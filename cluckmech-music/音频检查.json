@@ -1,0 +1,79 @@
+[
+  {
+    "title": "沙海齿轮",
+    "seconds": 130.17,
+    "peak_pcm": 17944,
+    "loop_step": 0.001648,
+    "minimum_rms_8s": 0.053,
+    "durations": {
+      "mp3": 130.17,
+      "ogg": 130.17
+    }
+  },
+  {
+    "title": "海风装配线",
+    "seconds": 121.905,
+    "peak_pcm": 15701,
+    "loop_step": 0.000854,
+    "minimum_rms_8s": 0.0544,
+    "durations": {
+      "mp3": 121.905,
+      "ogg": 121.905
+    }
+  },
+  {
+    "title": "极光回路",
+    "seconds": 137.143,
+    "peak_pcm": 12076,
+    "loop_step": 0.00296,
+    "minimum_rms_8s": 0.0377,
+    "durations": {
+      "mp3": 137.143,
+      "ogg": 137.143
+    }
+  },
+  {
+    "title": "岩窟快车",
+    "seconds": 109.714,
+    "peak_pcm": 16921,
+    "loop_step": 0.00235,
+    "minimum_rms_8s": 0.0402,
+    "durations": {
+      "mp3": 109.714,
+      "ogg": 109.714
+    }
+  },
+  {
+    "title": "雨林脉冲",
+    "seconds": 144.906,
+    "peak_pcm": 24571,
+    "loop_step": 0.000305,
+    "minimum_rms_8s": 0.0426,
+    "durations": {
+      "mp3": 144.906,
+      "ogg": 144.906
+    }
+  },
+  {
+    "title": "熔岩祭舞",
+    "seconds": 103.784,
+    "peak_pcm": 18920,
+    "loop_step": 0.000458,
+    "minimum_rms_8s": 0.0504,
+    "durations": {
+      "mp3": 103.784,
+      "ogg": 103.784
+    }
+  },
+  {
+    "title": "霓虹实验室",
+    "seconds": 116.364,
+    "peak_pcm": 21773,
+    "loop_step": 0.0,
+    "minimum_rms_8s": 0.0356,
+    "durations": {
+      "mp3": 116.364,
+      "ogg": 116.364
+    }
+  }
+]

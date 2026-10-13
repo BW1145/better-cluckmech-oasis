@@ -1,0 +1,181 @@
+using System;
+using System.Collections;
+using System.Reflection;
+using HarmonyLib;
+using Newtonsoft.Json;
+using UnityEngine;
+
+namespace CluckmechCoop
+{
+    internal sealed class SessionMessage
+    {
+        public string Type, Version = Plugin.Version;
+        public int Role, Revision;
+        public int Stage;
+        public float Delay;
+        public bool Expedition, Transfer;
+        public ExpeditionChoice Choice;
+        public string Token;
+        public GameplayModules Modules;
+        public RunProgress Progress;
+        public PlayerProgress PlayerProgress;
+        public bool Held;
+        public uint Unit;
+        public float X, Y;
+    }
+    internal sealed class NetworkService
+    {
+        internal const string RequestKey = "CluckmechCoop.Session.Request.v3", ReplyKey = "CluckmechCoop.Session.Reply.v3";
+        private static readonly MethodInfo rpc = AccessTools.Method(typeof(联机玩家控件), "发送消息广播_Rpc", new[] { typeof(string), typeof(string) });
+        private Coroutine handshake;
+        private bool peer;
+        private int revision, acknowledged = -1;
+        internal string Status = "等待队友同步模组设置";
+        internal bool PeerReady => Plugin.Role == 0 || peer;
+        internal bool SettingsReady => Plugin.Role == 0 || peer && acknowledged == revision;
+        internal void PlayerCreated(联机玩家控件 player) => BeginHandshake();
+        internal void BeginHandshake()
+        {
+            if (Plugin.Role == 0 || handshake != null) return;
+            handshake = Plugin.Instance.StartCoroutine(Handshake());
+        }
+        private IEnumerator Handshake()
+        {
+            yield return null;
+            for (int i = 0; i < 12 && !SettingsReady; i++)
+            {
+                Send(new SessionMessage { Type = "hello", Role = Plugin.Role });
+                yield return new WaitForSecondsRealtime(0.5f);
+            }
+            handshake = null;
+        }
+        internal void Disconnect()
+        {
+            if (handshake != null) Plugin.Instance.StopCoroutine(handshake);
+            handshake = null; peer = false; revision = 0; acknowledged = -1; Status = "等待队友同步模组设置";
+            Plugin.Combat?.Disconnected();
+            Plugin.Transfers.Disconnect();
+            Plugin.Panel.RefreshState();
+        }
+        internal void Send(SessionMessage message)
+        {
+            var player = Plugin.LocalPlayer;
+            if (player != null && player.isLocalPlayer) player.发送消息广播_cmd(RequestKey, JsonConvert.SerializeObject(message));
+        }
+        internal void PublishSettings()
+        {
+            if (Plugin.Role != 1) return;
+            revision++; Status = "等待队友同步模组设置";
+            BroadcastSettings();
+        }
+        private void BroadcastSettings() => Broadcast(new SessionMessage
+        {
+            Type = "settings", Revision = revision, Expedition = ModuleSettings.Expedition,
+            Transfer = ModuleSettings.Transfer, Choice = ModuleSettings.Choice,
+            Modules = ModuleSettings.Extra, Progress = ModuleSettings.Progress, Token = Plugin.Combat?.Token, Held = Plugin.Combat?.Holds.Active ?? false, Delay = Plugin.Combat?.RemainingEnergy ?? 0
+        });
+        internal void SendProgress(PlayerProgress progress) => Send(new SessionMessage { Type = "progress", PlayerProgress = progress });
+        internal void Complete(string token) => Broadcast(new SessionMessage { Type = "complete", Token = token });
+        internal void Playback(string token, int stage, float delay) => Broadcast(new SessionMessage { Type = "playback", Token = token, Stage = stage, Delay = delay });
+        internal void Broadcast(SessionMessage message)
+        {
+            if (Plugin.Role == 1 && Steam联机管理器.玩家_主机 != null)
+                rpc.Invoke(Steam联机管理器.玩家_主机, new object[] { ReplyKey, JsonConvert.SerializeObject(message) });
+        }
+        private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+        private static bool ValidProgress(PlayerProgress progress)
+        {
+            if (progress == null || progress.Coupons < 0 || progress.Regions == null || progress.Shops == null) return false;
+            foreach (var shop in progress.Shops.Values)
+                if (shop == null || shop.Sold == null || shop.Sold.Length != 4 || shop.Refreshes < 0 || shop.FourthPrice < 0 || shop.FourthId < -1) return false;
+            return true;
+        }
+        private static bool ValidMessage(SessionMessage message)
+        {
+            if (!Finite(message.Delay) || message.Delay < 0 || !Finite(message.X) || !Finite(message.Y)) return false;
+            switch (message.Type)
+            {
+                case "settings":
+                    if (message.Revision < 0 || message.Delay > 10 || (message.Choice != null && (string.IsNullOrWhiteSpace(message.Choice.Token) || message.Choice.RewardId < -1 || message.Choice.RewardId > 2))) return false;
+                    if (message.Progress == null) return true;
+                    if (message.Progress.Players == null) return false;
+                    foreach (var player in message.Progress.Players)
+                        if (player.Key < 0 || player.Key > 2 || !ValidProgress(player.Value)) return false;
+                    return true;
+                case "progress": return ValidProgress(message.PlayerProgress);
+                case "hello": case "ack": return message.Revision >= 0;
+                case "playback": return !string.IsNullOrWhiteSpace(message.Token) && message.Stage >= 0;
+                case "energy": return !string.IsNullOrWhiteSpace(message.Token) && message.Delay <= 10;
+                case "complete": case "speed": case "growth": case "speed-request": case "energy-request": case "rabbit-aim":
+                    return !string.IsNullOrWhiteSpace(message.Token);
+                default: return false;
+            }
+        }
+        internal void ServerReceive(联机玩家控件 sender, string json)
+        {
+            if (Plugin.Role != 1 || sender == null) return;
+            bool guest = sender == Steam联机管理器.玩家_客户端;
+            if (!guest && sender != Steam联机管理器.玩家_主机) return;
+            if (!NetworkJson.TryRead<SessionMessage>(json, out var message) || !ValidMessage(message)) return;
+            if (message.Version != Plugin.Version) { Status = "双方模组版本不一致"; PreparationPanel.ShowStatus(Status); return; }
+            if (message.Type == "progress" && message.PlayerProgress != null)
+            {
+                ModuleSettings.Progress.Players[guest ? 2 : 1] = message.PlayerProgress;
+                Plugin.Summary?.保存单局存档();
+            }
+            else if (FeatureNetwork.ServerReceive(message, guest ? 2 : 1)) return;
+            else if (message.Type == "hello")
+            {
+                if (guest) peer = true;
+                BroadcastSettings();
+            }
+            else if (message.Type == "ack" && guest && message.Revision == revision)
+            {
+                peer = true; acknowledged = revision; Status = "";
+                PreparationPanel.RefreshAll(); Plugin.Panel.RefreshState();
+            }
+        }
+        internal void Receive(string key, string json)
+        {
+            if (key != ReplyKey || Plugin.Role != 2) return;
+            if (!NetworkJson.TryRead<SessionMessage>(json, out var message) || !ValidMessage(message)) return;
+            if (message.Version != Plugin.Version) { Status = "双方模组版本不一致"; PreparationPanel.ShowStatus(Status); return; }
+            if (message.Type == "settings")
+            {
+                if (message.Revision < revision) return;
+                if (message.Choice != null)
+                {
+                    bool same = ModuleSettings.Choice != null && ModuleSettings.Choice.Token == message.Choice.Token;
+                    message.Choice.RewardApplied = same && ModuleSettings.Choice.RewardApplied;
+                    if (same) message.Choice.Locked |= ModuleSettings.Choice.Locked;
+                }
+                ModuleSettings.EnterRun();
+                ModuleSettings.Expedition = message.Expedition;
+                ModuleSettings.Transfer = message.Transfer;
+                ModuleSettings.Choice = message.Choice;
+                ModuleSettings.Extra = message.Modules ?? new GameplayModules();
+                ModuleSettings.Progress = message.Progress ?? new RunProgress();
+                if (Plugin.Combat != null) { Plugin.Combat.Token = message.Token; Plugin.Combat.Synchronize(message.Held, message.Delay); }
+                revision = acknowledged = message.Revision; peer = true; Status = "";
+                Send(new SessionMessage { Type = "ack", Revision = revision });
+                PreparationPanel.RefreshAll();
+                Plugin.Panel.RefreshState();
+            }
+            else if (FeatureNetwork.Receive(message)) return;
+            else if (message.Type == "complete" && ModuleSettings.Active && ModuleSettings.Choice?.Token != null && ModuleSettings.Choice.Token == message.Token)
+                Difficulty.ClientFinished();
+            else if (message.Type == "playback" && ModuleSettings.Active && ModuleSettings.Choice?.Token != null && ModuleSettings.Choice.Token == message.Token)
+                Difficulty.Playback(message.Stage, message.Delay);
+        }
+    }
+    [HarmonyPatch(typeof(联机玩家控件), "UserCode_发送消息广播_cmd__String__String")]
+    internal static class SessionRequestPatch
+    {
+        private static bool Prefix(联机玩家控件 __instance, string key, string 值)
+        {
+            if (key == NetworkService.ReplyKey) return false;
+            if (key != NetworkService.RequestKey) return true;
+            Plugin.Network.ServerReceive(__instance, 值); return false;
+        }
+    }
+}

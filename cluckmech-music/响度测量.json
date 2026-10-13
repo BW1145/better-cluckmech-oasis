@@ -1,0 +1,44 @@
+[
+  {
+    "title": "沙海齿轮",
+    "lufs": -17.88,
+    "true_peak": -1.11,
+    "range": 1.5
+  },
+  {
+    "title": "海风装配线",
+    "lufs": -16.72,
+    "true_peak": -1.11,
+    "range": 1.3
+  },
+  {
+    "title": "极光回路",
+    "lufs": -14.44,
+    "true_peak": -1.09,
+    "range": 1.4
+  },
+  {
+    "title": "岩窟快车",
+    "lufs": -17.37,
+    "true_peak": -1.09,
+    "range": 3.6
+  },
+  {
+    "title": "雨林脉冲",
+    "lufs": -20.61,
+    "true_peak": -1.09,
+    "range": 4.8
+  },
+  {
+    "title": "熔岩祭舞",
+    "lufs": -18.34,
+    "true_peak": -1.09,
+    "range": 4.6
+  },
+  {
+    "title": "霓虹实验室",
+    "lufs": -19.56,
+    "true_peak": -1.11,
+    "range": 6.9
+  }
+]

@@ -1,0 +1,93 @@
+[
+  {
+    "title": "铜管通缉令",
+    "style": "普通Boss · 摇摆铜管追逐",
+    "description": "铜管领奏、钢琴独奏与萨克斯回应交替展开，轻声潜行逐步转入齐奏高潮，以留白和重音塑造戏剧化追逐。",
+    "bpm": 152,
+    "seconds": 101.05,
+    "notes": 1608,
+    "peak_dbfs": -4.66,
+    "rms_8s": [
+      0.0646,
+      0.0639,
+      0.0635,
+      0.0609,
+      0.064,
+      0.0654,
+      0.0431,
+      0.0468,
+      0.0755,
+      0.0751,
+      0.0723,
+      0.0653,
+      0.0598
+    ],
+    "sections": [
+      [
+        0,
+        4,
+        "Standoff"
+      ],
+      [
+        4,
+        16,
+        "Chase"
+      ],
+      [
+        16,
+        24,
+        "Piano pursuit"
+      ],
+      [
+        24,
+        32,
+        "Brass crossfire"
+      ],
+      [
+        32,
+        40,
+        "Sneaking bass"
+      ],
+      [
+        40,
+        56,
+        "Full pursuit"
+      ],
+      [
+        56,
+        64,
+        "Closing in"
+      ]
+    ],
+    "use": "普通Boss战斗",
+    "integrated_lufs": -22.0,
+    "true_peak_dbfs": -4.66,
+    "audio_check": {
+      "title": "铜管通缉令",
+      "gain_db": -3.55,
+      "formats": {
+        "wav": {
+          "lufs": -22.0,
+          "true_peak_dbfs": -4.66,
+          "loudness_range": 5.9
+        },
+        "mp3": {
+          "lufs": -21.99,
+          "true_peak_dbfs": -4.68,
+          "loudness_range": 5.9
+        },
+        "ogg": {
+          "lufs": -21.99,
+          "true_peak_dbfs": -4.58,
+          "loudness_range": 5.9
+        }
+      },
+      "loop_edge_step": 0.00174,
+      "durations": {
+        "wav": 101.053,
+        "mp3": 101.053,
+        "ogg": 101.053
+      }
+    }
+  }
+]

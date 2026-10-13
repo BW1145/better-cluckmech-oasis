@@ -1,0 +1,131 @@
+[
+  {
+    "Playlist": "背景音乐_战斗场景_荒漠",
+    "Title": "沙海齿轮",
+    "File": "沙海齿轮.ogg",
+    "OriginalGains": {
+      "BGM_战斗场景_荒漠": 0.7897688493998856
+    },
+    "OriginalLufs": -19.95,
+    "OriginalGainDb": -2.05,
+    "CustomLufs": -21.99,
+    "OriginalSongVolume": 1.0,
+    "OriginalEffectiveLufs": -19.95
+  },
+  {
+    "Playlist": "背景音乐_战斗场景_沼泽",
+    "Title": "雨林脉冲",
+    "File": "雨林脉冲.ogg",
+    "OriginalGains": {
+      "BGM_战斗场景_沼泽": 0.6668067692136221
+    },
+    "OriginalLufs": -18.48,
+    "OriginalGainDb": -3.52,
+    "CustomLufs": -21.97,
+    "OriginalSongVolume": 1.0,
+    "OriginalEffectiveLufs": -18.48
+  },
+  {
+    "Playlist": "背景音乐_战斗场景_冰川",
+    "Title": "极光回路",
+    "File": "极光回路.ogg",
+    "OriginalGains": {
+      "BGM_战斗场景_冰川": 0.43551187368556854
+    },
+    "OriginalLufs": -14.78,
+    "OriginalGainDb": -7.22,
+    "CustomLufs": -21.98,
+    "OriginalSongVolume": 1.0,
+    "OriginalEffectiveLufs": -14.78
+  },
+  {
+    "Playlist": "背景音乐_战斗场景_火山",
+    "Title": "熔岩祭舞",
+    "File": "熔岩祭舞.ogg",
+    "OriginalGains": {
+      "BGM_战斗场景_火山": 0.531495999506648
+    },
+    "OriginalLufs": -16.51,
+    "OriginalGainDb": -5.49,
+    "CustomLufs": -21.99,
+    "OriginalSongVolume": 1.0,
+    "OriginalEffectiveLufs": -16.51
+  },
+  {
+    "Playlist": "背景音乐_战斗场景_海滩",
+    "Title": "海风装配线",
+    "File": "海风装配线.ogg",
+    "OriginalGains": {
+      "BGM_战斗场景_海滩": 1.095216555366736
+    },
+    "OriginalLufs": -12.79,
+    "OriginalGainDb": 0.79,
+    "CustomLufs": -22.0,
+    "OriginalSongVolume": 0.3162277638912201,
+    "OriginalEffectiveLufs": -22.79
+  },
+  {
+    "Playlist": "背景音乐_战斗场景_研究所",
+    "Title": "霓虹实验室",
+    "File": "霓虹实验室.ogg",
+    "OriginalGains": {
+      "BGM_战斗场景_研究所": 0.3463378846082794
+    },
+    "OriginalLufs": -12.79,
+    "OriginalGainDb": -9.21,
+    "CustomLufs": -22.01,
+    "OriginalSongVolume": 1.0,
+    "OriginalEffectiveLufs": -12.79
+  },
+  {
+    "Playlist": "背景音乐_战斗场景_矿洞",
+    "Title": "岩窟快车",
+    "File": "岩窟快车.ogg",
+    "OriginalGains": {
+      "BGM_战斗场景_矿洞": 0.6839116472814293
+    },
+    "OriginalLufs": -18.7,
+    "OriginalGainDb": -3.3,
+    "CustomLufs": -21.99,
+    "OriginalSongVolume": 1.0,
+    "OriginalEffectiveLufs": -18.7
+  },
+  {
+    "Playlist": "背景音乐_Boss出场_普通Boss",
+    "OriginalPlaylists": ["背景音乐_Boss出场_普通Boss", "背景音乐_Boss出场_普通Boss2"],
+    "Title": "铜管通缉令",
+    "File": "铜管通缉令.ogg",
+    "OriginalGains": {
+      "BGM_Boss出场_普通Boss": 0.43451022417157154,
+      "BGM_Boss出场_普通Boss2": 0.46131757456037936
+    },
+    "OriginalLufs": -14.76,
+    "OriginalGainDb": -7.24,
+    "CustomLufs": -21.99,
+    "OriginalSongVolume": 1.0,
+    "OriginalEffectiveLufs": -14.76
+  },
+  {
+    "Playlist": "背景音乐_Boss出场_普通Boss2",
+    "OriginalPlaylists": ["背景音乐_Boss出场_普通Boss", "背景音乐_Boss出场_普通Boss2"],
+    "Title": "铜管通缉令",
+    "File": "铜管通缉令.ogg",
+    "OriginalGains": {
+      "BGM_Boss出场_普通Boss": 0.43451022417157154,
+      "BGM_Boss出场_普通Boss2": 0.46131757456037936
+    },
+    "OriginalLufs": -15.28,
+    "OriginalGainDb": -6.72,
+    "CustomLufs": -21.99,
+    "OriginalSongVolume": 1.0,
+    "OriginalEffectiveLufs": -15.28
+  },
+  {
+    "Playlist": "背景音乐_主界面",
+    "Title": "春日影 (MyGO!!!!! ver.)",
+    "File": "haruhikage.ogg",
+    "OriginalGains": {},
+    "Replace": true,
+    "Menu": true
+  }
+]

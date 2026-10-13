@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems><NoWarn>CS0169;CS0649</NoWarn></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" /><Compile Include="UnityTestObjects.cs" /><Compile Include="obj/CompletionMethods.cs" />
+    <Compile Include="obj/CountdownUi.cs" />
+    <Compile Include="../../src/Rules.cs" Link="Rules.cs" />
+    <Compile Include="../../../cluckmech-research/inspection/game/模块_仇恨.cs" Link="Hate.cs" />
+    <Compile Include="../../../cluckmech-research/inspection/game/模块_移动属性.cs" Link="MovementAttributes.cs" />
+    <Compile Include="../../../cluckmech-research/inspection/game/模块_移动.cs" Link="Movement.cs" />
+    <Compile Include="../../../cluckmech-research/inspection/game/词条_100028_Boss胜利判断.cs" Link="BossCompletion.cs" />
+    <Compile Include="../../../cluckmech-research/inspection/navigation/PolyNav.PolyNavAgent.decompiled.cs" Link="PolyNavAgent.cs" />
+  </ItemGroup>
+</Project>

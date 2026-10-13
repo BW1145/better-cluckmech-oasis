@@ -1,0 +1,14 @@
+[
+  {
+    "clip": "BGM_Boss出场_普通Boss2",
+    "duration": 44.064,
+    "path": "原版参考/原版普通Boss2.mp3",
+    "bytes": 1058733
+  },
+  {
+    "clip": "BGM_Boss出场_普通Boss",
+    "duration": 58.584,
+    "path": "原版参考/原版普通Boss.mp3",
+    "bytes": 1407213
+  }
+]

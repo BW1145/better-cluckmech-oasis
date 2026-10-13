@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <GameDir Condition="'$(GameDir)' == ''">$(CLUCKMECH_GAME_DIR)</GameDir>
+    <PathMap>$(MSBuildThisFileDirectory)=./</PathMap>
+  </PropertyGroup>
+  <Target Name="CheckGameDirectory" BeforeTargets="ResolveAssemblyReferences" Condition="'$(RequireGameDir)' == 'true'">
+    <Error Condition="'$(GameDir)' == ''" Text="Specify -p:GameDir or set CLUCKMECH_GAME_DIR to the game installation directory." />
+    <Error Condition="'$(GameDir)' != '' and !Exists('$(GameDir)/Cluckmech Oasis_Data/Managed/Assembly-CSharp.dll')" Text="GameDir must contain Cluckmech Oasis_Data/Managed/Assembly-CSharp.dll." />
+  </Target>
+</Project>

@@ -1,0 +1,152 @@
+{
+  "target_lufs": -22.0,
+  "tracks": [
+    {
+      "title": "沙海齿轮",
+      "gain_db": 0.0,
+      "formats": {
+        "wav": {
+          "lufs": -22.0,
+          "true_peak_dbfs": -5.23,
+          "loudness_range": 1.5
+        },
+        "mp3": {
+          "lufs": -22.0,
+          "true_peak_dbfs": -5.25,
+          "loudness_range": 1.5
+        },
+        "ogg": {
+          "lufs": -21.99,
+          "true_peak_dbfs": -5.15,
+          "loudness_range": 1.5
+        }
+      }
+    },
+    {
+      "title": "海风装配线",
+      "gain_db": -5.28,
+      "formats": {
+        "wav": {
+          "lufs": -22.0,
+          "true_peak_dbfs": -6.39,
+          "loudness_range": 1.3
+        },
+        "mp3": {
+          "lufs": -22.0,
+          "true_peak_dbfs": -6.37,
+          "loudness_range": 1.3
+        },
+        "ogg": {
+          "lufs": -22.0,
+          "true_peak_dbfs": -6.21,
+          "loudness_range": 1.3
+        }
+      }
+    },
+    {
+      "title": "极光回路",
+      "gain_db": -7.56,
+      "formats": {
+        "wav": {
+          "lufs": -22.0,
+          "true_peak_dbfs": -8.65,
+          "loudness_range": 1.5
+        },
+        "mp3": {
+          "lufs": -22.0,
+          "true_peak_dbfs": -8.6,
+          "loudness_range": 1.5
+        },
+        "ogg": {
+          "lufs": -21.98,
+          "true_peak_dbfs": -8.71,
+          "loudness_range": 1.5
+        }
+      }
+    },
+    {
+      "title": "岩窟快车",
+      "gain_db": -4.63,
+      "formats": {
+        "wav": {
+          "lufs": -22.0,
+          "true_peak_dbfs": -5.72,
+          "loudness_range": 3.6
+        },
+        "mp3": {
+          "lufs": -22.0,
+          "true_peak_dbfs": -5.76,
+          "loudness_range": 3.6
+        },
+        "ogg": {
+          "lufs": -21.99,
+          "true_peak_dbfs": -5.61,
+          "loudness_range": 3.6
+        }
+      }
+    },
+    {
+      "title": "雨林脉冲",
+      "gain_db": -1.39,
+      "formats": {
+        "wav": {
+          "lufs": -22.0,
+          "true_peak_dbfs": -2.48,
+          "loudness_range": 4.8
+        },
+        "mp3": {
+          "lufs": -21.99,
+          "true_peak_dbfs": -2.5,
+          "loudness_range": 4.8
+        },
+        "ogg": {
+          "lufs": -21.97,
+          "true_peak_dbfs": -2.43,
+          "loudness_range": 4.8
+        }
+      }
+    },
+    {
+      "title": "熔岩祭舞",
+      "gain_db": -3.66,
+      "formats": {
+        "wav": {
+          "lufs": -22.0,
+          "true_peak_dbfs": -4.75,
+          "loudness_range": 4.6
+        },
+        "mp3": {
+          "lufs": -22.0,
+          "true_peak_dbfs": -4.66,
+          "loudness_range": 4.6
+        },
+        "ogg": {
+          "lufs": -21.99,
+          "true_peak_dbfs": -4.65,
+          "loudness_range": 4.6
+        }
+      }
+    },
+    {
+      "title": "霓虹实验室",
+      "gain_db": -2.44,
+      "formats": {
+        "wav": {
+          "lufs": -21.99,
+          "true_peak_dbfs": -3.55,
+          "loudness_range": 6.9
+        },
+        "mp3": {
+          "lufs": -22.0,
+          "true_peak_dbfs": -3.57,
+          "loudness_range": 6.9
+        },
+        "ogg": {
+          "lufs": -22.01,
+          "true_peak_dbfs": -3.47,
+          "loudness_range": 6.9
+        }
+      }
+    }
+  ]
+}
