@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
- <PropertyGroup><TargetFramework>net472</TargetFramework><LangVersion>latest</LangVersion><AssemblyName>CluckmechSkipSplash</AssemblyName><Version>1.0.0</Version><NuGetAudit>false</NuGetAudit></PropertyGroup>
+ <PropertyGroup><TargetFramework>net472</TargetFramework><LangVersion>latest</LangVersion><AssemblyName>CluckmechSkipSplash</AssemblyName><Version>1.1.0</Version><NuGetAudit>false</NuGetAudit></PropertyGroup>
  <ItemGroup><Reference Include="Mono.Cecil"><HintPath>../../cluckmech-coop-mod/dependencies/BepInEx/BepInEx/core/Mono.Cecil.dll</HintPath><Private>false</Private></Reference></ItemGroup>
 </Project>

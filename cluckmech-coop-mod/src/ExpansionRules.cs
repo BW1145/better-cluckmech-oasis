@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace CluckmechCoop
 {
-    internal enum ModuleId { Speed, Characters, Energy, Music, Growth, Shop, Expedition, Transfer }
+    internal enum ModuleId { Speed, Characters, Energy, Music, Growth, Shop, Expedition, Transfer, SkipSplash }
 
     internal sealed class ModuleInfo
     {
@@ -23,7 +23,8 @@ namespace CluckmechCoop
             new ModuleInfo(ModuleId.Growth, "强化成长", "区域通关增加强化空间，商店出售刷新券。", "区域关底完成后，每人选一台鸡械，强化上限+1。\n工匠刷新券：30金币，增加3次刷新，每家商店限购一次；剩余次数本局保留。"),
             new ModuleInfo(ModuleId.Shop, "商店扩展", "同一家商店刷新3次后提供4台鸡械。", "成功付费刷新达到3次后，每次提供4台鸡械供购买。刷新价格沿用原版，新商店重新累计。"),
             new ModuleInfo(ModuleId.Expedition, "强化远征", "追加强化敌人，并增强绿洲最终Boss。", "进关前独立选择。原版敌人全部出完并消灭后，再出现一次；生命×1.5，攻击×2。\n绿洲最终Boss只出现一次，生命×10、攻击×2。\n完成后获得显示的额外奖励。"),
-            new ModuleInfo(ModuleId.Transfer, "队友转交", "向队友转交金币或指定鸡械。", "在路线地图等关间界面打开队友转交。鸡械保留强化词条与强化上限，选中后确认转交。")
+            new ModuleInfo(ModuleId.Transfer, "队友转交", "向队友转交金币或指定鸡械。", "在路线地图等关间界面打开队友转交。鸡械保留强化词条与强化上限，选中后确认转交。"),
+            new ModuleInfo(ModuleId.SkipSplash, "跳过开屏", "跳过启动商标，修改后下次启动生效。", "启动时跳过全部开屏商标。\n开关独立保存，修改后下次启动游戏时生效。")
         };
     }
 

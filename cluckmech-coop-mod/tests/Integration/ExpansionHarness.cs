@@ -74,7 +74,7 @@ static class ExpansionHarness
         using (Harness.Use(new Context(0)))
         {
             ModuleSettings.MainMenu(); ModuleSettings.EnterRun();
-            check(ModuleCatalog.All.Length == 8 && ModuleSettings.Extra.Speed && ModuleSettings.Extra.Characters && ModuleSettings.Extra.Energy && ModuleSettings.Extra.Growth && ModuleSettings.Extra.Shop && ModuleSettings.Music, "eight modules start enabled");
+            check(ModuleCatalog.All.Length == 9 && ModuleSettings.Extra.Speed && ModuleSettings.Extra.Characters && ModuleSettings.Extra.Energy && ModuleSettings.Extra.Growth && ModuleSettings.Extra.Shop && ModuleSettings.Music && ModuleSettings.Preference(ModuleId.SkipSplash), "nine modules start enabled");
             ModuleSettings.Preference(ModuleId.Speed, false); ModuleSettings.EnterRun();
             check(ModuleSettings.Extra.Speed, "new module preferences do not mutate active run");
             foreach (var module in ModuleCatalog.All)
@@ -82,10 +82,10 @@ static class ExpansionHarness
                 ModuleSettings.MainMenu();
                 foreach (var choice in ModuleCatalog.All) ModuleSettings.Preference(choice.Id, true);
                 ModuleSettings.Preference(module.Id, false); ModuleSettings.EnterRun();
-                bool[] actual = { ModuleSettings.Extra.Speed, ModuleSettings.Extra.Characters, ModuleSettings.Extra.Energy, ModuleSettings.Music, ModuleSettings.Extra.Growth, ModuleSettings.Extra.Shop, ModuleSettings.Expedition, ModuleSettings.Transfer };
+                bool[] actual = { ModuleSettings.Extra.Speed, ModuleSettings.Extra.Characters, ModuleSettings.Extra.Energy, ModuleSettings.Music, ModuleSettings.Extra.Growth, ModuleSettings.Extra.Shop, ModuleSettings.Expedition, ModuleSettings.Transfer, ModuleSettings.Preference(ModuleId.SkipSplash) };
                 bool independent = true;
                 for (int i = 0; i < actual.Length; i++) independent &= actual[i] == (i != (int)module.Id);
-                check(independent, "each of eight module switches changes only its own active flag");
+                check(independent, "each of nine module switches changes only its own state");
             }
             ModuleSettings.MainMenu(); ModuleSettings.Preference(ModuleId.Speed, false); ModuleSettings.EnterRun();
             var progress = ModuleSettings.LocalProgress;

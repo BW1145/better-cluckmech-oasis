@@ -13,6 +13,9 @@ foreach ($name in @('winhttp.dll', 'doorstop_config.ini', '.doorstop_version', '
 }
 Copy-Item -LiteralPath (Join-Path $modRoot 'src\bin\Release\net472\CluckmechCoop.dll') -Destination $pluginDir -Force
 Copy-Item -LiteralPath (Join-Path $modRoot 'diagnostics\bin\Release\net472\CluckmechCoopDiagnostics.dll') -Destination $pluginDir -Force
+$patcherDir = Join-Path $packageDir 'BepInEx/patchers'
+New-Item -ItemType Directory -Path $patcherDir -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $modRoot '../cluckmech-skip-splash/src/bin/Release/net472/CluckmechSkipSplash.dll') -Destination $patcherDir -Force
 $musicDir = Join-Path $pluginDir 'Music'
 New-Item -ItemType Directory -Path $musicDir -Force | Out-Null
 Copy-Item -Path (Join-Path $modRoot 'src\MusicAssets\*') -Destination $musicDir -Force
@@ -20,7 +23,7 @@ $configDir = Join-Path $packageDir 'BepInEx\config'
 New-Item -ItemType Directory -Path $configDir -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $modRoot 'evidence\startup-destruction\BepInEx.cfg.updated') -Destination (Join-Path $configDir 'BepInEx.cfg') -Force
 [System.IO.File]::WriteAllText((Join-Path $configDir 'billy.cluckmech.coop.diagnostics.cfg'), "[Diagnostics]`r`nDetailedScan = false`r`n", [System.Text.UTF8Encoding]::new($false))
-[System.IO.File]::WriteAllText((Join-Path $configDir 'billy.cluckmech.coop.cfg'), "[Modules]`r`nSpeed = true`r`nCharacters = true`r`nEnergy = true`r`nMusic = true`r`nGrowth = true`r`nShop = true`r`nExpedition = true`r`nTransfer = true`r`n", [System.Text.UTF8Encoding]::new($false))
+[System.IO.File]::WriteAllText((Join-Path $configDir 'billy.cluckmech.coop.cfg'), "[Modules]`r`nSpeed = true`r`nCharacters = true`r`nEnergy = true`r`nMusic = true`r`nGrowth = true`r`nShop = true`r`nExpedition = true`r`nTransfer = true`r`nSkipSplash = true`r`n", [System.Text.UTF8Encoding]::new($false))
 Copy-Item -LiteralPath (Join-Path $modRoot '使用说明.md') -Destination $packageDir -Force
 Copy-Item -LiteralPath (Join-Path $modRoot '验证记录.md') -Destination $packageDir -Force
 Copy-Item -LiteralPath (Join-Path $modRoot 'dependencies\BepInEx-LICENSE.txt') -Destination $packageDir -Force
@@ -29,14 +32,15 @@ Compress-Archive -Path (Join-Path $packageDir '*') -DestinationPath $archivePath
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [System.IO.Compression.ZipFile]::OpenRead($archivePath)
 try {
-    foreach ($name in @('CluckmechCoop.dll', 'CluckmechCoopDiagnostics.dll')) {
+    foreach ($name in @('CluckmechCoop.dll', 'CluckmechCoopDiagnostics.dll', 'CluckmechSkipSplash.dll')) {
         $entry = @($archive.Entries | Where-Object Name -EQ $name)
         if ($entry.Count -ne 1) { throw "Plugin count mismatch: $name" }
         $stream = $entry[0].Open()
         $sha = [System.Security.Cryptography.SHA256]::Create()
         try { $entryHash = [BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-', '') }
         finally { $stream.Dispose(); $sha.Dispose() }
-        if ($entryHash -ne (Get-FileHash -LiteralPath (Join-Path $pluginDir $name) -Algorithm SHA256).Hash) { throw "Plugin hash mismatch: $name" }
+        $binaryDir = if ($name -eq 'CluckmechSkipSplash.dll') { $patcherDir } else { $pluginDir }
+        if ($entryHash -ne (Get-FileHash -LiteralPath (Join-Path $binaryDir $name) -Algorithm SHA256).Hash) { throw "Plugin hash mismatch: $name" }
     }
     $audioEntries = @($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -match '^BepInEx/plugins/CluckmechCoop/Music/.+\.ogg$' })
     if ($audioEntries.Count -ne 9) { throw 'Expected nine OGG music tracks' }

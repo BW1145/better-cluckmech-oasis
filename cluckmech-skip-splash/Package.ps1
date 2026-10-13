@@ -1,7 +1,8 @@
 $ErrorActionPreference='Stop'
 [Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false)
 $loader=Join-Path $PSScriptRoot '../cluckmech-coop-mod/dependencies/BepInEx'
-$package=Join-Path $PSScriptRoot 'release/鸡械绿洲跳过开屏-1.0.0-完整包'
+$project=[xml][System.IO.File]::ReadAllText((Join-Path $PSScriptRoot 'src/CluckmechSkipSplash.csproj'),[System.Text.Encoding]::UTF8)
+$package=Join-Path $PSScriptRoot "release/鸡械绿洲跳过开屏-$($project.Project.PropertyGroup.Version)-完整包"
 New-Item -ItemType Directory -Path (Join-Path $package 'BepInEx/patchers') -Force | Out-Null
 Copy-Item -Path (Join-Path $loader 'BepInEx/*') -Destination (Join-Path $package 'BepInEx') -Recurse -Force
 foreach($file in 'winhttp.dll','doorstop_config.ini','.doorstop_version','changelog.txt'){Copy-Item -LiteralPath (Join-Path $loader $file) -Destination $package -Force}

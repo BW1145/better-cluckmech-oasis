@@ -12,6 +12,7 @@
 | 商店扩展 | 同家商店付费刷新3次后提供4台鸡械。 |
 | 强化远征 | 清完原版敌人后完整追加强化敌人，最终完成领取额外奖励。 |
 | 队友转交 | 向队友转交金币和指定鸡械，保留强化内容及上限。 |
+| 跳过开屏 | 启动时跳过商标展示，主菜单可开关，下次启动生效。 |
 
 ## 目录
 
@@ -27,6 +28,7 @@
 cd cluckmech-coop-mod
 dotnet build src/CluckmechCoop.csproj -c Release
 dotnet build diagnostics/CluckmechCoopDiagnostics.csproj -c Release
+dotnet build ../cluckmech-skip-splash/src/CluckmechSkipSplash.csproj -c Release
 dotnet run --project tests/Music/MusicTests.csproj -c Release
 dotnet run --project tests/Integration/IntegrationTests.csproj -c Release
 dotnet run --project tests/RunSave/RunSaveTests.csproj -c Release

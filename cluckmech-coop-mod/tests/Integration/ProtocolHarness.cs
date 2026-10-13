@@ -28,8 +28,9 @@ static class ProtocolHarness
                 Harness.Host.Summary.当前金钱数 = 100; Harness.Guest.Summary.当前金钱数 = 40;
                 Steam联机管理器.玩家_客户端.Network总结数据_联机 = new 联机玩家控件.联机总结数据包 { 当前金钱数 = 40 };
                 Harness.DeliverTransfers = false;
-                var malformed = new[] { null, "", "null", "[]", "{", "{}", "{\"Type\":\"give\",\"Version\":3}", "{\"Type\":\"give\",\"Version\":\"0.4.7\",\"Gold\":2147483648}",
-                    new string('x', NetworkJson.MaxLength + 1), "{\"Type\":\"give\",\"Version\":\"0.4.7\",\"Wallet\":" + new string('[', 40) + "0" + new string(']', 40) + "}" };
+                string versionField = "\"Version\":" + Json(Plugin.Version);
+                var malformed = new[] { null, "", "null", "[]", "{", "{}", "{\"Type\":\"give\",\"Version\":3}", "{\"Type\":\"give\"," + versionField + ",\"Gold\":2147483648}",
+                    new string('x', NetworkJson.MaxLength + 1), "{\"Type\":\"give\"," + versionField + ",\"Wallet\":" + new string('[', 40) + "0" + new string(']', 40) + "}" };
                 foreach (var json in malformed)
                 {
                     Plugin.Transfers.ServerReceive(Steam联机管理器.玩家_主机, json);
@@ -50,7 +51,9 @@ static class ProtocolHarness
                 var zero = Give(); zero.Transfer.Amount = 0; Start(zero); check(Pending() == null, "zero amount creates no transaction");
                 var negative = Give(); negative.Transfer.Amount = -1; Start(negative); check(Pending() == null, "negative amount creates no transaction");
                 var nullUpgrades = Give("machine"); nullUpgrades.Transfer.Expected.Upgrades = null; Start(nullUpgrades); check(Pending() == null, "null machine upgrades create no transaction");
-                var missingVersion = Json(invalid).Replace("\"Version\":\"0.4.7\",", "");
+                var withoutVersion = Newtonsoft.Json.Linq.JObject.Parse(Json(invalid));
+                withoutVersion.Remove("Version");
+                var missingVersion = withoutVersion.ToString(Formatting.None);
                 Plugin.Transfers.ServerReceive(Steam联机管理器.玩家_主机, missingVersion); check(Pending() == null, "missing explicit protocol version is rejected");
                 Plugin.Transfers.ServerReceive(null, Json(invalid)); Plugin.Transfers.ServerReceive(new 联机玩家控件(), Json(invalid));
                 check(Pending() == null, "null and unrelated senders cannot create transfers");

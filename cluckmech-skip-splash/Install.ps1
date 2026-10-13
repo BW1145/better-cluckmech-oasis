@@ -9,4 +9,4 @@ New-Item -ItemType Directory -Path ([System.IO.Path]::GetDirectoryName($target))
 $source=Join-Path $PSScriptRoot 'src/bin/Release/net472/CluckmechSkipSplash.dll'
 Copy-Item -LiteralPath $source -Destination $target -Force
 if((Get-FileHash -LiteralPath $source).Hash -ne (Get-FileHash -LiteralPath $target).Hash){throw 'Installed splash patcher differs'}
-'Installed independent splash skip 1.0.0; hash verified'
+'Installed independent splash skip; hash verified'

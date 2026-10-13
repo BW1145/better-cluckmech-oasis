@@ -4,6 +4,16 @@ $ErrorActionPreference='Stop'
 [Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false)
 Add-Type -Path (Join-Path $PSScriptRoot '../cluckmech-coop-mod/dependencies/BepInEx/BepInEx/core/Mono.Cecil.dll')
 Add-Type -Path (Join-Path $PSScriptRoot 'src/bin/Release/net472/CluckmechSkipSplash.dll')
+$setting=[CluckmechSkipSplash.Patcher].GetMethod('ReadEnabled',[System.Reflection.BindingFlags]'Static,NonPublic')
+$fixture=[System.IO.Path]::GetTempFileName()
+try {
+ foreach($sample in @(@("[Modules]`nSkipSplash = false",$false),@("[Modules]`nSkipSplash = true",$true),@("[Other]`nSkipSplash = false",$true),@("[Modules]`nSpeed = false",$true),@("[Modules]`nSkipSplash = FALSE`n[Other]`nSkipSplash = true",$false),@("[Modules]`nSkipSplash = invalid",$true))) {
+  [System.IO.File]::WriteAllText($fixture,$sample[0],[System.Text.UTF8Encoding]::new($false))
+  if($setting.Invoke($null,@($fixture)) -ne $sample[1]){throw 'Startup module setting incorrect'}
+ }
+} finally {Remove-Item -LiteralPath $fixture -Force}
+if(-not $setting.Invoke($null,@($fixture))){throw 'Missing startup setting should enable splash skip'}
+'PASS: seven startup setting checks; section scope, enable, disable and defaults'
 $managed=Join-Path $GameDir 'Cluckmech Oasis_Data/Managed'
 $native=Join-Path $managed 'Unity.2D.Animation.Runtime.dll'
 $before=(Get-FileHash -LiteralPath $native).Hash

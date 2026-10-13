@@ -169,7 +169,7 @@ namespace CluckmechCoop
     }
     internal static class Plugin
     {
-        internal const string Version = "0.4.7";
+        internal const string Version = "0.4.8";
         internal static CombatFeatures Combat => Harness.Current.Combat;
         internal static bool InCombat => Harness.Current.CombatScene;
         internal static int Role => Harness.Current.Role;

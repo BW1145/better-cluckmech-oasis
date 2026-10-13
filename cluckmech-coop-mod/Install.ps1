@@ -35,6 +35,8 @@ foreach ($name in @('CluckmechCoop.dll', 'CluckmechCoopDiagnostics.dll')) {
     $relative = 'BepInEx/plugins/CluckmechCoop/' + $name
     if ((Get-FileHash -LiteralPath (Join-Path $gameRoot $relative)).Hash -ne (Get-FileHash -LiteralPath (Join-Path $packageRoot $relative)).Hash) { throw "Installed hash mismatch: $name" }
 }
+$patcher = 'BepInEx/patchers/CluckmechSkipSplash.dll'
+if ((Get-FileHash -LiteralPath (Join-Path $gameRoot $patcher)).Hash -ne (Get-FileHash -LiteralPath (Join-Path $packageRoot $patcher)).Hash) { throw 'Installed startup module hash mismatch' }
 if ([System.IO.File]::ReadAllText($configPath, [System.Text.Encoding]::UTF8) -notmatch '(?m)^HideManagerGameObject = true\r?$') { throw 'Loader protection setting missing' }
 if ([System.IO.File]::ReadAllText((Join-Path $gameRoot 'BepInEx/config/billy.cluckmech.coop.diagnostics.cfg'), [System.Text.Encoding]::UTF8) -notmatch '(?m)^DetailedScan = false\r?$') { throw 'Diagnostic scan setting incorrect' }
 "Installed $version; plugin hashes and loader/diagnostic settings verified"
