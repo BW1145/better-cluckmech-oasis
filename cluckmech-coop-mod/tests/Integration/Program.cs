@@ -418,6 +418,7 @@ static class Program
         ProtocolHarness.Run(Check);
         ExpansionHarness.Run(Check);
         ModuleSaveHarness.Run(Check);
+        StratagemHarness.Run(Check);
         Console.WriteLine($"PASS: {checks} production module, storage and two-peer protocol checks using code-level transport/storage doubles");
     }
 }

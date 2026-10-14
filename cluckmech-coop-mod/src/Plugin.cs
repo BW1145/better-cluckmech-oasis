@@ -14,7 +14,7 @@ namespace CluckmechCoop
     [BepInPlugin("billy.cluckmech.coop", "更好的鸡械绿洲", Version)]
     public sealed class Plugin : BaseUnityPlugin
     {
-        internal const string Version = "0.4.8";
+        internal const string Version = "0.5.0";
         internal static Plugin Instance;
         internal static TransferService Transfers;
         internal static NetworkService Network;
@@ -48,6 +48,7 @@ namespace CluckmechCoop
         {
             if (scene.buildIndex == 常数类.场景id_选择英雄) RunSaveRepair.Blocked = false;
             Combat.ClearScene(); GrowthPanel.Close(); Difficulty.Reset(); ModuleSettings.ClearScene();
+            StratagemWorld.Clear();
             Spawner = null; units = null; InCombat = false;
             Panel.Rebuild();
             if (scene.buildIndex == 常数类.场景id_开始菜单) { Network.Disconnect(); ModuleSettings.MainMenu(); }
@@ -81,6 +82,7 @@ namespace CluckmechCoop
         {
             if (RunSaveRepair.AtMainMenu) return;
             Spawner = spawner; InCombat = true; Combat.Begin(spawner);
+            StratagemWorld.Begin(); StratagemDeployment.Begin();
             Panel.RefreshState();
         }
         internal static void BindSummary(总结脚本 value) => summary = value;

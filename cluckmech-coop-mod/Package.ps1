@@ -19,15 +19,18 @@ Copy-Item -LiteralPath (Join-Path $modRoot '../cluckmech-skip-splash/src/bin/Rel
 $musicDir = Join-Path $pluginDir 'Music'
 New-Item -ItemType Directory -Path $musicDir -Force | Out-Null
 Copy-Item -Path (Join-Path $modRoot 'src\MusicAssets\*') -Destination $musicDir -Force
+$soundDir = Join-Path $pluginDir 'StratagemSounds'
+New-Item -ItemType Directory -Path $soundDir -Force | Out-Null
+Copy-Item -Path (Join-Path $modRoot 'src\StratagemSounds\*') -Destination $soundDir -Force
 $configDir = Join-Path $packageDir 'BepInEx\config'
 New-Item -ItemType Directory -Path $configDir -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $modRoot 'evidence\startup-destruction\BepInEx.cfg.updated') -Destination (Join-Path $configDir 'BepInEx.cfg') -Force
 [System.IO.File]::WriteAllText((Join-Path $configDir 'billy.cluckmech.coop.diagnostics.cfg'), "[Diagnostics]`r`nDetailedScan = false`r`n", [System.Text.UTF8Encoding]::new($false))
-[System.IO.File]::WriteAllText((Join-Path $configDir 'billy.cluckmech.coop.cfg'), "[Modules]`r`nSpeed = true`r`nCharacters = true`r`nEnergy = true`r`nMusic = true`r`nGrowth = true`r`nShop = true`r`nExpedition = true`r`nTransfer = true`r`nSkipSplash = true`r`n", [System.Text.UTF8Encoding]::new($false))
+[System.IO.File]::WriteAllText((Join-Path $configDir 'billy.cluckmech.coop.cfg'), "[Modules]`r`nSpeed = true`r`nCharacters = true`r`nEnergy = true`r`nMusic = true`r`nGrowth = true`r`nShop = true`r`nExpedition = true`r`nTransfer = true`r`nSkipSplash = true`r`nStratagems = true`r`n", [System.Text.UTF8Encoding]::new($false))
 Copy-Item -LiteralPath (Join-Path $modRoot '使用说明.md') -Destination $packageDir -Force
 Copy-Item -LiteralPath (Join-Path $modRoot '验证记录.md') -Destination $packageDir -Force
 Copy-Item -LiteralPath (Join-Path $modRoot 'dependencies\BepInEx-LICENSE.txt') -Destination $packageDir -Force
-$archivePath = "$packageDir.zip"
+$archivePath = Join-Path $modRoot "release/Better-Cluckmech-Oasis-$version-Full.zip"
 Compress-Archive -Path (Join-Path $packageDir '*') -DestinationPath $archivePath -Force
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [System.IO.Compression.ZipFile]::OpenRead($archivePath)
@@ -44,6 +47,8 @@ try {
     }
     $audioEntries = @($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -match '^BepInEx/plugins/CluckmechCoop/Music/.+\.ogg$' })
     if ($audioEntries.Count -ne 9) { throw 'Expected nine OGG music tracks' }
+    $soundEntries = @($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -match '^BepInEx/plugins/CluckmechCoop/StratagemSounds/.+\.ogg$' })
+    if ($soundEntries.Count -ne 10) { throw 'Expected ten stratagem sound effects' }
     if (-not ($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq 'BepInEx/plugins/CluckmechCoop/Music/mix.json' })) { throw 'Music calibration missing' }
     foreach ($path in @('winhttp.dll' , 'doorstop_config.ini', 'BepInEx/core/BepInEx.dll', 'BepInEx/core/0Harmony.dll', 'BepInEx/core/BepInEx.Preloader.dll')) {
         if (-not ($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq $path })) { throw "Loader file missing: $path" }

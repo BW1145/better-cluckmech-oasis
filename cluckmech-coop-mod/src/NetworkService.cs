@@ -22,6 +22,9 @@ namespace CluckmechCoop
         public bool Held;
         public uint Unit;
         public float X, Y;
+        public Machine[] Cards;
+        public StratagemPlacement Placement;
+        public StratagemEffectMessage Effect;
     }
     internal sealed class NetworkService
     {
@@ -85,7 +88,10 @@ namespace CluckmechCoop
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
         private static bool ValidProgress(PlayerProgress progress)
         {
-            if (progress == null || progress.Coupons < 0 || progress.Regions == null || progress.Shops == null) return false;
+            if (progress == null || progress.Coupons < 0 || progress.Regions == null || progress.Shops == null || progress.StratagemCooldowns == null) return false;
+            foreach (var cooldown in progress.StratagemCooldowns)
+                if (cooldown == null || string.IsNullOrWhiteSpace(cooldown.Node) || cooldown.Slot < 0 || cooldown.Slot >= 5 ||
+                    !Rules.ValidMachine(cooldown.Machine) || !StratagemCatalog.IsUnit(cooldown.Machine.Id) || !Finite(cooldown.Remaining) || cooldown.Remaining < 0) return false;
             foreach (var shop in progress.Shops.Values)
                 if (shop == null || shop.Sold == null || shop.Sold.Length != 4 || shop.Refreshes < 0 || shop.FourthPrice < 0 || shop.FourthId < -1) return false;
             return true;
@@ -95,6 +101,16 @@ namespace CluckmechCoop
             if (!Finite(message.Delay) || message.Delay < 0 || !Finite(message.X) || !Finite(message.Y)) return false;
             switch (message.Type)
             {
+                case "stratagem-carry":
+                    if (string.IsNullOrWhiteSpace(message.Token) || message.Cards == null || message.Cards.Length != 5) return false;
+                    foreach (var card in message.Cards) if (card != null && !Rules.ValidMachine(card)) return false;
+                    return true;
+                case "stratagem-place":
+                    var placement = message.Placement;
+                    return !string.IsNullOrWhiteSpace(message.Token) && placement != null && placement.Slot >= 0 && placement.Slot < 5 && placement.Sequence > 0 &&
+                        Rules.ValidMachine(placement.Machine) && StratagemCatalog.IsUnit(placement.Machine.Id) && Finite(placement.X) && Finite(placement.Y);
+                case "stratagem-placed": return !string.IsNullOrWhiteSpace(message.Token) && message.Stage >= 0 && message.Stage < 5 && message.Revision > 0 && message.Delay <= 600 && message.X >= 0 && message.X <= 100;
+                case "stratagem-effect": return !string.IsNullOrWhiteSpace(message.Token) && message.Effect != null && message.Effect.Valid;
                 case "settings":
                     if (message.Revision < 0 || message.Delay > 10 || (message.Choice != null && (string.IsNullOrWhiteSpace(message.Choice.Token) || message.Choice.RewardId < -1 || message.Choice.RewardId > 2))) return false;
                     if (message.Progress == null) return true;
@@ -118,6 +134,13 @@ namespace CluckmechCoop
             if (!guest && sender != Steam联机管理器.玩家_主机) return;
             if (!NetworkJson.TryRead<SessionMessage>(json, out var message) || !ValidMessage(message)) return;
             if (message.Version != Plugin.Version) { Status = "双方模组版本不一致"; PreparationPanel.ShowStatus(Status); return; }
+            if ((message.Type == "stratagem-carry" || message.Type == "stratagem-place") && Plugin.InCombat && message.Token == Plugin.Combat.Token && ModuleSettings.Extra.Stratagems)
+            {
+                int role = guest ? 2 : 1;
+                if (message.Type == "stratagem-carry") StratagemDeployment.Carry(role,message.Cards);
+                else StratagemDeployment.Place(role,message.Placement);
+                return;
+            }
             if (message.Type == "progress" && message.PlayerProgress != null)
             {
                 ModuleSettings.Progress.Players[guest ? 2 : 1] = message.PlayerProgress;
@@ -155,12 +178,16 @@ namespace CluckmechCoop
                 ModuleSettings.Choice = message.Choice;
                 ModuleSettings.Extra = message.Modules ?? new GameplayModules();
                 ModuleSettings.Progress = message.Progress ?? new RunProgress();
-                if (Plugin.Combat != null) { Plugin.Combat.Token = message.Token; Plugin.Combat.Synchronize(message.Held, message.Delay); }
+                if (Plugin.Combat != null) { Plugin.Combat.Token = message.Token; Plugin.Combat.Synchronize(message.Held, message.Delay); StratagemDeployment.Begin(); }
                 revision = acknowledged = message.Revision; peer = true; Status = "";
                 Send(new SessionMessage { Type = "ack", Revision = revision });
                 PreparationPanel.RefreshAll();
                 Plugin.Panel.RefreshState();
             }
+            else if (message.Token == Plugin.Combat?.Token && ModuleSettings.Extra.Stratagems && message.Type == "stratagem-placed")
+                StratagemDeployment.Applied(message.Role,message.Revision,message.Stage,message.Delay,message.X,message.Held);
+            else if (message.Token == Plugin.Combat?.Token && ModuleSettings.Extra.Stratagems && message.Type == "stratagem-effect")
+                StratagemEffects.Play(message.Effect);
             else if (FeatureNetwork.Receive(message)) return;
             else if (message.Type == "complete" && ModuleSettings.Active && ModuleSettings.Choice?.Token != null && ModuleSettings.Choice.Token == message.Token)
                 Difficulty.ClientFinished();

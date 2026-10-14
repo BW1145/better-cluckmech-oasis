@@ -1,0 +1,72 @@
+[
+  {
+    "file": "deploy.ogg",
+    "duration": 0.35,
+    "sampleRate": 22050,
+    "loop": false,
+    "peakDb": -3.1
+  },
+  {
+    "file": "mine.ogg",
+    "duration": 0.55,
+    "sampleRate": 22050,
+    "loop": false,
+    "peakDb": -3.1
+  },
+  {
+    "file": "barrage.ogg",
+    "duration": 1.0,
+    "sampleRate": 22050,
+    "loop": false,
+    "peakDb": -3.1
+  },
+  {
+    "file": "eagle.ogg",
+    "duration": 1.7,
+    "sampleRate": 22050,
+    "loop": false,
+    "peakDb": -3.1
+  },
+  {
+    "file": "laser-start.ogg",
+    "duration": 0.6,
+    "sampleRate": 22050,
+    "loop": false,
+    "peakDb": -3.1
+  },
+  {
+    "file": "laser-loop.ogg",
+    "duration": 1.0,
+    "sampleRate": 22050,
+    "loop": true,
+    "peakDb": -16.07
+  },
+  {
+    "file": "ems.ogg",
+    "duration": 0.45,
+    "sampleRate": 22050,
+    "loop": false,
+    "peakDb": -3.1
+  },
+  {
+    "file": "shield-hit.ogg",
+    "duration": 0.24,
+    "sampleRate": 22050,
+    "loop": false,
+    "peakDb": -3.1
+  },
+  {
+    "file": "shield-break.ogg",
+    "duration": 0.75,
+    "sampleRate": 22050,
+    "loop": false,
+    "peakDb": -3.1
+  },
+  {
+    "file": "rover.ogg",
+    "duration": 0.11,
+    "sampleRate": 22050,
+    "loop": false,
+    "peakDb": -3.1
+  }
+]

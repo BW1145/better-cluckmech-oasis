@@ -84,7 +84,31 @@ try {
         @('商店脚本', '购买', 0),
         @('选择词条流程脚本', '刷新词条', 0),
         @('选择词条流程脚本', '初始化', 0),
-        @('场景函数', '切换场景', 1)
+        @('场景函数', '切换场景', 1),
+        @('dw单位库', 'OnEnable', 0),
+        @('dw单位库', '是否抽取', 1),
+        @('cz词缀库', 'Start', 0),
+        @('cz词缀库', '获取词缀描述', 1),
+        @('cz升级词缀库', 'Start', 0),
+        @('cz升级词缀库', '获取单位词缀列表', 2),
+        @('词条数据模板', '获取词缀名称', 0),
+        @('词条数据模板', '获取词缀描述', 0),
+        @('模块_基本属性', 'Awake', 0),
+        @('模块_基本属性', 'OnDisable', 0),
+        @('模块_基本属性', '名称', 0),
+        @('模块_基本属性', '概述', 0),
+        @('模块_基本属性', '说明', 0),
+        @('模块_移动', 'Start', 0),
+        @('模块_移动', '初始化', 0),
+        @('模块_死亡', '死亡', 0),
+        @('模块_伤害精灵', 'Start', 0),
+        @('模块_伤害精灵', 'OnTriggerEnter2D', 1),
+        @('模块_伤害精灵', '死亡', 0),
+        @('建造系统', '背包cd初始化', 0),
+        @('建造系统', '结束拖动延迟', 0),
+        @('建造系统', '炮台运算', 1),
+        @('建造系统', '开始拖动', 0),
+        @('联机玩家控件', 'UserCode_放置单位_cmd__放置单位数据', 1)
     )
     foreach ($target in $targets) {
         $type = $assembly.MainModule.Types | Where-Object Name -EQ $target[0]
@@ -120,6 +144,17 @@ try {
             if (-not ($controller.Methods | Where-Object { $_.Name -eq $entry[0] -and $_.Parameters.Count -eq $entry[1] -and $_.HasBody })) { throw "Music startup binding missing: $($entry[0])" }
         }
         if (-not ($controller.Fields | Where-Object Name -EQ 'isShuffle')) { throw 'Music shuffle field missing' }
+        $audio = $musicAssembly.MainModule.Types | Where-Object FullName -EQ 'DarkTonic.MasterAudio.MasterAudio'
+        foreach ($entry in @(@('CreateSoundGroup',3), @('StopAllOfSound',1))) {
+            if (-not ($audio.Methods | Where-Object { $_.Name -eq $entry[0] -and $_.Parameters.Count -eq $entry[1] })) { throw "Stratagem audio binding missing: $($entry[0])" }
+        }
     } finally { $musicAssembly.Dispose() }
+    $mirror = [Mono.Cecil.AssemblyDefinition]::ReadAssembly((Join-Path $GameDir 'Cluckmech Oasis_Data/Managed/Mirror.dll'))
+    try {
+        $identity = $mirror.MainModule.Types | Where-Object FullName -EQ 'Mirror.NetworkIdentity'
+        if (-not ($identity.Fields | Where-Object { $_.Name -eq '_assetId' -and $_.FieldType.FullName -eq 'System.UInt32' })) { throw 'Network prefab asset identifier binding changed' }
+        $client = $mirror.MainModule.Types | Where-Object FullName -EQ 'Mirror.NetworkClient'
+        if (-not ($client.Methods | Where-Object Name -EQ 'PrepareToSpawnSceneObjects')) { throw 'Network scene prefab registration entry missing' }
+    } finally { $mirror.Dispose() }
     "PASS: $($targets.Count) game method bindings; SHA256 $((Get-FileHash -LiteralPath $assemblyPath -Algorithm SHA256).Hash)"
 } finally { $assembly.Dispose() }

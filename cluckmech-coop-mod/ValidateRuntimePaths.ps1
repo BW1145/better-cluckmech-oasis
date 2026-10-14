@@ -11,6 +11,13 @@ try {
     if ((Get-Type 'CoopPanel').Methods.Name -contains 'Update' -or (Get-Type 'Plugin').Methods.Name -contains 'Update') {
         throw 'Mod panel or plugin still performs per-frame work'
     }
+    foreach ($atlas in @('md6', 'barrage380', 'orbitalLaser', 'eagle500', 'emsMortar', 'shieldRelay', 'laserRover')) {
+        if (-not ($assembly.MainModule.Resources | Where-Object Name -EQ "CluckmechCoop.StratagemAssets.$atlas.png")) { throw "Stratagem resource missing: $atlas" }
+    }
+    foreach ($entry in @(@('StratagemUnit','Update'),@('StratagemRover','Update'),@('StratagemWorld','Living'),@('StratagemWorld','Target'))) {
+        if ((Get-Method $entry[0] $entry[1]).Body.Instructions | Where-Object { $_.Operand -and $_.Operand.Name -match '^FindObject|^FindGameObject' }) { throw "Stratagem hot path searches the scene: $($entry[0]).$($entry[1])" }
+    }
+    if (-not ((Get-Method 'StratagemEffects' 'Emit').Body.Instructions | Where-Object { $_.Operand -and $_.Operand.Name -eq 'PlayReady' })) { throw 'Single-player stratagem effects depend on a network identifier' }
     foreach ($name in @('get_Summary', 'get_Challenge', 'get_CanTrade')) {
         $queries = @((Get-Method 'Plugin' $name).Body.Instructions | Where-Object {
             $_.OpCode.Name -in @('call', 'callvirt') -and $_.Operand.Name -match '^Find'

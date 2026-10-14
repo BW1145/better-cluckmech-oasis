@@ -2,5 +2,7 @@
 <PropertyGroup><OutputType>Exe</OutputType><RequireGameDir>true</RequireGameDir><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems><NuGetAudit>false</NuGetAudit></PropertyGroup>
 <ItemGroup><Compile Include="../../src/Rules.cs"/><Compile Include="../../src/NetworkJson.cs"/><Compile Include="../../src/ModuleSettings.cs"/><Compile Include="../../src/NetworkService.cs"/><Compile Include="../../src/TransferService.cs"/><Compile Include="../../src/ExpansionRules.cs"/><Compile Include="../../src/CombatFeatures.cs"/><Compile Include="ExpansionHarness.cs"/><Compile Include="Program.cs"/><Compile Include="ProtocolHarness.cs"/>
 <Compile Include="ModuleSaveHarness.cs"/>
+<Compile Include="../../src/StratagemRules.cs"/>
+<Compile Include="StratagemHarness.cs"/>
 <Reference Include="Newtonsoft.Json"><HintPath>$(GameDir)/Cluckmech Oasis_Data/Managed/Newtonsoft.Json.dll</HintPath></Reference></ItemGroup>
 </Project>

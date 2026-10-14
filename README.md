@@ -13,6 +13,7 @@
 | 强化远征 | 清完原版敌人后完整追加强化敌人，最终完成领取额外奖励。 |
 | 队友转交 | 向队友转交金币和指定鸡械，保留强化内容及上限。 |
 | 跳过开屏 | 启动时跳过商标展示，主菜单可开关，下次启动生效。 |
+| 地狱潜兵战备鸡械 | 七台新鸡械与42个专属强化，接入原版商店、奖励、工匠及携带卡槽。 |
 
 ## 目录
 
@@ -34,11 +35,17 @@ dotnet run --project tests/Integration/IntegrationTests.csproj -c Release
 dotnet run --project tests/RunSave/RunSaveTests.csproj -c Release
 dotnet run --project tests/Characters/CharacterTests.csproj -c Release
 dotnet run --project tests/TransferUi/TransferUiTests.csproj -c Release
+dotnet run --project tests/Stratagems/StratagemTests.csproj -c Release
+./tests/StratagemEffects/Prepare.ps1
+dotnet run --project tests/StratagemEffects/StratagemEffectsTests.csproj -c Release
 ./ValidateBindings.ps1
 ./ValidateRuntimePaths.ps1
+python ./ValidateStratagemAssets.py
 ./Package.ps1
 ```
 
 退出游戏后执行`./Install.ps1 -GameDir 游戏目录`安装完整包，并保留现有模块设置。其他行为检查和资源检查见[开发记录](cluckmech-coop-mod/继续开发.md)及[验证记录](cluckmech-coop-mod/验证记录.md)。
 
 主插件构建使用运行目录的九份OGG；音乐制作脚本另需Python、FFmpeg、FluidSynth及SoundFont。FFmpeg和FluidSynth从系统PATH读取，也可分别用 `FFMPEG`、`FLUIDSYNTH` 环境变量指定；`SOUNDFONT` 指定音色库，默认使用音乐目录内的 `tools/GeneralUser-GS.sf2`。主菜单音乐通过 `python cluckmech-coop-mod/PrepareMenuMusic.py "源音频文件"` 制作。参考清单的路径相对于 `cluckmech-music` 目录。音乐响度在离线阶段校准，游戏运行时直接播放。
+
+战备PNG图集嵌入插件，十份OGG音效位于插件旁的`StratagemSounds`。素材检查使用Pillow，音效制作脚本`art/MakeStratagemSounds.py`使用NumPy和SoundFile。制作参考与资源说明见[战备美术](cluckmech-coop-mod/art/README.md)。

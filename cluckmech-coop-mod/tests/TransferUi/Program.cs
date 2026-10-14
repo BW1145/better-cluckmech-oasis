@@ -241,7 +241,7 @@ static class Program
         var settings = new GameObject("Settings");settings.transform.sizeDelta = new Vector2(1484,924);
         var modules=settings.AddComponent<ModulePanel>(); typeof(ModulePanel).GetMethod("OnEnable",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(modules,null);
         var switches=(IList)Field(modules,"toggles"); var highlights=(IList)Field(modules,"selections");
-        Check(switches.Count==9,"control panel builds nine separate module switches");
+        Check(switches.Count==10,"control panel builds ten separate module switches");
         ((Toggle)switches[8]).onValueChanged.Invoke(false);
         Check(!ModuleSettings.Preference(ModuleId.SkipSplash) && ModuleSettings.Preference(ModuleId.Speed) && ((Text)Field(modules,"details")).text.Contains("下次启动"),"startup module has its own preference and restart timing description");
         typeof(ModulePanel).GetMethod("Select",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(modules,new object[]{0});

@@ -43,7 +43,7 @@ namespace CluckmechCoop
             Expedition = ExpeditionPreference;
             Transfer = TransferPreference;
             Music = Preference(ModuleId.Music);
-            Extra = new GameplayModules { Speed = Preference(ModuleId.Speed), Characters = Preference(ModuleId.Characters), Energy = Preference(ModuleId.Energy), Growth = Preference(ModuleId.Growth), Shop = Preference(ModuleId.Shop) };
+            Extra = new GameplayModules { Speed = Preference(ModuleId.Speed), Characters = Preference(ModuleId.Characters), Energy = Preference(ModuleId.Energy), Growth = Preference(ModuleId.Growth), Shop = Preference(ModuleId.Shop), Stratagems = Preference(ModuleId.Stratagems) };
             if (Plugin.Role == 2) { Expedition = Transfer = false; Extra = new GameplayModules(); }
             else Plugin.Network.PublishSettings();
         }
@@ -118,6 +118,7 @@ namespace CluckmechCoop
             if (Plugin.Role == 2 || !InRun || !RunSaveRepair.IsRunSlot(save)) return;
             string path = save.文件名 + "_m" + save.后缀;
             if (protectedSaves.Contains(path)) return;
+            StratagemDeployment.Capture();
             ES3.Save(ProgressKey, JsonConvert.SerializeObject(Progress), path, SaveSettings());
             ES3.Save(SaveKey, JsonConvert.SerializeObject(Choice), path, SaveSettings());
         }
@@ -164,7 +165,11 @@ namespace CluckmechCoop
             foreach (var entry in progress.Players)
             {
                 var player = entry.Value;
-                if (entry.Key < 0 || entry.Key > 2 || player == null || player.Coupons < 0 || player.Regions == null || player.Shops == null) return false;
+                if (entry.Key < 0 || entry.Key > 2 || player == null || player.Coupons < 0 || player.Regions == null || player.Shops == null || player.StratagemCooldowns == null) return false;
+                foreach (var cooldown in player.StratagemCooldowns)
+                    if (cooldown == null || string.IsNullOrWhiteSpace(cooldown.Node) || cooldown.Slot < 0 || cooldown.Slot >= 5 ||
+                        !Rules.ValidMachine(cooldown.Machine) || !StratagemCatalog.IsUnit(cooldown.Machine.Id) || cooldown.Remaining < 0 ||
+                        float.IsNaN(cooldown.Remaining) || float.IsInfinity(cooldown.Remaining)) return false;
                 var fields = players[entry.Key.ToString(System.Globalization.CultureInfo.InvariantCulture)] as JObject;
                 if (!(fields?["Regions"] is JArray regions) || !(fields["Shops"] is JObject shops)) return false;
                 if (!HasFields(fields, JTokenType.Integer, "Coupons") ||
