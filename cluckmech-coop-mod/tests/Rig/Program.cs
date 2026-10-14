@@ -1,0 +1,138 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text.Json;
+using UnityEngine;
+using CluckmechCoop;
+
+namespace UnityEngine
+{
+    public class MonoBehaviour
+    {
+        public GameObject gameObject;public Transform transform=>gameObject.transform;
+    }
+    public sealed class GameObject
+    {
+        public Transform transform;public readonly List<SpriteRenderer> Renderers=new();
+        public GameObject(){transform=new Transform(this);}
+    }
+    public sealed class Transform
+    {
+        public GameObject owner;public Transform parent;public Vector3 position,localPosition,localScale=Vector3.one;public Quaternion localRotation;
+        public Transform(GameObject owner){this.owner=owner;}
+        public Vector3 TransformPoint(Vector3 p)=>localPosition+new Vector3(p.x*localScale.x,p.y*localScale.y,0);
+    }
+    public sealed class SpriteRenderer
+    {
+        public Sprite sprite;public bool enabled=true;public int sortingLayerID,sortingOrder;public Color color=Color.white;public Transform transform;
+    }
+    public sealed class Sprite {public string Name;public Bounds bounds;}
+    public struct Bounds {public Vector3 size;}
+    public struct Quaternion {public float z;public static Quaternion Euler(float x,float y,float z)=>new(){z=z};}
+    public struct Color
+    {
+        public float r,g,b,a;public Color(float r,float g,float b,float a=1){this.r=r;this.g=g;this.b=b;this.a=a;}public static Color white=>new(1,1,1);
+    }
+    public struct Vector2
+    {
+        public float x,y;public Vector2(float x,float y){this.x=x;this.y=y;}public float sqrMagnitude=>x*x+y*y;
+        public Vector2 normalized=>sqrMagnitude>0?this/(float)Math.Sqrt(sqrMagnitude):zero;
+        public static Vector2 zero=>new(0,0);public static Vector2 up=>new(0,1);public static Vector2 left=>new(-1,0);
+        public static Vector2 operator +(Vector2 a,Vector2 b)=>new(a.x+b.x,a.y+b.y);
+        public static Vector2 operator -(Vector2 a,Vector2 b)=>new(a.x-b.x,a.y-b.y);
+        public static Vector2 operator *(Vector2 a,float b)=>new(a.x*b,a.y*b);public static Vector2 operator /(Vector2 a,float b)=>new(a.x/b,a.y/b);
+        public static Vector2 Lerp(Vector2 a,Vector2 b,float t)=>a+(b-a)*t;
+        public static implicit operator Vector3(Vector2 v)=>new(v.x,v.y,0);
+    }
+    public struct Vector3
+    {
+        public float x,y,z;public Vector3(float x,float y,float z){this.x=x;this.y=y;this.z=z;}public static Vector3 one=>new(1,1,1);
+        public Vector3 normalized=>this*(1/(float)Math.Sqrt(x*x+y*y+z*z));
+        public static Vector3 operator *(Vector3 a,float b)=>new(a.x*b,a.y*b,a.z*b);
+        public static Vector3 operator +(Vector3 a,Vector3 b)=>new(a.x+b.x,a.y+b.y,a.z+b.z);
+        public static implicit operator Vector2(Vector3 v)=>new(v.x,v.y);
+    }
+    public static class Time {public static float time;}
+    public static class Mathf
+    {
+        public const float PI=(float)Math.PI,Rad2Deg=180/PI;
+        public static float Atan2(float y,float x)=>(float)Math.Atan2(y,x);public static int RoundToInt(float x)=>(int)Math.Round(x);
+        public static float Clamp01(float x)=>Math.Clamp(x,0,1);public static float Sin(float x)=>(float)Math.Sin(x);
+        public static float Lerp(float a,float b,float t)=>a+(b-a)*t;public static float SmoothStep(float a,float b,float t)=>Lerp(a,b,t*t*(3-2*t));
+    }
+}
+public sealed class 模块_基本属性 {public int ID;}
+namespace CluckmechCoop
+{
+    internal enum StratagemKind {Mines,Barrage,Laser,Eagle,Mortar,Shield,Rover}
+    public sealed class StratagemUnit:MonoBehaviour
+    {
+        internal 模块_基本属性 Stats=new();internal StratagemKind Kind;
+        public T[] GetComponentsInChildren<T>(bool inactive)=>gameObject.Renderers.OfType<T>().ToArray();
+    }
+    internal static class StratagemAssets
+    {
+        internal static Dictionary<string,Dictionary<string,float>> Boxes;
+        internal static Sprite Named(string name){var b=Boxes[name];return new Sprite{Name=name,bounds=new Bounds{size=new Vector3(b["W"]/32,b["H"]/32,0)}};}
+        internal static Vector3 Muzzle(string name){var b=Boxes[name];return new Vector3(b["MX"],b["MY"],0);}
+        internal static SpriteRenderer Part(Transform parent,string name,float width,Vector3 position)
+        {
+            var obj=new GameObject();obj.transform.parent=parent;obj.transform.localPosition=position;
+            var sprite=Named(name);obj.transform.localScale=Vector3.one*(width/sprite.bounds.size.x);
+            var renderer=new SpriteRenderer{sprite=sprite,transform=obj.transform};parent.owner.Renderers.Add(renderer);return renderer;
+        }
+        internal static void Effect(string name,Vector2 point,float width,float duration,bool ground=false,float rise=0,float grow=0){Named(name);}
+    }
+}
+static class Program
+{
+    private static readonly MethodInfo update=typeof(StratagemRig).GetMethod("Update",BindingFlags.NonPublic|BindingFlags.Instance);
+    private static int checks;
+    private static void Check(bool yes,string message){if(!yes)throw new Exception(message);checks++;}
+    static void Main(string[] args)
+    {
+        string root=Path.GetFullPath(args[0]);
+        StratagemAssets.Boxes=JsonSerializer.Deserialize<Dictionary<string,Dictionary<string,float>>>(File.ReadAllText(Path.Combine(root,"src/StratagemAssets/stratagem-v2.json")));
+        var frames=new List<object>();
+        foreach(int id in new[]{20001,20002,20003,20004,20005,20006,20007,20101,20102})
+        {
+            Time.time=0;var go=new GameObject();var unit=new StratagemUnit{gameObject=go,Stats=new(){ID=id},Kind=(StratagemKind)(id==20101?0:id==20102?6:id-20001)};
+            var rig=new StratagemRig{gameObject=go};rig.Build(unit);
+            var basePart=rig.Body;var anchor=basePart.transform.localPosition;var scale=basePart.transform.localScale;
+            void Snapshot(string stage)
+            {
+                update.Invoke(rig,null);
+                frames.Add(new{id,stage,time=Time.time,parts=go.Renderers.Where(x=>x.enabled).Select(x=>new{name=x.sprite.Name,x=x.transform.localPosition.x,y=x.transform.localPosition.y,z=x.transform.localPosition.z,sx=x.transform.localScale.x,sy=x.transform.localScale.y,angle=x.transform.localRotation.z,alpha=x.color.a}).ToArray()});
+            }
+            if(id==20101)rig.LaunchMine(new Vector2(1,.8f),.3f);
+            foreach(float t in new[]{0f,.2f,.4f,.8f,1f}){Time.time=t;Snapshot("deploy");}
+            for(int n=0;n<8;n++)
+            {
+                float a=(180-n*45)*Mathf.PI/180;rig.Aim(new Vector2((float)Math.Cos(a),(float)Math.Sin(a)));Time.time=2+n;
+                Snapshot("aim-"+n);rig.Shoot();Time.time+=.06f;Snapshot("fire-"+n);Time.time+=.24f;Snapshot("rest-"+n);
+                if(id<20100)Check(basePart.transform.localPosition.x==anchor.x&&basePart.transform.localPosition.y==anchor.y&&basePart.transform.localScale.x==scale.x,"Fixed base remains unchanged while aiming and shooting");
+                if(id==20005)Check(float.IsFinite(rig.Muzzle.x)&&float.IsFinite(rig.Muzzle.y),"Every barrel has finite muzzle coordinates");
+            }
+            if(id==20102)
+            {
+                Time.time=12;rig.Dock(1,.5f);
+                foreach(float t in new[]{12f,12.25f,12.5f}){Time.time=t;Snapshot("return");}
+                rig.Dock(2,0);Snapshot("dock");Check(go.Renderers.Count(x=>x.enabled&&x.sprite.Name.StartsWith("rover-drone"))==1,"Docked state contains exactly one drone");
+                rig.Dock(3,.5f);foreach(float t in new[]{12.5f,12.75f,13f}){Time.time=t;Snapshot("launch");}
+            }
+            Time.time=14;rig.Die();Snapshot("destroyed");Check(!go.Renderers.Any(x=>x.enabled),"Destroyed rig does not re-enable its body or flashes");
+        }
+        Directory.CreateDirectory(Path.Combine(root,"evidence/0.5.1"));
+        var first=new StratagemRig{gameObject=new GameObject()};var second=new StratagemRig{gameObject=new GameObject()};
+        first.Build(new StratagemUnit{gameObject=first.gameObject,Stats=new(){ID=20102},Kind=StratagemKind.Rover});
+        second.Build(new StratagemUnit{gameObject=second.gameObject,Stats=new(){ID=20102},Kind=StratagemKind.Rover});
+        second.Dock(0,0);
+        first.Dock(2,0);update.Invoke(first,null);update.Invoke(second,null);
+        Check(first.Body.transform.localScale.x<second.Body.transform.localScale.x,"Docking one base's drone does not change another drone's state");
+        Check(first.gameObject.Renderers.Count(x=>x.enabled&&x.sprite.Name.StartsWith("rover-drone"))==1&&second.gameObject.Renderers.Count(x=>x.enabled&&x.sprite.Name.StartsWith("rover-drone"))==1,"Two bases maintain two independent drone renderers");
+        File.WriteAllText(Path.Combine(root,"evidence/0.5.1/rig-poses.json"),JsonSerializer.Serialize(frames));
+        Console.WriteLine($"PASS: {checks} production rig checks; {frames.Count} animation poses exported");
+    }
+}

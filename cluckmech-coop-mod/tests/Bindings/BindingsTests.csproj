@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net472</TargetFramework><LangVersion>latest</LangVersion><NuGetAudit>false</NuGetAudit></PropertyGroup>
+  <ItemGroup><Reference Include="0Harmony"><HintPath>../../dependencies/BepInEx/BepInEx/core/0Harmony.dll</HintPath></Reference></ItemGroup>
+</Project>

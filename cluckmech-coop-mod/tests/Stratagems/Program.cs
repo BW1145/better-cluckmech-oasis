@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CluckmechCoop;
 
 internal static class Program
@@ -10,6 +11,7 @@ internal static class Program
     private static void Near(float actual, float expected, string message)
     { Check(Math.Abs(actual - expected) < .001f, message + $": {actual} != {expected}"); }
     private static StratagemParameters Params(int id, params int[] upgrades) => new StratagemParameters(id, upgrades);
+    private sealed class Target{internal float Distance;internal bool Living=true;}
     private static void Main()
     {
         var ids = new HashSet<int>();
@@ -20,30 +22,36 @@ internal static class Program
         Check(StratagemCatalog.OwnsDeck(new[] {two,one,null,null,null},new[] {one,two}), "Reordered same-name cards keep exact upgrades and cap");
         Check(!StratagemCatalog.OwnsDeck(new[] {one,one,null,null,null},new[] {one,two}), "Deck cannot duplicate one inventory copy");
         Check(!StratagemCatalog.OwnsDeck(new[] {one.Copy()},new[] {two}), "Same identifier with different upgrades is rejected");
-        foreach (var rows in StratagemCatalog.AtlasRows)
-        {
-            Check(rows.Length == 7 && rows[0] == 0 && rows[6] == 1086, "Atlas rows cover the complete source height");
-            for (int row = 0; row < 6; row++) Check(rows[row+1] > rows[row], "Atlas frames have positive area");
-        }
-        Check(StratagemCatalog.Units.Length == 7 && StratagemCatalog.Affixes.Length == 42, "Seven machines and 42 upgrades");
+        Check(StratagemCatalog.Units.Length==7&&StratagemCatalog.ActiveAffixes.Count()==33&&StratagemCatalog.Affixes.Length==42,"Seven machines, 33 candidates and 42 readable legacy identifiers");
+        int[] counts={4,5,5,5,4,5,5};
         foreach (var unit in StratagemCatalog.Units)
         {
             Check(ids.Add(unit.Id), "Unique unit identifiers");
             var p = Params(unit.Id);
             Check(p.Power == unit.Power && p.Cooldown == unit.Cooldown, "Unmodified deployment uses catalog parameters");
-            for (int n = 1; n <= 6; n++)
+            Check(StratagemCatalog.UpgradePool(unit.Id).Count()==counts[unit.Id-20001],"Active upgrade counts follow each machine's design");
+            foreach(int id in StratagemCatalog.UpgradePool(unit.Id))
             {
-                int id = 25010 + (unit.Id - 20001) * 10 + n;
-                var upgrade = StratagemCatalog.Affix(id);
-                Check(upgrade != null && ids.Add(id), "Each machine has six unique upgrade identifiers");
+                var upgrade=StratagemCatalog.Affix(id);
+                Check(ids.Add(id),"Unique explicit upgrade identifiers");
                 Check(!StratagemCatalog.CanChoose(id, new[] { id }), "Owned unique upgrade excluded");
                 if (upgrade.Excludes != 0)
                 {
                     Check(StratagemCatalog.Affix(upgrade.Excludes).Excludes == id, "Exclusion is symmetric");
                     Check(!StratagemCatalog.CanChoose(id, new[] { upgrade.Excludes }), "Incompatible upgrade excluded");
+                    Check(upgrade.Description.Contains("与「"+StratagemCatalog.Affix(upgrade.Excludes).Name+"」互斥。"),"Description names incompatible upgrade");
                 }
             }
         }
+        foreach(int retired in new[]{25012,25013,25025,25034,25042,25054,25056,25066,25073})
+            Check(StratagemCatalog.Affix(retired)!=null&&!StratagemCatalog.ActiveAffixes.Any(x=>x.Id==retired),"Retired identifier parses but is not newly selected");
+        var currentMines=Params(20001,25011);
+        Near(currentMines.ArmTime,.4f,"Expanded chain accelerates arming");Near(currentMines.TriggerTime,.08f,"Expanded chain accelerates triggering");
+        Near(Params(20003,25032).TrackSpeed,6,"Focus includes tracking upgrade");
+        Near(Params(20005,25053).Stun,1,"EMS control combines stun and slow");
+        Check(Params(20005,25055,25054,25053).Gas&&Params(20005,25055,25054,25053).Stun==0,"Legacy gas/control effects are order independent");
+        Near(Params(20006,25062).CapacityRatio,.55f,"Capacitor scales from native maximum health");
+        Near(Params(20007,25072).ReturnTime,.25f,"Cooling includes return and launch");
         var mines = Params(20001, 25011, 25012, 25014, 25016);
         Check(mines.MineCap == 8 && mines.MineInitial == 6 && mines.MineRefill == 4 && mines.Power == 5, "Mine ammunition upgrades combine");
         Near(mines.MineInterval(.12f), 8 / 1.2f, "Attack speed accelerates refill");
@@ -93,6 +101,16 @@ internal static class Program
         Near(ShieldGeometry.Residual(80,1,ref capacity),30,"Partially blocked projectile passes residual"); Near(capacity,0,"Shield depleted");
         capacity = 100;
         Near(ShieldGeometry.Residual(200,.75f,ref capacity), 200 - 100 / .75f, "Fortress absorbs raw damage at reduced capacity cost");
+        var close=new Target{Distance=1};var cursor=new Target{Distance=3};var outside=new Target{Distance=8};var selection=new List<Target>();
+        var targets=new List<Target>{outside,cursor,close};
+        Predicate<Target> valid=t=>t.Living&&t.Distance<=3.5f;
+        Func<Target,float> distance=t=>t.Distance;
+        SwallowSelection.Choose(targets,cursor,1,valid,distance,selection);Check(selection.SequenceEqual(new[]{cursor}),"Mouse target wins over nearest unit");
+        SwallowSelection.Choose(targets,outside,1,valid,distance,selection);Check(selection.Count==0,"Pointed edible unit outside range fails without consuming nearest unit");
+        SwallowSelection.Choose(targets,null,1,valid,distance,selection);Check(selection.SequenceEqual(new[]{close}),"Empty ground selects nearest legal unit");
+        SwallowSelection.Choose(targets,cursor,2,valid,distance,selection);Check(selection.SequenceEqual(new[]{cursor,close}),"Multiple swallow selects cursor first then nearest distinct units");
+        cursor.Living=false;SwallowSelection.Choose(targets,cursor,2,valid,distance,selection);Check(selection.Count==0,"Invalidated pointed target cannot be replaced by a different unit");
+        SwallowSelection.Choose(targets,null,3,valid,distance,selection);Check(selection.SequenceEqual(new[]{close}),"Dead and distant units are excluded from fallback list");
         Console.WriteLine($"Stratagem rules: {assertions} assertions passed.");
     }
 }

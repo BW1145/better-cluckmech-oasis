@@ -304,10 +304,10 @@ static class Program
         typeof(ShopPurchase).GetMethod("Postfix",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,purchase);
         Check(feature.State.Sold[0],"free native purchase persists sold marker after granting machine");
         stock.更新背包(4);feature.StockReady(true);Check(!stock.单元列表[3].Active&&shop.当前商品[3].x==103,"restored shop retains fourth offer and hides purchased card");
-        Plugin.Summary.当前金钱数=100;feature.BuildCoupon();NativeUi.Actions.FindLast(b=>b.Title=="工匠刷新券  30金币").onClick.Invoke();Check(Plugin.Summary.当前金钱数==70&&ModuleSettings.LocalProgress.Coupons==3&&feature.State.TicketBought,"coupon purchase deducts thirty and credits three rerolls");
-        NativeUi.Actions.FindLast(b=>b.Title=="工匠刷新券  30金币").onClick.Invoke();Check(Plugin.Summary.当前金钱数==70&&ModuleSettings.LocalProgress.Coupons==3,"same shop cannot sell coupon pack twice");
-        Plugin.Summary.地图存档.是否位于工匠=true;var artisan=new 选择词条流程脚本();artisan.选择词条.词条剩余刷新次数=0;Check((bool)typeof(ArtisanCouponRefresh).GetMethod("Prefix",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,new object[]{artisan})&&ModuleSettings.LocalProgress.Coupons==2&&artisan.选择词条.词条剩余刷新次数==1,"artisan credits native refresh only after consuming one coupon");
-        artisan.选择词条.词条剩余刷新次数=0;ArtisanCouponUi.Refresh(artisan);Check(artisan.刷新按钮.interactable&&artisan.剩余刷新次数文本.text=="2","artisan button displays available retained coupon balance");
+        Plugin.Summary.当前金钱数=100;feature.BuildCoupon();NativeUi.Actions.FindLast(b=>b.Title=="工匠刷新券  30金币").onClick.Invoke();Check(Plugin.Summary.当前金钱数==70&&ModuleSettings.LocalProgress.Coupons==1&&feature.State.TicketBought,"coupon purchase deducts thirty and credits one reroll");
+        NativeUi.Actions.FindLast(b=>b.Title=="工匠刷新券  30金币").onClick.Invoke();Check(Plugin.Summary.当前金钱数==70&&ModuleSettings.LocalProgress.Coupons==1,"same shop cannot sell coupon pack twice");
+        Plugin.Summary.地图存档.是否位于工匠=true;var artisan=new 选择词条流程脚本();artisan.选择词条.词条剩余刷新次数=0;Check((bool)typeof(ArtisanCouponRefresh).GetMethod("Prefix",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,new object[]{artisan})&&ModuleSettings.LocalProgress.Coupons==0&&artisan.选择词条.词条剩余刷新次数==1,"artisan credits native refresh only after consuming one coupon");
+        artisan.选择词条.词条剩余刷新次数=0;ArtisanCouponUi.Refresh(artisan);Check(!artisan.刷新按钮.interactable&&artisan.剩余刷新次数文本.text=="0","artisan button displays available retained coupon balance");
         Console.WriteLine($"PASS: {checks} production transfer UI behavior checks with code-level Unity objects");
     }
 }

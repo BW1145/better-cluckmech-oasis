@@ -31,6 +31,10 @@ if ($preservedConfig) {
     [System.IO.File]::WriteAllText($configPath, $preservedConfig, [System.Text.UTF8Encoding]::new($false))
 }
 if ($preservedModules) { [System.IO.File]::WriteAllText($moduleConfigPath, $preservedModules, [System.Text.UTF8Encoding]::new($false)) }
+foreach ($name in @('deploy.ogg','mine.ogg','ems.ogg','shield-hit.ogg','shield-break.ogg','rover.ogg')) {
+    $obsolete = Join-Path $gameRoot ("BepInEx/plugins/CluckmechCoop/StratagemSounds/" + $name)
+    if (Test-Path -LiteralPath $obsolete) { Remove-Item -LiteralPath $obsolete -Force }
+}
 foreach ($name in @('CluckmechCoop.dll', 'CluckmechCoopDiagnostics.dll')) {
     $relative = 'BepInEx/plugins/CluckmechCoop/' + $name
     if ((Get-FileHash -LiteralPath (Join-Path $gameRoot $relative)).Hash -ne (Get-FileHash -LiteralPath (Join-Path $packageRoot $relative)).Hash) { throw "Installed hash mismatch: $name" }

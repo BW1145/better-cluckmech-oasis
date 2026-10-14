@@ -67,22 +67,23 @@ namespace CluckmechCoop
     internal sealed class StratagemAffix
     {
         internal readonly int Id, Quality, Excludes;
-        internal readonly string Name, Description;
+        internal readonly string Name, Effect;
+        internal string Description
+        {
+            get
+            {
+                string text = Effect;
+                foreach (int other in StratagemCatalog.Exclusions(Id))
+                    if(StratagemCatalog.Active(other))text += "\n与「" + StratagemCatalog.Affix(other).Name + "」互斥。";
+                return text;
+            }
+        }
         internal StratagemAffix(int id, int quality, string name, string description, int excludes = 0)
-        { Id = id; Quality = quality; Name = name; Description = description; Excludes = excludes; }
+        { Id = id; Quality = quality; Name = name; Effect = description; Excludes = excludes; }
     }
 
     internal static class StratagemCatalog
     {
-        internal static readonly int[][] AtlasRows = {
-            new[] {0,182,368,544,735,909,1086},
-            new[] {0,213,376,566,736,900,1086},
-            new[] {0,195,385,548,735,901,1086},
-            new[] {0,210,402,592,774,948,1086},
-            new[] {0,199,396,574,751,901,1086},
-            new[] {0,202,392,582,727,906,1086},
-            new[] {0,194,370,524,734,920,1086}
-        };
         internal static readonly StratagemDefinition[] Units = {
             new StratagemDefinition(20001, "MD-6地雷播撒器", 4, 2, 4, 4, 650, 0, 100, .1f, 3.2f, 30, 2, new[] {42,109,157,23,25,66,82,72}),
             new StratagemDefinition(20002, "380mm轨道火力网", 5, 4, 6, 9, 1, 0, 1200, 1, 4.5f, 60, 12, new[] {42,109,157,23,25,66,82,72}),
@@ -93,7 +94,7 @@ namespace CluckmechCoop
             new StratagemDefinition(20007, "AX/LAS-5激光护卫犬", 2, 3, 5, 5, 450, 0, 24, 4, 4.5f, 30, 3, new[] {143,105,146,255,462,23,72})
         };
         internal static readonly StratagemAffix[] Affixes = {
-            new StratagemAffix(25011,0,"扩充弹链","地雷上限+4，初次布雷+2。"),
+            new StratagemAffix(25011,0,"扩充弹链","地雷上限+4，初次布雷+2；布防0.4秒，触发等待0.08秒。"),
             new StratagemAffix(25012,0,"快速投送","补雷间隔缩短至8秒。"),
             new StratagemAffix(25013,0,"灵敏引信","布防0.4秒，触发延迟0.08秒。"),
             new StratagemAffix(25014,1,"反坦克地雷","只由Boss或基础生命至少1000的敌人触发，伤害提高80%，地雷上限减少4。",25015),
@@ -106,7 +107,7 @@ namespace CluckmechCoop
             new StratagemAffix(25025,1,"快速落弹","呼叫等待1.2秒，批内间隔0.5秒，批次间隔2.5秒。"),
             new StratagemAffix(25026,2,"焦土火网","留下持续3秒的燃烧区域，半径1.2，每0.5秒施加2点灼烧。"),
             new StratagemAffix(25031,0,"持续供能","照射时间增加3秒。"),
-            new StratagemAffix(25032,0,"光束聚焦","伤害提高25%，光束半径缩小至0.55。",25033),
+            new StratagemAffix(25032,0,"光束聚焦","伤害提高25%，光束半径缩小至0.55，追踪速度提高至6。",25033),
             new StratagemAffix(25033,0,"宽幅照射","光束半径增加至1.15，伤害减少10%。",25032),
             new StratagemAffix(25034,1,"快速调焦","追踪速度增加至6。"),
             new StratagemAffix(25035,1,"冷却储备","放置冷却缩短20%。"),
@@ -119,9 +120,9 @@ namespace CluckmechCoop
             new StratagemAffix(25046,2,"震荡冲击","爆炸外围增加1.5格冲击环，眩晕0.8秒并击退敌人。"),
             new StratagemAffix(25051,0,"静电扩散","区域半径增加至2.3。"),
             new StratagemAffix(25052,0,"延时电容","区域持续时间增加至6秒。"),
-            new StratagemAffix(25053,0,"高压制动","移动减速提高至50%。"),
+            new StratagemAffix(25053,0,"高压制动","移动减速提高至50%，首次眩晕提高至1秒。",25055),
             new StratagemAffix(25054,1,"稳定脉冲","首次眩晕提高至1秒。",25055),
-            new StratagemAffix(25055,1,"瓦斯弹头","保留减速，施加持续2秒、每0.5秒5点中毒，替代首次眩晕。",25054),
+            new StratagemAffix(25055,1,"瓦斯弹头","保留减速，施加持续2秒、每0.5秒5点中毒，替代首次眩晕。",25053),
             new StratagemAffix(25056,2,"紧急拦阻","每第三次发射，额外向另一名靠近基地的敌人发射一弹。"),
             new StratagemAffix(25061,0,"扩域线圈","护罩半径增加至3.5。"),
             new StratagemAffix(25062,0,"备用电容","护罩容量提高至本体最大生命的55%。"),
@@ -130,12 +131,31 @@ namespace CluckmechCoop
             new StratagemAffix(25065,1,"紧急泄压","破盾时眩晕并击退4格内敌人，眩晕0.6秒。"),
             new StratagemAffix(25066,2,"堡垒模式","护罩受到的弹丸伤害减少25%。"),
             new StratagemAffix(25071,0,"大容量散热器","无人机热量容量提高至140。"),
-            new StratagemAffix(25072,0,"高效风冷","停靠充能时间缩短至3秒。"),
+            new StratagemAffix(25072,0,"高效风冷","停靠充能时间缩短至3秒，返航和起飞各0.25秒。"),
             new StratagemAffix(25073,0,"返航推进","返航和起飞各0.25秒，飞行速度提高至6。"),
             new StratagemAffix(25074,1,"红线输出","激光伤害提高20%，每次攻击热量增加20%。"),
             new StratagemAffix(25075,1,"自动维修","停靠时每秒恢复无人机15%最大生命。"),
             new StratagemAffix(25076,2,"焦灼射线","激光附加持续2秒、每0.5秒4点灼烧。")
         };
+        private static readonly HashSet<int> retired = new HashSet<int> {25012,25013,25025,25034,25042,25054,25056,25066,25073};
+        private static readonly Dictionary<int,StratagemAffix> affixesById = IndexAffixes();
+        private static Dictionary<int,StratagemAffix> IndexAffixes()
+        {
+            var result = new Dictionary<int,StratagemAffix>();
+            foreach (var affix in Affixes) result.Add(affix.Id,affix);
+            return result;
+        }
+        internal static IEnumerable<StratagemAffix> ActiveAffixes
+        { get { foreach (var affix in Affixes) if (!retired.Contains(affix.Id)) yield return affix; } }
+        internal static bool Active(int id)=>affixesById.ContainsKey(id)&&!retired.Contains(id);
+        internal static IEnumerable<int> UpgradePool(int unit)
+        { foreach (var affix in ActiveAffixes) if (affix.Id/10-2501 == unit-20001) yield return affix.Id; }
+        internal static IEnumerable<int> Exclusions(int id)
+        {
+            var affix = Affix(id);
+            if (affix != null && affix.Excludes != 0) yield return affix.Excludes;
+            if (id == 25055) yield return 25054;
+        }
         internal static bool IsUnit(int id) => id >= 20001 && id <= 20007;
         internal static bool OwnsDeck(Machine[] cards,IEnumerable<Machine> inventory)
         {
@@ -152,13 +172,16 @@ namespace CluckmechCoop
         internal static StratagemDefinition Unit(int id) => IsUnit(id) ? Units[id - 20001] : null;
         internal static StratagemAffix Affix(int id)
         {
-            int group = id / 10 - 2501, index = id % 10 - 1;
-            return group >= 0 && group < 7 && index >= 0 && index < 6 ? Affixes[group * 6 + index] : null;
+            return affixesById.TryGetValue(id,out var affix) ? affix : null;
         }
         internal static bool CanChoose(int id, ICollection<int> owned)
         {
             var affix = Affix(id);
-            return affix == null || !owned.Contains(id) && (affix.Excludes == 0 || !owned.Contains(affix.Excludes));
+            if (affix == null) return true;
+            if(retired.Contains(id))return false;
+            if (owned.Contains(id)) return false;
+            foreach (int other in Exclusions(id)) if (owned.Contains(other)) return false;
+            return true;
         }
     }
 
@@ -189,6 +212,7 @@ namespace CluckmechCoop
             }
             if (owned == null) return;
             foreach (int affix in owned) Apply(affix);
+            if (Gas) Stun = 0;
             MineInitial = Math.Min(MineInitial, MineCap);
         }
         private void Apply(int id)
@@ -196,7 +220,7 @@ namespace CluckmechCoop
             if ((id / 10 - 2501) != (int)Definition.Kind) return;
             switch (id)
             {
-                case 25011: MineCap += 4; MineInitial += 2; break;
+                case 25011: MineCap += 4; MineInitial += 2; ArmTime = .4f; TriggerTime = .08f; break;
                 case 25012: RefillInterval = 8; break;
                 case 25013: ArmTime = .4f; TriggerTime = .08f; break;
                 case 25014: AntiTank = true; DamageMultiplier *= 1.8f; MineCap -= 4; break;
@@ -209,7 +233,7 @@ namespace CluckmechCoop
                 case 25025: CallDelay = 1.2f; ShellInterval = .5f; SalvoInterval = 2.5f; break;
                 case 25026: Scorch = true; break;
                 case 25031: Duration += 3; break;
-                case 25032: DamageMultiplier *= 1.25f; BlastRadius = .55f; break;
+                case 25032: DamageMultiplier *= 1.25f; BlastRadius = .55f; TrackSpeed = 6; break;
                 case 25033: DamageMultiplier *= .9f; BlastRadius = 1.15f; break;
                 case 25034: TrackSpeed = 6; break;
                 case 25035: Cooldown *= .8f; break;
@@ -222,7 +246,7 @@ namespace CluckmechCoop
                 case 25046: Shock = true; break;
                 case 25051: BlastRadius = 2.3f; break;
                 case 25052: FieldDuration = 6; break;
-                case 25053: Slow = .5f; break;
+                case 25053: Slow = .5f; Stun = 1; break;
                 case 25054: Stun = 1; break;
                 case 25055: Gas = true; Stun = 0; break;
                 case 25056: DoubleMortar = true; break;
@@ -233,7 +257,7 @@ namespace CluckmechCoop
                 case 25065: Discharge = true; break;
                 case 25066: ShieldDamageFactor = .75f; break;
                 case 25071: HeatCap = 140; break;
-                case 25072: DockTime = 3; break;
+                case 25072: DockTime = 3; ReturnTime = .25f; break;
                 case 25073: ReturnTime = .25f; FlightSpeed = 6; break;
                 case 25074: DamageMultiplier *= 1.2f; HeatPerShot *= 1.2f; break;
                 case 25075: Repair = true; break;

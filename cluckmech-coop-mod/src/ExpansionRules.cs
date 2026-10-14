@@ -17,10 +17,10 @@ namespace CluckmechCoop
     {
         internal static readonly ModuleInfo[] All = {
             new ModuleInfo(ModuleId.Speed, "倍速", "按住左Ctrl加快战斗，松开恢复。", "左Ctrl：2倍速\n联机时任意一人按住，双方一起加速；全部松开后恢复。移动、攻击、刷怪、冷却和持续效果同步加速。"),
-            new ModuleInfo(ModuleId.Characters, "更好的角色右键强化", "增强五个角色的右键攻击与动作。", "战斗鸡：三连霰弹，间隔0.2秒，冷却4秒。\n工程狮：集结时移速提高30%、蓄力时间×0.75；松手后集结战士伤害提高25%、攻速提高20%，持续4秒，冷却8秒。\n肌肉鼠：移动治疗；按下额外治疗20%最大生命，冷却10秒。\n阿法狗：召唤并自爆，伤害300，冷却30秒；召唤物前5秒生命、格挡×2。\n八酱兔：向鼠标处召唤；前5秒伤害提高50%、移速提高30%。"),
+            new ModuleInfo(ModuleId.Characters, "更好的角色右键强化", "增强角色右键，并改善鼠标吞噬选择。", "战斗鸡：三连霰弹，间隔0.2秒，冷却4秒。\n工程狮：集结时移速提高30%、蓄力时间×0.75；松手后集结战士伤害提高25%、攻速提高20%，持续4秒，冷却8秒。\n肌肉鼠：移动治疗；按下额外治疗20%最大生命，冷却10秒。\n阿法狗：召唤并自爆，伤害300，冷却30秒；召唤物前5秒生命、格挡×2。\n八酱兔：向鼠标处召唤；前5秒伤害提高50%、移速提高30%。\n肚子鳄、水母骑士：优先吞噬范围内鼠标指向的合法目标；空地仍选最近目标。"),
             new ModuleInfo(ModuleId.Energy, "基地车后备隐藏能源", "按F强化基地车，整局共用一次。", "F：启动后备隐藏能源\n受到伤害减少100%，攻击力增加500，持续10秒。整局双方共用一次。"),
-            new ModuleInfo(ModuleId.Music, "音乐扩展", "主菜单播放《春日影》，扩展战斗音乐。", "主菜单播放《春日影 (MyGO!!!!! ver.)》。\n七个区域各增加一首音乐，原版与新增各有50%概率。\n普通Boss从原版两首和《铜管通缉令》中随机选一首，各占1/3。\n响度统一，使用原版音乐音量设置。"),
-            new ModuleInfo(ModuleId.Growth, "强化成长", "区域通关增加强化空间，商店出售刷新券。", "区域关底完成后，每人选一台鸡械，强化上限+1。\n工匠刷新券：30金币，增加3次刷新，每家商店限购一次；剩余次数本局保留。"),
+            new ModuleInfo(ModuleId.Music, "音乐扩展", "主菜单播放《春日影》，扩展战斗音乐。", "主菜单播放《春日影 (MyGO!!!!! ver.)》。\n矿洞：原版、《岩窟快车》《矿脉引擎》各有1/3概率。其他六个区域：原版与新增各有50%概率。\n普通Boss从原版两首和《铜管通缉令》中随机选一首，各占1/3。\n响度统一，使用原版音乐音量设置。"),
+            new ModuleInfo(ModuleId.Growth, "强化成长", "区域通关增加强化空间，商店与维修节点提供刷新券。", "区域关底完成后，每人选一台鸡械，强化上限+1。\n工匠刷新券：30金币，增加1次刷新，每家商店限购一次。维修节点每人额外获得1次；剩余次数本局保留。"),
             new ModuleInfo(ModuleId.Shop, "商店扩展", "同一家商店刷新3次后提供4台鸡械。", "成功付费刷新达到3次后，每次提供4台鸡械供购买。刷新价格沿用原版，新商店重新累计。"),
             new ModuleInfo(ModuleId.Expedition, "强化远征", "追加强化敌人，并增强绿洲最终Boss。", "进关前独立选择。原版敌人全部出完并消灭后，再出现一次；生命×1.5，攻击×2。\n绿洲最终Boss只出现一次，生命×10、攻击×2。\n完成后获得显示的额外奖励。"),
             new ModuleInfo(ModuleId.Transfer, "队友转交", "向队友转交金币或指定鸡械。", "在路线地图等关间界面打开队友转交。鸡械保留强化词条与强化上限，选中后确认转交。"),
@@ -49,6 +49,7 @@ namespace CluckmechCoop
         public int Coupons;
         public string PendingRegion;
         public HashSet<string> Regions = new HashSet<string>();
+        public HashSet<string> RepairNodes = new HashSet<string>();
         public Dictionary<string, ShopProgress> Shops = new Dictionary<string, ShopProgress>();
         public ShopProgress ShopAt(string node)
         {
@@ -69,7 +70,12 @@ namespace CluckmechCoop
         {
             var shop = ShopAt(node);
             if (gold < 30 || shop.TicketBought) return false;
-            shop.TicketBought = true; Coupons += 3; return true;
+            shop.TicketBought = true; Coupons++; return true;
+        }
+        public bool ClaimRepair(string node)
+        {
+            if (string.IsNullOrWhiteSpace(node) || !RepairNodes.Add(node)) return false;
+            Coupons++; return true;
         }
         public bool SpendCoupon(int freeRefreshes)
         {

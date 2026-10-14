@@ -1,19 +1,29 @@
 # 战备美术与声音
 
-七份透明PNG图集由AI绘图工具按确认的装备造型制作，使用斜俯视视角、灰色金属装甲、警示黄、像素描边和活动零件。每份图集1448×1086，八列、六组动作；运行切片边界保存在`StratagemCatalog.AtlasRows`，纹理使用最近邻采样。
+0.5.1使用一份按需加载的运行图集`stratagem-v2.png`及对应矩形、枢轴和炮口元数据，含103个精确切片。33项专属强化各有对应部件图标；背包和详情图使用96像素画布，主体最大72像素。机体按32像素/世界单位导入，采用最近邻采样。
 
-| 图集 | 内容 |
+## 部件来源与制作
+
+`StratagemParts`保存AI绘图生成的透明源素材。统一采用鸡械绿洲式斜俯视透视、深灰金属、警示黄、装甲亮边和清晰像素轮廓。原有造型图集继续作为380、轨道激光、500kg及护卫犬图标的制作输入。
+
+| 源图 | 提示规格与用途 |
 |---|---|
-| md6.png | 升起、撒雷、待机、地雷状态、损毁、爆炸及尘土 |
-| barrage380.png | 信标、落点提示、爆炸、尘土、弹坑与高速尾迹 |
-| orbitalLaser.png | 点火、循环光束、地面熔融、结束与信标 |
-| eagle500.png | 飞机、炸弹、入土、爆炸、烟雾、冲击波与弹坑 |
-| emsMortar.png | 朝向、后坐、弹丸、静电场、消散与瓦斯场 |
-| shieldRelay.png | 部署、充能、蜂窝护罩、受击、破盾、损毁与重启 |
-| laserRover.png | 背包基座、无人机朝向、射击、返航、停靠、起飞与损毁 |
+| md6Parts.png | 3列×2行：固定底座、升降筒、左瓣片、右瓣片、完整肖像、独立地雷；部件共用中心轴和透视 |
+| emsPartsResult.png | 4列×5行：固定底座、机座参考、8方向独立炮管、完整肖像、炮口火花、弹丸；固定件与炮管分别绘制 |
+| emsHousings.png | 4列×2行：左、左上、上、右上、右、右下、下、左下8个旋转座；比例和轴心一致 |
+| shieldParts.png | 2列×2行：固定底座、升降能源塔、完整肖像、碎片；塔脚由底座前侧装甲遮合 |
+| roverParts.png | 3列×3行：空停靠背包与8方向无人机；基座和无人机独立，不把停靠机体画进基座 |
+| upgradeIcons.png | 6列×6行：按有效强化编号顺序使用前33格；弹链、弹头、准星、镜片、线圈、电容、散热器等各有独立外形 |
+| vfxParts.png | 4列×3行：闪光、小爆炸、大火球、碎片、两种烟尘、两种弹坑、尾迹、落地光核、冲击环、火花；轮廓完全包含在透明格内 |
 
-MD-6轮廓参考[实机装备截图](https://www.gamesradar.com/helldivers-2-minefield-anti-personnel/)；EMS迫击炮参考[原版游戏截图](https://steamcommunity.com/sharedfiles/filedetails/?id=3198345382)。图集中装备与效果为重新绘制的素材。
+MD-6参考[原版装备截图](https://www.gamesradar.com/helldivers-2-minefield-anti-personnel/)，EMS参考[原版游戏截图](https://steamcommunity.com/sharedfiles/filedetails/?id=3198345382)。运行图集由`BuildStratagemAssets.py`整理主轮廓、独立留白和部件枢轴，游戏不读取制作源图。
 
-十份短音效由`MakeStratagemSounds.py`合成，制作参数固定，包含部署、地雷、炮击、重型爆炸、激光启动与循环、EMS、护盾受击与破碎、无人机射击。音效使用Vorbis，运行时经原版Master Audio播放，资源按插件安装位置解析。
+## 动作与显示
 
-`ValidateStratagemAssets.py`检查运行图集、全部336个切片、透明背景、音效清单和OGG文件头；可通过`--preview`输出离线资源检查图。
+`StratagemRig`驱动固定底座、旋转座、炮管轴向后坐、瓣片、能源塔及无人机的独立姿态。`StratagemEffects`组合投送、尾迹、火核、火球、碎片、烟尘和弹坑。电场、瓦斯及护罩采用一次建立的像素网格：EMS内部12%、边缘40%；护罩内部10%、蜂窝18%、边缘40%。所有动作使用游戏时间。
+
+`tests/Rig`直接运行生产动作代码，导出姿态后用`RenderPreview.py`进行离线合成。`ValidateStratagemAssets.py`检查精确切片、33张图标、8方向部件、肖像留白和音频。
+
+## 音效
+
+运行包含四份Vorbis：380爆炸、500kg爆炸、轨道激光启动和持续循环。`MakeStratagemSounds.py`保存合成参数，运行使用原版Master Audio音效总线，音量随玩家与声源距离变化。每条轨道激光独立持有和停止自己的循环声音。

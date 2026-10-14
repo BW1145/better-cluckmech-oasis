@@ -3,14 +3,14 @@
     <TargetFramework>net472</TargetFramework>
     <LangVersion>latest</LangVersion>
     <AssemblyName>CluckmechCoop</AssemblyName>
-    <Version>0.5.0</Version>
+    <Version>0.5.1</Version>
     <RequireGameDir>true</RequireGameDir>
     <Managed>$(GameDir)\Cluckmech Oasis_Data\Managed</Managed>
     <Loader>$(MSBuildThisFileDirectory)..\dependencies\BepInEx\BepInEx\core</Loader>
     <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
-    <EmbeddedResource Include="StratagemAssets/*.png"><LogicalName>CluckmechCoop.StratagemAssets.%(Filename)%(Extension)</LogicalName></EmbeddedResource>
+    <EmbeddedResource Include="StratagemAssets/stratagem-v2.png;StratagemAssets/stratagem-v2.json"><LogicalName>CluckmechCoop.StratagemAssets.%(Filename)%(Extension)</LogicalName></EmbeddedResource>
     <EmbeddedResource Include="UiAssets/*.png"><LogicalName>CluckmechCoop.UiAssets.%(Filename)%(Extension)</LogicalName></EmbeddedResource>
     <Reference Include="BepInEx"><HintPath>$(Loader)\BepInEx.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(Loader)\0Harmony.dll</HintPath><Private>false</Private></Reference>

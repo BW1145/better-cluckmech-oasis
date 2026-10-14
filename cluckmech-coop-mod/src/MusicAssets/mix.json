@@ -88,11 +88,20 @@
     "OriginalGainDb": -3.3,
     "CustomLufs": -21.99,
     "OriginalSongVolume": 1.0,
-    "OriginalEffectiveLufs": -18.7
+    "OriginalEffectiveLufs": -18.7,
+    "AdditionalSongs": [
+      {
+        "Title": "矿脉引擎",
+        "File": "矿脉引擎.ogg"
+      }
+    ]
   },
   {
     "Playlist": "背景音乐_Boss出场_普通Boss",
-    "OriginalPlaylists": ["背景音乐_Boss出场_普通Boss", "背景音乐_Boss出场_普通Boss2"],
+    "OriginalPlaylists": [
+      "背景音乐_Boss出场_普通Boss",
+      "背景音乐_Boss出场_普通Boss2"
+    ],
     "Title": "铜管通缉令",
     "File": "铜管通缉令.ogg",
     "OriginalGains": {
@@ -107,7 +116,10 @@
   },
   {
     "Playlist": "背景音乐_Boss出场_普通Boss2",
-    "OriginalPlaylists": ["背景音乐_Boss出场_普通Boss", "背景音乐_Boss出场_普通Boss2"],
+    "OriginalPlaylists": [
+      "背景音乐_Boss出场_普通Boss",
+      "背景音乐_Boss出场_普通Boss2"
+    ],
     "Title": "铜管通缉令",
     "File": "铜管通缉令.ogg",
     "OriginalGains": {

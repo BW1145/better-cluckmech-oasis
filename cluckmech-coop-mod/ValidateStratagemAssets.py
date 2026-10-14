@@ -1,56 +1,48 @@
-"""Inspect the exact runtime sprite rectangles and packaged Vorbis effects."""
+"""Validate runtime atlas bounds, framed portraits, unique upgrade art and required audio."""
 import argparse
 import json
-import re
 from pathlib import Path
-from PIL import Image, ImageDraw
+from PIL import Image,ImageDraw
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--preview', type=Path)
-args = parser.parse_args()
-root = Path(__file__).resolve().parent
-source = (root / 'src/StratagemRules.cs').read_text(encoding='utf-8')
-rows = [list(map(int, re.findall(r'\d+', row))) for row in re.findall(r'new\[\] \{([^}]+)\}', source.split('internal static readonly StratagemDefinition[]')[0])]
-names = ['md6', 'barrage380', 'orbitalLaser', 'eagle500', 'emsMortar', 'shieldRelay', 'laserRover']
-icons = [(2, 0), (0, 0), (5, 0), (1, 0), (2, 0), (1, 0), (0, 4)]
-checks = 0
-
-def check(valid, label):
+parser=argparse.ArgumentParser();parser.add_argument('--preview',type=Path);args=parser.parse_args()
+root=Path(__file__).resolve().parent
+atlas=Image.open(root/'src/StratagemAssets/stratagem-v2.png')
+boxes=json.loads((root/'src/StratagemAssets/stratagem-v2.json').read_text(encoding='utf-8'))
+checks=0
+def check(ok,label):
     global checks
-    if not valid:
-        raise AssertionError(label)
-    checks += 1
+    if not ok:raise AssertionError(label)
+    checks+=1
 
-preview = Image.new('RGBA', (7*192, 230), (43, 43, 37, 255)) if args.preview else None
-for index, name in enumerate(names):
-    image = Image.open(root / f'src/StratagemAssets/{name}.png')
-    check(image.mode == 'RGBA' and image.size == (1448, 1086), f'{name}: format and dimensions')
-    check(image.getchannel('A').getextrema() == (0, 255), f'{name}: real transparency')
-    for row in range(6):
-        for col in range(8):
-            box = (col*181, rows[index][row], (col+1)*181, rows[index][row+1])
-            check(0 <= box[0] < box[2] <= image.width and 0 <= box[1] < box[3] <= image.height, f'{name}: sprite {row}:{col}')
-    row, col = icons[index]
-    icon = image.crop((col*181, rows[index][row], (col+1)*181, rows[index][row+1]))
-    check(icon.getchannel('A').getbbox() is not None, f'{name}: visible card icon')
-    if preview:
-        draw = ImageDraw.Draw(preview)
-        x = index*192
-        draw.rectangle((x+5, 5, x+186, 224), outline=(138,138,123), width=3)
-        draw.rectangle((x+10, 10, x+181, 219), fill=(27,28,25))
-        icon.thumbnail((160,164), Image.Resampling.NEAREST)
-        preview.alpha_composite(icon, (x+(192-icon.width)//2, 18+(164-icon.height)//2))
-        draw.text((x+12, 192), name, fill=(239,191,51))
-        small = icon.copy(); small.thumbnail((32,32), Image.Resampling.NEAREST)
-        preview.alpha_composite(small, (x+144,187))
-
-manifest = json.loads((root/'src/StratagemSounds/sounds.json').read_text(encoding='utf-8'))
-entries = manifest if isinstance(manifest,list) else manifest['sounds']
-check(len(entries) == 10, 'ten sound effects')
+check(atlas.mode=='RGBA' and atlas.getchannel('A').getextrema()==(0,255),'RGBA with complete transparency')
+occupied=[];icons=[];hashes=set()
+for name,b in boxes.items():
+    x,y,w,h=[b[key] for key in ['X','Y','W','H']]
+    check(0<=x<x+w<=atlas.width and 0<=y<y+h<=atlas.height,name+': import bounds')
+    rect=(x,y,x+w,y+h)
+    check(all(rect[2]<=a[0] or rect[0]>=a[2] or rect[3]<=a[1] or rect[1]>=a[3] for a in occupied),name+': independent rectangle')
+    occupied.append(rect);tile=atlas.crop(rect);bounds=tile.getchannel('A').getbbox()
+    check(bounds is not None,name+': visible silhouette')
+    if name.startswith(('icon.','affix.')):
+        check(w==96 and h==96 and max(bounds[2]-bounds[0],bounds[3]-bounds[1])<=72,name+': 75% portrait framing')
+        if name.startswith('affix.'):
+            value=tile.tobytes();check(value not in hashes,name+': distinct upgrade art');hashes.add(value)
+        icons.append((name,tile))
+    if name.startswith('mortar-barrel.'):
+        check(all(abs(b[k])<4 for k in ['MX','MY']),name+': finite muzzle coordinates')
+check(len(hashes)==33,'33 distinct upgrade icons')
+check(sum(name.startswith('mortar-housing.') for name in boxes)==8,'eight matching turret housings')
+check(sum(name.startswith('mortar-barrel.') for name in boxes)==8,'eight matching barrels')
+check(sum(name.startswith('rover-drone.') for name in boxes)==8,'eight drone directions')
+entries=json.loads((root/'src/StratagemSounds/sounds.json').read_text(encoding='utf-8'))
+check({e['file'] for e in entries}=={'barrage.ogg','eagle.ogg','laser-start.ogg','laser-loop.ogg'},'four required sound clips')
 for entry in entries:
-    path = root/'src/StratagemSounds'/entry['file']
-    check(path.is_file() and path.read_bytes()[:4] == b'OggS', f'{path.name}: Vorbis container')
+    check((root/'src/StratagemSounds'/entry['file']).read_bytes()[:4]==b'OggS',entry['file']+': Vorbis')
 if args.preview:
-    args.preview.parent.mkdir(parents=True,exist_ok=True)
-    preview.save(args.preview)
-print(f'PASS: {checks} stratagem asset checks; 336 sprite rectangles, seven card icons and ten effects')
+    preview=Image.new('RGBA',(8*128,((len(icons)+7)//8)*140),(36,37,31,255));draw=ImageDraw.Draw(preview)
+    for n,(name,tile) in enumerate(icons):
+        x,y=n%8*128,n//8*140
+        draw.rectangle((x+3,y+3,x+124,y+132),outline=(140,139,125),width=3)
+        preview.alpha_composite(tile,(x+16,y+8));draw.text((x+12,y+112),name,fill=(244,202,65))
+    args.preview.parent.mkdir(parents=True,exist_ok=True);preview.save(args.preview)
+print(f'PASS: {checks} atlas, portrait, direction and sound checks; {len(boxes)} runtime sprites')

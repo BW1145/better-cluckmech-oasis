@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using CluckmechCoop;
 namespace CluckmechCoop
 {
+    internal static class SwallowTargets { internal static bool Handle(SessionMessage message,int role,bool server)=>true; }
     internal static class StratagemDeployment
     {
         internal static int Requests,Carried,AppliedCount;

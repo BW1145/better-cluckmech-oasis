@@ -1,0 +1,54 @@
+{
+  "title": "矿脉引擎",
+  "style": "矿洞 · 金属敲击与工业摇滚",
+  "description": "扬琴主题、短促吉他与低音推进，金属敲击呼应；机械间奏后回归完整主题。",
+  "bpm": 128,
+  "seconds": 120.0,
+  "notes": 2160,
+  "sections": [
+    [
+      0,
+      4,
+      "Ignition"
+    ],
+    [
+      4,
+      16,
+      "Ore line"
+    ],
+    [
+      16,
+      24,
+      "Crosscut"
+    ],
+    [
+      24,
+      32,
+      "Deep vein"
+    ],
+    [
+      32,
+      40,
+      "Shaft machinery"
+    ],
+    [
+      40,
+      48,
+      "Ore line return"
+    ],
+    [
+      48,
+      56,
+      "Deep vein return"
+    ],
+    [
+      56,
+      64,
+      "Turnaround"
+    ]
+  ],
+  "lufs": -22.04,
+  "true_peak_dbfs": -5.46,
+  "loudness_range": 3.2,
+  "loop_step": 0.0
+}

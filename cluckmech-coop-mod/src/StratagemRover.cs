@@ -51,7 +51,10 @@ namespace CluckmechCoop
                     if (drone == null) { yield return new WaitForSeconds(repairWait); continue; }
                     movement = drone.GetComponent<模块_移动属性>();
                     movement.移动速度 = root.Parameters.FlightSpeed; movement.运算移动速度();
-                    heat = shots = 0; phase = 0;
+                    heat = shots = 0;
+                    SetPhase(3);
+                    yield return Transit(root.Parameters.ReturnTime,false);
+                    if(drone==null||!drone.Alive)continue;
                     SetPhase(0);
                 }
                 if (!drone.Alive)
@@ -82,7 +85,6 @@ namespace CluckmechCoop
                         }
                     }
                     else { heat = Mathf.Max(0,heat-20*Time.deltaTime); shots = 0; }
-                    root.SetFrame(0,0);
                 }
                 if (phase == 1)
                 {
@@ -90,7 +92,6 @@ namespace CluckmechCoop
                     if (drone == null || !drone.Alive) continue;
                     SetPhase(2);
                     foreach (var collider in drone.GetComponents<Collider2D>()) collider.enabled = false;
-                    drone.Visible(false); root.SetFrame(0,4);
                     float until = Time.time+root.Parameters.DockTime;
                     while (root.Alive && drone != null && drone.Alive && Time.time < until)
                     {
@@ -99,7 +100,7 @@ namespace CluckmechCoop
                         yield return null;
                     }
                     if (!root.Alive || drone == null || !drone.Alive) continue;
-                    SetPhase(3); drone.Visible(true); root.SetFrame(0,0);
+                    SetPhase(3);
                     yield return Transit(root.Parameters.ReturnTime,false);
                     if (drone == null) continue;
                     foreach (var collider in drone.GetComponents<Collider2D>()) collider.enabled = true;
@@ -117,6 +118,7 @@ namespace CluckmechCoop
         private void SetPhase(int value)
         {
             phase = value;
+            if(drone!=null)drone.Dock(value);
             if (drone != null) StratagemEffects.Emit(drone,16,drone.transform.position,0,value,StratagemWorld.Id(root.gameObject));
         }
         private void MoveDrone(Vector2 destination,float speed)
@@ -126,7 +128,7 @@ namespace CluckmechCoop
             Vector2 point = Vector2.MoveTowards(from,destination,speed*Time.deltaTime);
             drone.transform.position = new Vector3(point.x,point.y,(point.y+10000)*.01f-.05f);
             Vector2 direction = target == null ? destination-from : (Vector2)target.transform.position-from;
-            if (direction.sqrMagnitude > .001f) drone.SetFrame(1,(Mathf.RoundToInt(Mathf.Atan2(direction.y,direction.x)*Mathf.Rad2Deg/45)+8)%8);
+            if (direction.sqrMagnitude > .001f) drone.Aim(direction);
         }
         private IEnumerator Transit(float duration,bool returning)
         {
@@ -137,7 +139,6 @@ namespace CluckmechCoop
                 Vector2 destination = (Vector2)transform.position+(returning ? Vector2.zero : new Vector2(.8f,.6f));
                 Vector2 point = Vector2.Lerp(from,destination,(Time.time-started)/duration);
                 drone.transform.position = new Vector3(point.x,point.y,(point.y+10000)*.01f-.05f);
-                root.SetFrame(returning ? 3 : 4,Mathf.Min(5,(int)((Time.time-started)/duration*6)));
                 yield return null;
             }
         }

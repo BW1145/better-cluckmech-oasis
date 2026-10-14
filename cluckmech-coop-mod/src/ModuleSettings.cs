@@ -165,7 +165,7 @@ namespace CluckmechCoop
             foreach (var entry in progress.Players)
             {
                 var player = entry.Value;
-                if (entry.Key < 0 || entry.Key > 2 || player == null || player.Coupons < 0 || player.Regions == null || player.Shops == null || player.StratagemCooldowns == null) return false;
+                if (entry.Key < 0 || entry.Key > 2 || player == null || player.Coupons < 0 || player.Regions == null || player.RepairNodes == null || player.Shops == null || player.StratagemCooldowns == null) return false;
                 foreach (var cooldown in player.StratagemCooldowns)
                     if (cooldown == null || string.IsNullOrWhiteSpace(cooldown.Node) || cooldown.Slot < 0 || cooldown.Slot >= 5 ||
                         !Rules.ValidMachine(cooldown.Machine) || !StratagemCatalog.IsUnit(cooldown.Machine.Id) || cooldown.Remaining < 0 ||
@@ -176,6 +176,11 @@ namespace CluckmechCoop
                     (fields["PendingRegion"]?.Type != JTokenType.String && fields["PendingRegion"]?.Type != JTokenType.Null)) return false;
                 foreach (var region in regions)
                     if (region.Type != JTokenType.String || string.IsNullOrWhiteSpace((string)region)) return false;
+                if (fields["RepairNodes"] != null)
+                {
+                    if (!(fields["RepairNodes"] is JArray repairs)) return false;
+                    foreach (var repair in repairs) if (repair.Type != JTokenType.String || string.IsNullOrWhiteSpace((string)repair)) return false;
+                }
                 foreach (var shopEntry in player.Shops)
                 {
                     var shop = shopEntry.Value;

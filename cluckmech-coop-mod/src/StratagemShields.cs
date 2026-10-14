@@ -110,8 +110,10 @@ namespace CluckmechCoop
     public sealed class StratagemShield : MonoBehaviour
     {
         private StratagemUnit root;
-        private SpriteRenderer dome;
+        private StratagemSurface dome;
         private float capacity,maximum,lastHit,restart,opening,nextThreat;
+        private float visualOpen;
+        private bool wasOpen;
         private 联机_单位属性同步 sync;
         private StratagemGauge gauge;
         internal float Radius => root.Parameters.BlastRadius;
@@ -119,18 +121,17 @@ namespace CluckmechCoop
         internal bool Open => root != null && root.Alive && Time.time >= opening && restart == 0 && capacity > 0;
         internal void Initialize(StratagemUnit source)
         {
-            root = source; opening = Time.time+.8f;
+            root = source; opening = Time.time+.8f;visualOpen=Time.time;
             maximum = root.Stats.当前生命值上限*root.Parameters.CapacityRatio; capacity = maximum;
             sync = GetComponent<联机_单位属性同步>();
-            dome = StratagemAssets.Renderer(transform,StratagemAssets.Frame(StratagemKind.Shield,2,6),Radius*2);
-            dome.transform.localPosition = new Vector3(0,Radius*.25f,-.05f);
-            dome.color = new Color(1,1,1,.24f); dome.enabled = false;
+            dome=StratagemSurface.Create(StratagemSurfaceKind.Shield,transform.position,Radius,0,transform);
+            dome.transform.localPosition=new Vector3(0,0,-.015f);dome.Visible(false);
             gauge = new StratagemGauge(transform,1.45f,new Color(1,.75f,.15f));
             StratagemShields.Add(this);
         }
         private void Update()
         {
-            if (root == null || !root.Alive) { if (dome != null) dome.enabled = false; return; }
+            if (root == null || !root.Alive) { if (dome != null) dome.Visible(false); return; }
             var p = root.Parameters;
             maximum = root.Stats.当前生命值上限*p.CapacityRatio;
             if (Plugin.Role == 2)
@@ -154,12 +155,15 @@ namespace CluckmechCoop
                     }
                 }
             }
-            dome.enabled = Open;
+            bool starting=Time.time<opening;
+            if(Open&&!wasOpen&&!starting)visualOpen=Time.time;
+            wasOpen=Open;
+            dome.Visible(Open||starting);
+            float start=Mathf.Clamp01((Time.time-visualOpen)/(starting?.8f:.25f));
+            dome.Strength(start);
+            dome.transform.localScale=Vector3.one*Mathf.Lerp(.35f,1,start);
             gauge.Set(maximum > 0 ? capacity/maximum : 0);
-            if (Time.time < opening) root.SetFrame(0,Mathf.Min(7,(int)((Time.time-opening+.8f)/.8f*8)));
-            else if (restart > 0) root.SetFrame(5,6);
-            else root.SetFrame(1,(int)(Time.time*4)%6);
-            if (Open) dome.sprite = StratagemAssets.Frame(StratagemKind.Shield,2,6+(int)(Time.time*4)%2);
+            root.ShieldState(Open,maximum>0?capacity/maximum:0);
         }
         private void LateUpdate() { if (root != null && StratagemShields.First(this)) StratagemShields.Tick(); }
         internal float Block(float raw,Vector2 point)

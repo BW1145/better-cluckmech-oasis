@@ -43,6 +43,7 @@ def main():
     volumes = {p["playlistName"]: p["MusicSettings"][0]["volume"] for p in playlists if len(p["MusicSettings"]) == 1}
     controllers = [row["data"] for row in research["tables"] if row["class"] == "PlaylistController"]
     assert all(row["_playlistVolume"] == 1 for row in controllers)
+    existing = json.loads((DEST / "mix.json").read_text(encoding="utf-8")) if (DEST / "mix.json").exists() else []
     manifest = []
     for name, title in TRACKS:
         native_name = "BGM_" + name
@@ -66,6 +67,12 @@ def main():
         row = {"Playlist": "背景音乐_" + name, "Title": title, "File": source.name,
                "OriginalGains": {native_name: 10 ** (gain_db / 20)},
                "OriginalLufs": loudness, "OriginalSongVolume": song_volume, "OriginalEffectiveLufs": round(effective_lufs, 2), "OriginalGainDb": round(gain_db, 2), "CustomLufs": custom["lufs"]}
+        if name == "战斗场景_矿洞":
+            extra = MUSIC / "试听" / "矿脉引擎.ogg"
+            extra_stats = measure(extra)
+            assert abs(extra_stats["lufs"] + 22) < .5 and extra_stats["true_peak_dbfs"] < -1
+            shutil.copyfile(extra, DEST / extra.name)
+            row["AdditionalSongs"] = [{"Title": "矿脉引擎", "File": extra.name}]
         manifest.append(row)
         print(json.dumps(row, ensure_ascii=False), flush=True)
     boss_rows = [row for row in manifest if row["Title"] == "铜管通缉令"]
@@ -74,6 +81,7 @@ def main():
     for row in boss_rows:
         row["OriginalPlaylists"] = boss_sources
         row["OriginalGains"] = boss_gains
+    manifest.extend(row for row in existing if row.get("Menu"))
     (DEST / "mix.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 
 

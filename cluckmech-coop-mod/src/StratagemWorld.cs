@@ -24,6 +24,7 @@ namespace CluckmechCoop
         {
             StratagemDeployment.Capture();
             StratagemAudio.Clear();
+            StratagemSurface.Clear();
             Enemies.Clear(); enemySet.Clear(); Players.Clear(); Base = null;
             StratagemUnit.Clear(); StratagemFields.Clear(); StratagemShields.Clear(); StratagemDeployment.Clear();
         }

@@ -10,6 +10,11 @@ using UnityEngine.Networking;
 
 namespace CluckmechCoop
 {
+    internal sealed class MusicSong
+    {
+        public string Title { get; set; }
+        public string File { get; set; }
+    }
     internal sealed class MusicTrack
     {
         public string Playlist { get; set; }
@@ -19,6 +24,7 @@ namespace CluckmechCoop
         public string[] OriginalPlaylists { get; set; }
         public bool Replace { get; set; }
         public bool Menu { get; set; }
+        public MusicSong[] AdditionalSongs { get; set; }
     }
     public sealed class MusicExpansion : MonoBehaviour
     {
@@ -73,9 +79,33 @@ namespace CluckmechCoop
                 if (track.OriginalGains == null) return false;
                 foreach (var gain in track.OriginalGains.Values) if (float.IsNaN(gain) || float.IsInfinity(gain) || gain < 0) return false;
             }
-            foreach (var existing in tracks.Values) if (existing.Title == track.Title && existing.File != track.File) return false;
+            var titles = new HashSet<string>();
+            foreach (var song in Songs(track))
+            {
+                if (song == null || string.IsNullOrWhiteSpace(song.Title) || string.IsNullOrWhiteSpace(song.File) || !titles.Add(song.Title)) return false;
+                string file;
+                try
+                {
+                    string root = Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                    file = Path.GetFullPath(Path.Combine(root,song.File));
+                    if (Path.IsPathRooted(song.File) || !file.StartsWith(root,StringComparison.OrdinalIgnoreCase) || !string.Equals(Path.GetExtension(file),".ogg",StringComparison.OrdinalIgnoreCase) || !System.IO.File.Exists(file)) return false;
+                }
+                catch (ArgumentException) { return false; }
+                catch (NotSupportedException) { return false; }
+                foreach (var existing in tracks.Values) foreach (var other in Songs(existing))
+                    if (other.Title == song.Title && other.File != song.File) return false;
+            }
             return true;
         }
+        private static IEnumerable<MusicSong> Songs(MusicTrack track)
+        {
+            yield return new MusicSong {Title = track.Title,File = track.File};
+            if (track.AdditionalSongs != null) foreach (var song in track.AdditionalSongs) yield return song;
+        }
+        private bool Loaded(MusicTrack track)
+        { foreach (var song in Songs(track)) if (!clips.ContainsKey(song.Title)) return false; return true; }
+        private bool Failed(MusicTrack track)
+        { foreach (var song in Songs(track)) if (failed.Contains(song.Title)) return true; return false; }
 
         internal bool Change(PlaylistController controller, ref string playlistName, ref string clipName, bool first)
         {
@@ -87,8 +117,8 @@ namespace CluckmechCoop
                 return true;
             }
             if (!shuffle.ContainsKey(controller)) shuffle[controller] = controller.isShuffle;
-            if (failed.Contains(track.Title)) return true;
-            if (!clips.ContainsKey(track.Title))
+            if (Failed(track)) return true;
+            if (!Loaded(track))
             {
                 StartCoroutine(LoadAndPlay(controller, track, first, request)); return false;
             }
@@ -129,29 +159,31 @@ namespace CluckmechCoop
         }
         private IEnumerator LoadAndPlay(PlaylistController controller, MusicTrack track, bool first, int request)
         {
-            if (loading.Add(track.Title))
+            foreach (var song in Songs(track))
             {
-                string path = Path.Combine(directory, track.File);
+                if (clips.ContainsKey(song.Title) || failed.Contains(song.Title)) continue;
+                if (!loading.Add(song.Title))
+                { while (loading.Contains(song.Title)) yield return null; continue; }
+                string path = Path.Combine(directory, song.File);
                 using (var download = UnityWebRequestMultimedia.GetAudioClip(new Uri(path).AbsoluteUri, AudioType.OGGVORBIS))
                 {
                     ((DownloadHandlerAudioClip)download.downloadHandler).streamAudio = true;
                     yield return download.SendWebRequest();
                     if (download.result != UnityWebRequest.Result.Success)
                     {
-                        failed.Add(track.Title); Plugin.Warn("[Music] Audio load failed: " + track.Title + "; " + download.error);
+                        failed.Add(song.Title); Plugin.Warn("[Music] Audio load failed: " + song.Title + "; " + download.error);
                     }
                     else
                     {
                         var clip = DownloadHandlerAudioClip.GetContent(download);
-                        if (clip == null) { failed.Add(track.Title); Plugin.Warn("[Music] Audio decoder returned no clip"); }
-                        else { clip.name = track.Title; clips[track.Title] = clip; }
+                        if (clip == null) { failed.Add(song.Title); Plugin.Warn("[Music] Audio decoder returned no clip"); }
+                        else { clip.name = song.Title; clips[song.Title] = clip; }
                     }
                 }
-                loading.Remove(track.Title);
+                loading.Remove(song.Title);
             }
-            else while (loading.Contains(track.Title)) yield return null;
             if (controller == null || !requests.TryGetValue(controller, out int latest) || latest != request) yield break;
-            string pool = failed.Contains(track.Title) ? null : EnsurePool(track);
+            string pool = Failed(track) ? null : EnsurePool(track);
             if (pool == null)
             {
                 if (shuffle.TryGetValue(controller, out bool original)) controller.isShuffle = original;
@@ -188,7 +220,10 @@ namespace CluckmechCoop
                     pool.MusicSettings.Add(song);
                 }
             }
-            pool.MusicSettings.Add(new MusicSetting { audLocation = MasterAudio.AudioLocation.Clip, clip = clips[track.Title], volume = 1, pitch = 1, isLoop = track.Replace, alias = name + ".new" });
+            int custom = 0;
+            foreach (var song in Songs(track))
+                pool.MusicSettings.Add(new MusicSetting { audLocation = MasterAudio.AudioLocation.Clip, clip = clips[song.Title], volume = 1, pitch = 1, isLoop = track.Replace,
+                    alias = name + ".new" + (custom++ == 0 ? "" : "." + custom) });
             MasterAudio.CreatePlaylist(pool, false);
             Plugin.Log("[Music] Registered " + (track.Replace ? "replacement: " : "pool: ") + track.Playlist + " / " + track.Title + "; songs=" + pool.MusicSettings.Count);
             return name;

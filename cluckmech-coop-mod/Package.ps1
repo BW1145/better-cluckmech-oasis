@@ -21,7 +21,9 @@ New-Item -ItemType Directory -Path $musicDir -Force | Out-Null
 Copy-Item -Path (Join-Path $modRoot 'src\MusicAssets\*') -Destination $musicDir -Force
 $soundDir = Join-Path $pluginDir 'StratagemSounds'
 New-Item -ItemType Directory -Path $soundDir -Force | Out-Null
-Copy-Item -Path (Join-Path $modRoot 'src\StratagemSounds\*') -Destination $soundDir -Force
+foreach ($sound in @('barrage.ogg','eagle.ogg','laser-start.ogg','laser-loop.ogg','sounds.json')) {
+    Copy-Item -LiteralPath (Join-Path $modRoot "src/StratagemSounds/$sound") -Destination $soundDir -Force
+}
 $configDir = Join-Path $packageDir 'BepInEx\config'
 New-Item -ItemType Directory -Path $configDir -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $modRoot 'evidence\startup-destruction\BepInEx.cfg.updated') -Destination (Join-Path $configDir 'BepInEx.cfg') -Force
@@ -46,9 +48,9 @@ try {
         if ($entryHash -ne (Get-FileHash -LiteralPath (Join-Path $binaryDir $name) -Algorithm SHA256).Hash) { throw "Plugin hash mismatch: $name" }
     }
     $audioEntries = @($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -match '^BepInEx/plugins/CluckmechCoop/Music/.+\.ogg$' })
-    if ($audioEntries.Count -ne 9) { throw 'Expected nine OGG music tracks' }
+    if ($audioEntries.Count -ne 10) { throw 'Expected ten OGG music tracks' }
     $soundEntries = @($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -match '^BepInEx/plugins/CluckmechCoop/StratagemSounds/.+\.ogg$' })
-    if ($soundEntries.Count -ne 10) { throw 'Expected ten stratagem sound effects' }
+    if ($soundEntries.Count -ne 4) { throw 'Expected four stratagem sound effects' }
     if (-not ($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq 'BepInEx/plugins/CluckmechCoop/Music/mix.json' })) { throw 'Music calibration missing' }
     foreach ($path in @('winhttp.dll' , 'doorstop_config.ini', 'BepInEx/core/BepInEx.dll', 'BepInEx/core/0Harmony.dll', 'BepInEx/core/BepInEx.Preloader.dll')) {
         if (-not ($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq $path })) { throw "Loader file missing: $path" }

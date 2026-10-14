@@ -1,87 +1,106 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace CluckmechCoop
 {
+    internal sealed class StratagemSpriteRect
+    {
+        public int X{get;set;} public int Y{get;set;} public int W{get;set;} public int H{get;set;}
+        public float PX{get;set;} public float PY{get;set;} public float MX{get;set;} public float MY{get;set;}
+    }
     internal static class StratagemAssets
     {
-        private static readonly string[] names = { "md6", "barrage380", "orbitalLaser", "eagle500", "emsMortar", "shieldRelay", "laserRover" };
-        private static readonly Dictionary<StratagemKind, Sprite[]> atlases = new Dictionary<StratagemKind, Sprite[]>();
-        internal static Sprite Frame(StratagemKind kind, int row, int column)
+        private static Texture2D texture;
+        private static Dictionary<string,StratagemSpriteRect> rectangles;
+        private static readonly Dictionary<string,Sprite> sprites = new Dictionary<string,Sprite>();
+        internal static float Z(float y) => (y+10000)*.01f;
+        internal static Sprite Named(string name)
         {
-            if (!atlases.TryGetValue(kind, out var frames))
+            if (sprites.TryGetValue(name,out var sprite)) return sprite;
+            if (texture == null)
             {
-                using (var source = typeof(Plugin).Assembly.GetManifestResourceStream("CluckmechCoop.StratagemAssets." + names[(int)kind] + ".png"))
+                var assembly = typeof(Plugin).Assembly;
+                using (var source = assembly.GetManifestResourceStream("CluckmechCoop.StratagemAssets.stratagem-v2.png"))
+                using (var memory = new MemoryStream())
                 {
-                    if (source == null) throw new FileNotFoundException("Stratagem atlas missing: " + kind);
-                    using (var memory = new MemoryStream())
-                    {
-                        source.CopyTo(memory);
-                        var texture = new Texture2D(2,2,TextureFormat.RGBA32,false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
-                        if (!texture.LoadImage(memory.ToArray(), true)) throw new InvalidDataException("Invalid stratagem atlas: " + kind);
-                        frames = new Sprite[48];
-                        float w = texture.width / 8f;
-                        var rows = StratagemCatalog.AtlasRows[(int)kind];
-                        for (int y = 0; y < 6; y++) for (int x = 0; x < 8; x++)
-                            frames[y * 8 + x] = Sprite.Create(texture, new Rect(x*w,texture.height-rows[y+1],w,rows[y+1]-rows[y]), new Vector2(.5f,.5f), w / 2f);
-                        atlases.Add(kind, frames);
-                    }
+                    source.CopyTo(memory);
+                    texture = new Texture2D(2,2,TextureFormat.RGBA32,false) {filterMode=FilterMode.Point,wrapMode=TextureWrapMode.Clamp};
+                    if (!texture.LoadImage(memory.ToArray(),true)) throw new InvalidDataException("Invalid stratagem atlas");
                 }
+                using (var source = assembly.GetManifestResourceStream("CluckmechCoop.StratagemAssets.stratagem-v2.json"))
+                using (var reader = new StreamReader(source,System.Text.Encoding.UTF8))
+                    rectangles = JsonConvert.DeserializeObject<Dictionary<string,StratagemSpriteRect>>(reader.ReadToEnd());
             }
-            return frames[row * 8 + column];
+            var box = rectangles[name];
+            sprite = Sprite.Create(texture,new Rect(box.X,texture.height-box.Y-box.H,box.W,box.H),new Vector2(box.PX,box.PY),32,0,SpriteMeshType.FullRect);
+            sprites.Add(name,sprite); return sprite;
         }
-        internal static Sprite Icon(StratagemKind kind, int id = 0)
+        internal static Sprite Icon(StratagemKind kind,int id = 0) => Named("icon."+(id == 0 ? 20001+(int)kind : id));
+        internal static Sprite Preview(int id) => Named("preview."+id);
+        internal static Vector3 Muzzle(string name)
+        { Named(name); var box=rectangles[name]; return new Vector3(box.MX,box.MY,0); }
+        internal static Sprite AffixIcon(int id)
         {
-            if (id == 20101) return Frame(kind,2,4);
-            if (id == 20102) return Frame(kind,1,0);
-            switch (kind)
+            switch (id)
             {
-                case StratagemKind.Mines: return Frame(kind,2,0);
-                case StratagemKind.Laser: return Frame(kind,5,0);
-                case StratagemKind.Eagle: return Frame(kind,1,0);
-                case StratagemKind.Mortar: return Frame(kind,2,0);
-                case StratagemKind.Shield: return Frame(kind,1,0);
-                case StratagemKind.Rover: return Frame(kind,0,4);
-                default: return Frame(kind,0,0);
+                case 25012: id=25016; break; case 25013: id=25011; break; case 25025: id=25024; break;
+                case 25034: id=25032; break; case 25042: id=25046; break; case 25054: id=25053; break;
+                case 25056: id=25051; break; case 25066: id=25062; break; case 25073: id=25072; break;
             }
+            return Named("affix."+id);
         }
-        internal static SpriteRenderer Renderer(Transform parent, Sprite sprite, float width = 2)
+        internal static Sprite Frame(StratagemKind kind,int row,int column) => Named("old."+(int)kind+"."+row+"."+column);
+        internal static SpriteRenderer Renderer(Transform parent,Sprite sprite,float width = 2)
         {
             var obj = new GameObject("StratagemSprite");
-            if (parent != null) obj.transform.SetParent(parent, false);
-            var renderer = obj.AddComponent<SpriteRenderer>(); renderer.sprite = sprite;
-            obj.transform.localScale = Vector3.one * (width / sprite.bounds.size.x);
+            if (parent != null) obj.transform.SetParent(parent,false);
+            var renderer = obj.AddComponent<SpriteRenderer>(); renderer.sprite=sprite;
+            obj.transform.localScale=Vector3.one*(width/sprite.bounds.size.x);
             return renderer;
         }
-        internal static SpriteRenderer Effect(StratagemKind kind, int row, int start, int count, Vector2 position, float width, float duration, bool loop = false)
+        internal static SpriteRenderer Part(Transform parent,string name,float width,Vector3 position)
         {
-            var renderer = Renderer(null, Frame(kind,row,start),width);
-            renderer.transform.position = new Vector3(position.x,position.y,(position.y+10000)*.01f-.02f);
-            var animation = renderer.gameObject.AddComponent<StratagemAnimation>();
-            animation.Set(kind,row,start,count,duration,loop);
+            var renderer=Renderer(parent,Named(name),width); renderer.transform.localPosition=position;
+            return renderer;
+        }
+        internal static SpriteRenderer Effect(string name,Vector2 position,float width,float duration,float delay=0,bool ground=false,float grow=0,float rise=0,float opacity=1)
+        {
+            var renderer=Renderer(null,Named(name),width);
+            renderer.transform.position=new Vector3(position.x,position.y,Z(position.y)+(ground?.4f:-.025f));
+            renderer.color=new Color(1,1,1,opacity);
+            renderer.gameObject.AddComponent<StratagemAnimation>().Set(renderer,duration,delay,grow,rise,ground);
             return renderer;
         }
     }
     public sealed class StratagemAnimation : MonoBehaviour
     {
-        private SpriteRenderer renderer;
-        private StratagemKind kind;
-        private int row, first, count;
-        private float duration, started;
-        private bool looping;
-        internal void Set(StratagemKind type, int y, int x, int frames, float seconds, bool loop)
-        { renderer = GetComponent<SpriteRenderer>(); kind = type; row = y; first = x; count = frames; duration = seconds; started = Time.time; looping = loop; }
+        private SpriteRenderer image;
+        private Vector3 scale,origin;
+        private Color color;
+        private float started,duration,delay,grow,rise;
+        private bool ground;
+        private string token;
+        internal void Set(SpriteRenderer renderer,float seconds,float wait,float growth,float lift,bool floor)
+        {
+            image=renderer; scale=transform.localScale; origin=transform.position; color=image.color;
+            started=Time.time; duration=seconds; delay=wait; grow=growth; rise=lift; ground=floor;
+            token=Plugin.Combat?.Token;
+            image.enabled=wait==0;
+        }
         private void Update()
         {
-            float elapsed = Time.time - started;
-            if (elapsed >= duration) { Destroy(gameObject); return; }
-            if (renderer == null || !Plugin.InCombat) { Destroy(gameObject); return; }
-            float cycle = looping ? Mathf.Min(duration,.8f) : duration;
-            int frame = Mathf.Min(count-1,(int)((looping ? elapsed % cycle : elapsed) / cycle * count));
-            renderer.sprite = StratagemAssets.Frame(kind,row,first+frame);
+            float elapsed=Time.time-started-delay;
+            if (!Plugin.InCombat || token!=Plugin.Combat?.Token || elapsed >= duration) { Destroy(gameObject); return; }
+            if (elapsed < 0) { image.enabled=false; return; }
+            image.enabled=true;
+            float t=Mathf.Clamp01(elapsed/duration);
+            float alpha=ground ? Mathf.Clamp01((1-t)*4) : Mathf.Clamp01(t*12)*Mathf.Pow(1-t,.7f);
+            image.color=new Color(color.r,color.g,color.b,color.a*alpha);
+            transform.localScale=scale*(1+grow*t);
+            if(rise!=0)transform.position=origin+new Vector3(0,rise*t,rise*t*.01f);
         }
     }
 }

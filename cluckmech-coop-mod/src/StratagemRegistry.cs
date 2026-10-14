@@ -59,6 +59,8 @@ namespace CluckmechCoop
                 if (!(component is NetworkBehaviour) && !(component is NetworkIdentity) && !retained.Contains(component.GetType()))
                     UnityEngine.Object.DestroyImmediate(component);
             foreach (var animator in prefab.GetComponentsInChildren<Animator>(true)) animator.enabled = false;
+            foreach(var sound in prefab.GetComponentsInChildren<音效_播放音效>(true))UnityEngine.Object.DestroyImmediate(sound);
+            foreach(var source in prefab.GetComponentsInChildren<AudioSource>(true))source.enabled=false;
             foreach (var renderer in prefab.GetComponentsInChildren<Renderer>(true)) renderer.enabled = false;
             foreach (var collider in prefab.GetComponentsInChildren<Collider2D>(true))
                 if (collider.gameObject != prefab) collider.enabled = false;
@@ -87,7 +89,8 @@ namespace CluckmechCoop
             }
             stats.启用建筑体积 = id < 20100 && unit.Kind != StratagemKind.Rover && unit.Health > 1;
             stats.建筑体积 = new Vector2(1,1);
-            stats.图标 = stats.名片 = stats.预放置图片 = StratagemAssets.Icon(unit.Kind, id);
+            stats.图标 = stats.名片 = StratagemAssets.Icon(unit.Kind, id);
+            stats.预放置图片 = id < 20100 ? StratagemAssets.Preview(id) : stats.图标;
             var attack = prefab.GetComponent<模块_攻击属性>();
             attack.攻击力 = unit.Damage; attack.攻击速度 = unit.Rate; attack.攻击范围 = unit.Range;
             attack.变化攻击力 = attack.变化百分比攻击力 = attack.变化攻击速度 = attack.变化百分比攻击速度 = 0;
@@ -130,7 +133,7 @@ namespace CluckmechCoop
                 if (database.词缀列表.Exists(x => x.id == affix.Id)) continue;
                 var item = ScriptableObject.CreateInstance<词条数据模板>();
                 item.name = affix.Name; item.id = affix.Id; item.是否唯一 = true; item.禁止继承 = false;
-                item.图标 = StratagemAssets.Icon((StratagemKind)(affix.Id/10-2501));
+                item.图标 = StratagemAssets.AffixIcon(affix.Id);
                 item.稀有度 = (常量.枚举.词条稀有度)affix.Quality;
                 database.词缀列表.Add(item);
             }
@@ -141,7 +144,7 @@ namespace CluckmechCoop
             {
                 if (database.升级方案列表.Exists(x => x.炮台id == unit.Id)) continue;
                 var pool = new List<int>(unit.NativeAffixes);
-                for (int n = 1; n <= 6; n++) pool.Add(25010 + (int)unit.Kind * 10 + n);
+                pool.AddRange(StratagemCatalog.UpgradePool(unit.Id));
                 database.升级方案列表.Add(new cz升级词缀库.升级方案单元 { 炮台id = unit.Id, 升级词缀id = pool });
             }
         }
@@ -215,17 +218,29 @@ namespace CluckmechCoop
         private static bool Prefix(词条数据模板 __instance, ref string __result)
         { var a = StratagemCatalog.Affix(__instance.id); if (a == null) return true; __result = a.Description; return false; }
     }
-    [HarmonyPatch(typeof(cz升级词缀库), "获取单位词缀列表")]
+    [HarmonyPatch(typeof(奖励结算脚本), "随机词条结果运算")]
     internal static class FilterStratagemUpgrades
     {
-        private static void Postfix(int 单位id, List<int> 词缀列表)
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
-            if (!StratagemCatalog.IsUnit(单位id) || Plugin.Summary == null) return;
+            var original = AccessTools.Method(typeof(cz升级词缀库),"获取单位词缀列表");
+            var replacement = AccessTools.Method(typeof(FilterStratagemUpgrades),nameof(Candidates));
+            foreach (var instruction in instructions)
+            {
+                if (instruction.Calls(original)) { instruction.opcode = System.Reflection.Emit.OpCodes.Call; instruction.operand = replacement; }
+                yield return instruction;
+            }
+        }
+        internal static bool Candidates(cz升级词缀库 library,int unit,out List<int> pool)
+        {
+            bool found = library.获取单位词缀列表(unit,out pool);
+            if (!found || !StratagemCatalog.IsUnit(unit) || Plugin.Summary == null) return found;
             int selected = Plugin.Summary.当前选中的背包id;
             var bag = Plugin.Summary.当前拥有炮台;
-            if (selected < 0 || selected >= bag.Count || bag[selected].炮台id != 单位id) return;
+            if (selected < 0 || selected >= bag.Count || bag[selected].炮台id != unit) return found;
             var owned = bag[selected].强化词条;
-            词缀列表.RemoveAll(id => !StratagemCatalog.CanChoose(id, owned));
+            pool.RemoveAll(id => !StratagemCatalog.CanChoose(id, owned));
+            return found;
         }
     }
 }

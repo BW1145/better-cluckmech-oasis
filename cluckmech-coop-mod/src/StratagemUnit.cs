@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using HarmonyLib;
 using Mirror;
+using DarkTonic.MasterAudio;
 using UnityEngine;
 using 函数库;
 
@@ -20,15 +21,15 @@ namespace CluckmechCoop
         internal readonly HashSet<StratagemUnit> Mines = new HashSet<StratagemUnit>();
         private static readonly Dictionary<uint,StratagemUnit> networkUnits = new Dictionary<uint,StratagemUnit>();
         internal static readonly List<StratagemUnit> Rovers = new List<StratagemUnit>();
-        private SpriteRenderer image, beam, core;
+        private SpriteRenderer image, beam, core,flow;
+        private StratagemRig rig;
         private 模块_基本属性 beamTarget;
         private Vector2 beamPosition;
-        private float beamUntil, beamRadius, attackUntil;
+        private float beamUntil, beamRadius,beamStarted;
         private int pendingMines;
-        private int mortarFacing = 2;
         private bool dead, heldSource, releasing;
-        private bool beamSound;
-        private float born;
+        private SoundGroupVariation beamSound;
+        private float nextBeamSound,beamGain;
         private Vector2 lastDronePosition;
         private StratagemGauge gauge;
         private 联机_单位属性同步 progressSync;
@@ -44,10 +45,8 @@ namespace CluckmechCoop
             Stats = GetComponent<模块_基本属性>();
             int id = Stats.ID == 20101 ? 20001 : Stats.ID == 20102 ? 20007 : Stats.ID;
             Kind = StratagemCatalog.Unit(id).Kind;
-            born = Time.time;
             lastDronePosition = transform.position;
-            image = StratagemAssets.Renderer(transform,StratagemAssets.Icon(Kind,Stats.ID), Stats.ID == 20101 ? .5f : Stats.ID == 20102 ? .85f : Kind == StratagemKind.Rover ? .85f : 1.8f);
-            image.transform.localPosition = new Vector3(0,.3f,-.01f);
+            rig=gameObject.AddComponent<StratagemRig>();rig.Build(this);image=rig.Body;
             yield return null;
             yield return null;
             if (!Plugin.InCombat) yield break;
@@ -57,6 +56,7 @@ namespace CluckmechCoop
             if (netId != 0) networkUnits[netId] = this;
             if (Stats.ID == 20101)
             {
+                if(Parent!=null)rig.LaunchMine((Vector2)Parent.transform.position+Vector2.up*.8f,.3f);
                 if (Plugin.Role != 2 && Parent != null) StartCoroutine(Mine());
                 yield break;
             }
@@ -66,7 +66,6 @@ namespace CluckmechCoop
                 gauge = new StratagemGauge(transform,.95f,new Color(1,.4f,.1f));
                 progressSync = GetComponent<联机_单位属性同步>();
             }
-            StratagemAudio.Play("deploy",transform.position);
             if (Kind == StratagemKind.Shield) { gameObject.AddComponent<StratagemShield>().Initialize(this); yield break; }
             if (Plugin.Role == 2) yield break;
             switch (Kind)
@@ -88,54 +87,67 @@ namespace CluckmechCoop
                 if (Stats.ID == 20102 && Plugin.Role == 2)
                 {
                     Vector2 direction = (Vector2)transform.position-lastDronePosition;
-                    if (direction.sqrMagnitude > .0001f) SetFrame(1,(Mathf.RoundToInt(Mathf.Atan2(direction.y,direction.x)*Mathf.Rad2Deg/45)+8)%8);
+                    if (direction.sqrMagnitude > .0001f) rig.Aim(direction);
                     lastDronePosition = transform.position;
                 }
-                if (Kind == StratagemKind.Mortar && Stats.ID < 20100 && Parameters != null)
-                    image.sprite = Time.time < attackUntil ? StratagemAssets.Frame(Kind,1,Mathf.Min(5,(int)((1-(attackUntil-Time.time)/.5f)*6))) : StratagemAssets.Frame(Kind,0,mortarFacing);
-                else if (Kind == StratagemKind.Barrage) image.sprite = StratagemAssets.Frame(Kind,0,(int)(Time.time*8)%8);
-                else if (Kind == StratagemKind.Laser) image.sprite = StratagemAssets.Frame(Kind,5,(int)(Time.time*8)%8);
-                else if (Kind == StratagemKind.Mines && Stats.ID < 20100)
-                    image.sprite = Time.time-born < 1 ? StratagemAssets.Frame(Kind,0,Mathf.Min(5,(int)((Time.time-born)*6))) :
-                        Time.time < attackUntil ? StratagemAssets.Frame(Kind,1,(int)(Time.time*10)%8) : StratagemAssets.Frame(Kind,2,(int)(Time.time*4)%4);
             }
             if (beam == null) return;
             if (Time.time >= beamUntil) { EndBeam(); return; }
             if (beamTarget != null && beamTarget.当前生命值 > 0)
                 beamPosition = Vector2.MoveTowards(beamPosition,beamTarget.transform.position,(Parameters?.TrackSpeed ?? 4)*Time.deltaTime);
-            int frame = (int)(Time.time*10)%8;
-            beam.sprite = StratagemAssets.Frame(StratagemKind.Laser,1,frame);
+            float remaining=beamUntil-Time.time;
+            float strength=Mathf.Min(Mathf.Clamp01(remaining/.25f),Mathf.Clamp01((Time.time-beamStarted)/.15f));
+            beam.color=new Color(1,1,1,strength*(.86f+.08f*Mathf.Sin(Time.time*22)));
             beam.transform.position = new Vector3(beamPosition.x,beamPosition.y+4,(beamPosition.y+10000)*.01f-.2f);
-            beam.transform.localScale = new Vector3(beamRadius,8/beam.sprite.bounds.size.y,1);
-            core.sprite = StratagemAssets.Frame(StratagemKind.Laser,2,frame);
+            beam.transform.localScale = new Vector3(beamRadius*2/beam.sprite.bounds.size.x*strength,8/beam.sprite.bounds.size.y,1);
+            core.color=new Color(1,1,1,strength*.7f);
             core.transform.position = new Vector3(beamPosition.x,beamPosition.y,(beamPosition.y+10000)*.01f-.03f);
+            float pulse=Mathf.Repeat((Time.time-beamStarted)*3,1);
+            flow.transform.position=new Vector3(beamPosition.x,beamPosition.y+(1-pulse)*7,beam.transform.position.z-.001f);
+            flow.color=new Color(1,1,1,strength*.55f*Mathf.Sin(pulse*Mathf.PI));
+            if(Time.time>=nextBeamSound)
+            {
+                nextBeamSound=Time.time+.2f;
+                float gain=StratagemAudio.Gain(beamPosition);
+                if(beamSound==null)beamSound=StratagemAudio.BeamStarted(beamPosition);
+                else if(Mathf.Abs(gain-beamGain)>.025f)beamSound.AdjustVolume(gain);
+                beamGain=gain;
+            }
         }
         internal void StartBeam(Vector2 point,float duration,float radius)
         {
             EndBeam();
-            if (image != null) image.enabled = false;
-            beamSound = true; StratagemAudio.BeamStarted(point);
-            beamPosition = point; beamUntil = Time.time+duration; beamRadius = radius;
+            rig.Fade(.15f);
+            beamSound=StratagemAudio.BeamStarted(point);nextBeamSound=Time.time+.2f;beamGain=StratagemAudio.Gain(point);
+            beamPosition = point; beamStarted=Time.time;beamUntil = Time.time+duration; beamRadius = radius;
             beam = StratagemAssets.Renderer(null,StratagemAssets.Frame(StratagemKind.Laser,1,0),radius*2);
-            core = StratagemAssets.Renderer(null,StratagemAssets.Frame(StratagemKind.Laser,2,0),radius*2.5f);
+            core = StratagemAssets.Renderer(null,StratagemAssets.Named("fx.core"),radius*2);
+            flow=StratagemAssets.Renderer(null,StratagemAssets.Named("fx.streak"),radius*.18f);
         }
         internal void BeamTarget(uint id,Vector2 point)
         { if (Plugin.Role == 2) { beamTarget = StratagemWorld.Enemy(id); beamPosition = point; } }
         internal void EndBeam()
         {
-            if (beamSound) { beamSound = false; StratagemAudio.BeamEnded(); }
+            StratagemAudio.BeamEnded(beamSound);beamSound=null;
             if (beam != null) Destroy(beam.gameObject);
             if (core != null) Destroy(core.gameObject);
-            beam = core = null; beamTarget = null;
+            if(flow!=null)Destroy(flow.gameObject);
+            if(beam!=null&&Plugin.InCombat)StratagemAssets.Effect("fx.crater.1",beamPosition,beamRadius*2,6,ground:true,opacity:.35f);
+            beam = core = flow = null; beamTarget = null;
         }
-        internal void AttackAnimation() => attackUntil = Time.time+.5f;
-        internal void SetFrame(int row,int column) { if (image != null) image.sprite = StratagemAssets.Frame(Kind,row,column); }
-        internal void Visible(bool value) { if (image != null) image.enabled = value; }
+        internal void AttackAnimation() => rig.Shoot();
+        internal void Aim(Vector2 direction) => rig.Aim(direction);
+        internal Vector2 Muzzle => rig.Muzzle;
+        internal void ShieldState(bool open,float capacity) => rig.ShieldState(open,capacity);
+        internal void SetFrame(int row,int column) { if(Stats.ID==20101)rig.MineState(column==6); }
+        internal void Visible(bool value) => rig.Visible(value);
+        internal void RigDeath() => rig?.Die();
+        internal void FadeBeacon() => rig?.Fade(.15f);
+        internal void Dock(int phase) => rig.Dock(phase,Parent?.Parameters.ReturnTime??.5f);
         internal void DronePhase(int phase, uint parent)
         {
             if (parent != 0 && TryFind(parent,out var source)) Parent = source;
-            if (phase == 2) { Visible(false); Parent?.SetFrame(0,4); }
-            else { Visible(true); Parent?.SetFrame(0,0); }
+            Dock(phase);
         }
         private IEnumerator MineDispenser()
         {
@@ -157,7 +169,7 @@ namespace CluckmechCoop
         {
             count = Math.Min(count,Parameters.MineCap-Mines.Count-pendingMines);
             pendingMines += count;
-            if (count > 0) attackUntil = Time.time+.8f;
+            if (count > 0) rig.Shoot(.8f);
             var navigation = Plugin.Spawner?.GetComponent<导航管理器>();
             for (int i = 0; i < count; i++)
             {
@@ -185,7 +197,7 @@ namespace CluckmechCoop
             var p = Parent.Parameters;
             StratagemEffects.Emit(this,15,transform.position,p.BlastRadius,p.ArmTime,StratagemWorld.Id(Parent.gameObject),new Vector2(MineDamage,0));
             yield return new WaitForSeconds(p.ArmTime);
-            if (image != null) image.sprite = StratagemAssets.Frame(Kind,2,5);
+            rig.MineState(false);
             var sensor = new GameObject("MineSensor"); sensor.transform.SetParent(transform,false);
             var collider = sensor.AddComponent<CircleCollider2D>(); collider.radius = .45f; collider.isTrigger = true;
             sensor.AddComponent<StratagemMineSensor>().Mine = this;
@@ -194,12 +206,13 @@ namespace CluckmechCoop
         {
             if (parent != 0 && TryFind(parent,out var source)) Parent = source;
             MineDamage = damage; Parent?.Mines.Add(this);
+            if(Plugin.Role==2&&Parent!=null)rig.LaunchMine((Vector2)Parent.transform.position+Vector2.up*.8f,.3f);
             if (Plugin.Role == 2) StartCoroutine(MineLamp(armTime));
         }
         private IEnumerator MineLamp(float delay)
         {
             yield return new WaitForSeconds(delay);
-            if (image != null) image.sprite = StratagemAssets.Frame(Kind,2,5);
+            rig.MineState(false);
         }
         internal void TriggerMine(模块_基本属性 enemy)
         {
@@ -212,7 +225,7 @@ namespace CluckmechCoop
         {
             if (!Plugin.InCombat || Parent == null) yield break;
             var p = Parent.Parameters;
-            if (image != null) image.sprite = StratagemAssets.Frame(Kind,2,6);
+            rig.MineState(true);
             yield return new WaitForSeconds(p.TriggerTime);
             if (Parent == null) yield break;
             Parent.Damage.Area(transform.position,p.BlastRadius,MineDamage,Parent.Damage.Critical());
@@ -227,7 +240,7 @@ namespace CluckmechCoop
             var p = Parameters;
             Vector2 center = transform.position;
             yield return new WaitForSeconds(p.CallDelay);
-            if (image != null) image.enabled = false;
+            rig.Fade(.15f);
             float emissionClock = 0;
             for (int shell = 0; shell < p.Salvos*3; shell++)
             {
@@ -310,7 +323,7 @@ namespace CluckmechCoop
             Vector2 point = transform.position;
             yield return new WaitForSeconds(1.2f);
             if (!Alive) yield break;
-            if (image != null) image.enabled = false;
+            rig.Visible(false);
             StratagemEffects.Emit(this,6,point);
             StratagemEffects.Emit(this,7,point,1,.6f+Parameters.CallDelay);
             yield return new WaitForSeconds(.6f+Parameters.CallDelay);
@@ -357,7 +370,7 @@ namespace CluckmechCoop
         private void MortarShot(Vector2 point)
         {
             Vector2 direction = point-(Vector2)transform.position;
-            mortarFacing = (Mathf.RoundToInt(Mathf.Atan2(direction.y,direction.x)*Mathf.Rad2Deg/45)+4)%8;
+            rig.Aim(direction);
             StratagemEffects.Emit(this,9,transform.position,1,.8f,0,point);
             StartCoroutine(MortarImpact(point));
         }
@@ -387,14 +400,15 @@ namespace CluckmechCoop
         {
             if (!HasDependents) return false;
             heldSource = true;
+            dead=true;
             foreach (var collider in GetComponents<Collider2D>()) collider.enabled = false;
-            if (image != null) image.enabled = false;
+            rig.Die();
             ReleaseSource(); return true;
         }
         public void 死亡触发()
         {
             dead = true;
-            if (image != null) image.enabled = false;
+            rig.Die();
             if (Plugin.Role != 2)
                 if (Kind == StratagemKind.Mortar) StratagemEffects.Emit(this,0,transform.position,1);
                 else StratagemEffects.Emit(this,14,transform.position);

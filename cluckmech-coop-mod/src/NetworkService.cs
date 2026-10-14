@@ -21,6 +21,7 @@ namespace CluckmechCoop
         public PlayerProgress PlayerProgress;
         public bool Held;
         public uint Unit;
+        public uint[] Targets;
         public float X, Y;
         public Machine[] Cards;
         public StratagemPlacement Placement;
@@ -88,7 +89,8 @@ namespace CluckmechCoop
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
         private static bool ValidProgress(PlayerProgress progress)
         {
-            if (progress == null || progress.Coupons < 0 || progress.Regions == null || progress.Shops == null || progress.StratagemCooldowns == null) return false;
+            if (progress == null || progress.Coupons < 0 || progress.Regions == null || progress.RepairNodes == null || progress.Shops == null || progress.StratagemCooldowns == null) return false;
+            foreach (string node in progress.RepairNodes) if (string.IsNullOrWhiteSpace(node)) return false;
             foreach (var cooldown in progress.StratagemCooldowns)
                 if (cooldown == null || string.IsNullOrWhiteSpace(cooldown.Node) || cooldown.Slot < 0 || cooldown.Slot >= 5 ||
                     !Rules.ValidMachine(cooldown.Machine) || !StratagemCatalog.IsUnit(cooldown.Machine.Id) || !Finite(cooldown.Remaining) || cooldown.Remaining < 0) return false;
@@ -101,6 +103,8 @@ namespace CluckmechCoop
             if (!Finite(message.Delay) || message.Delay < 0 || !Finite(message.X) || !Finite(message.Y)) return false;
             switch (message.Type)
             {
+                case "swallow": case "swallow-request":
+                    return !string.IsNullOrWhiteSpace(message.Token) && message.Unit != 0 && message.Revision > 0 && message.Targets != null && message.Targets.Length <= 32;
                 case "stratagem-carry":
                     if (string.IsNullOrWhiteSpace(message.Token) || message.Cards == null || message.Cards.Length != 5) return false;
                     foreach (var card in message.Cards) if (card != null && !Rules.ValidMachine(card)) return false;
@@ -134,6 +138,7 @@ namespace CluckmechCoop
             if (!guest && sender != Steam联机管理器.玩家_主机) return;
             if (!NetworkJson.TryRead<SessionMessage>(json, out var message) || !ValidMessage(message)) return;
             if (message.Version != Plugin.Version) { Status = "双方模组版本不一致"; PreparationPanel.ShowStatus(Status); return; }
+            if (message.Type == "swallow-request") { SwallowTargets.Handle(message,guest ? 2 : 1,true); return; }
             if ((message.Type == "stratagem-carry" || message.Type == "stratagem-place") && Plugin.InCombat && message.Token == Plugin.Combat.Token && ModuleSettings.Extra.Stratagems)
             {
                 int role = guest ? 2 : 1;
@@ -163,6 +168,7 @@ namespace CluckmechCoop
             if (key != ReplyKey || Plugin.Role != 2) return;
             if (!NetworkJson.TryRead<SessionMessage>(json, out var message) || !ValidMessage(message)) return;
             if (message.Version != Plugin.Version) { Status = "双方模组版本不一致"; PreparationPanel.ShowStatus(Status); return; }
+            if (message.Type == "swallow") { SwallowTargets.Handle(message,2,false); return; }
             if (message.Type == "settings")
             {
                 if (message.Revision < revision) return;

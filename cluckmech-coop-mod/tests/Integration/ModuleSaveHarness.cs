@@ -14,7 +14,7 @@ static class ModuleSaveHarness
         EnergyUsed = true,
         Players = new Dictionary<int, PlayerProgress> { [0] = new PlayerProgress
         {
-            Coupons = 3, Regions = new HashSet<string> { "desert" }, PendingRegion = "ice",
+            Coupons = 3, Regions = new HashSet<string> { "desert" }, PendingRegion = "ice",RepairNodes=new HashSet<string>{"page:repair"},
             Shops = new Dictionary<string, ShopProgress> { ["page:shop"] = new ShopProgress
             { Refreshes = 3, FourthId = 24, FourthPrice = 80, Sold = new[] { false, false, false, true } } }
         } }
@@ -56,6 +56,9 @@ static class ModuleSaveHarness
                 verify(ModuleSettings.Choice.Token == "saved-token" && ModuleSettings.Choice.RewardId == 2 && ModuleSettings.Choice.Locked, "valid expedition restored");
                 verify(Plugin.Warnings.Count == 0 && ES3.Writes == 0, "valid load is read-only and quiet");
                 ModuleSettings.Save(save); verify(ES3.Writes == 2, "valid addons remain writable");
+                verify(player.RepairNodes.Contains("page:repair")&&!player.ClaimRepair("page:repair"),"repair claim survives save and cannot grant twice");
+                Seed(save,HealthyProgress().Replace("\"RepairNodes\":[\"page:repair\"],",""),HealthyChoice());Load(save);
+                verify(ModuleSettings.Progress.Player(0).RepairNodes.Count==0&&ModuleSettings.Progress.Player(0).Coupons==3,"older progress keeps coupon balance and initializes repair records");
                 Seed(save, HealthyProgress(), "null"); ES3.Data.Remove(Path(save) + ProgressKey); Load(save);
                 verify(ModuleSettings.Progress.Players.Count == 0 && ModuleSettings.Choice == null && Plugin.Warnings.Count == 0, "native-only save and explicit null choice use safe defaults");
                 ModuleSettings.Save(save); verify(ES3.Writes == 2, "absent addon data can be initialized normally");

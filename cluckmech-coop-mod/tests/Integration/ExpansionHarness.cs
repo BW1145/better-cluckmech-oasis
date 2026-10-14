@@ -92,9 +92,10 @@ static class ExpansionHarness
             check(progress.OfferRegion("region-1") && !progress.OfferRegion("region-1"), "region reward offers once");
             check(progress.ClaimRegion() && !progress.ClaimRegion() && !progress.OfferRegion("region-1"), "region reward can be claimed once");
             check(!progress.BuyCoupons("shop-1", 29) && progress.Coupons == 0, "insufficient gold cannot buy coupons");
-            check(progress.BuyCoupons("shop-1", 30) && progress.Coupons == 3 && !progress.BuyCoupons("shop-1", 100), "one coupon pack per shop");
-            check(!progress.SpendCoupon(1) && progress.Coupons == 3, "free reroll consumed first");
-            check(progress.SpendCoupon(0) && progress.Coupons == 2, "extra reroll consumes exactly one coupon");
+            check(progress.BuyCoupons("shop-1", 30) && progress.Coupons == 1 && !progress.BuyCoupons("shop-1", 100), "one coupon pack per shop");
+            check(!progress.SpendCoupon(1) && progress.Coupons == 1, "free reroll consumed first");
+            check(progress.SpendCoupon(0) && progress.Coupons == 0, "extra reroll consumes exactly one coupon");
+            check(progress.ClaimRepair("page:repair-1") && !progress.ClaimRepair("page:repair-1") && progress.ClaimRepair("page:repair-2") && progress.Coupons == 2, "each repair node credits exactly one retained reroll");
             var shop = progress.ShopAt("shop-1"); shop.Refreshed(); shop.Refreshed();
             check(!shop.Expanded, "first two shop rerolls show three offers");
             shop.Refreshed(); shop.FourthId = 24; shop.FourthPrice = 80; shop.Sold[3] = true;

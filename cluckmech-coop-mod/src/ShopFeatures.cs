@@ -91,7 +91,7 @@ namespace CluckmechCoop
             var rect = coupon.GetComponent<RectTransform>(); rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1, 0); rect.anchoredPosition = new Vector2(-32, 110);
             coupons = NativeUi.Label(Shop.transform, "", 0, 0, 320, 34, 23);
             var label = coupons.rectTransform; label.anchorMin = label.anchorMax = label.pivot = new Vector2(1, 0); label.anchoredPosition = new Vector2(-32, 185);
-            coupon.gameObject.AddComponent<RuleTooltip>().Text = "增加3次工匠刷新，剩余次数本局保留。";
+            coupon.gameObject.AddComponent<RuleTooltip>().Text = "增加1次工匠刷新，剩余次数本局保留。";
             WalletChanged();
         }
         private void BuyCoupon()
@@ -100,7 +100,7 @@ namespace CluckmechCoop
             Plugin.Summary.获得金钱(-30); ModuleSettings.SaveProgress(); Plugin.Summary.保存单局存档();
             if (Plugin.Role != 0) Plugin.LocalPlayer?.上传玩家总结数据();
             WalletChanged();
-            Plugin.Log("[Growth] Bought 3 artisan rerolls for 30 gold");
+            Plugin.Log("[Growth] Bought 1 artisan reroll for 30 gold");
         }
         internal static void WalletChanged()
         {

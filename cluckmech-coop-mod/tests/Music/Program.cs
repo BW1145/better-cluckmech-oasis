@@ -93,6 +93,18 @@ static class Program
         Check(Math.Abs(pool.MusicSettings[0].volume-.3463379f)<.00002,"calibration includes beach native per-song attenuation");
         Check(source.MusicSettings[0].volume==.31622777f&&source.MusicSettings.Count==1,"original playlist and song data remain intact");
         Check(pool.crossFadeTime==.7f&&!pool.MusicSettings[0].isLoop&&!pool.MusicSettings[1].isLoop,"pool preserves native transition and allows auto advance");
+        var mineSource=new MasterAudio.Playlist{playlistName="mine"};mineSource.MusicSettings.Add(new MusicSetting{clip=new AudioClip{name="BGM_mine"}});MasterAudio.All.Add("mine",mineSource);
+        var mine=Track("mine","岩窟快车","BGM_mine",.95f);mine.AdditionalSongs=new[]{new MusicSong{Title="矿脉引擎",File="矿脉引擎.ogg"}};
+        ((Dictionary<string,AudioClip>)Field("clips")).Add("岩窟快车",new AudioClip{name="岩窟快车"});
+        ((Dictionary<string,AudioClip>)Field("clips")).Add("矿脉引擎",new AudioClip{name="矿脉引擎"});
+        for(int choice=0;choice<3;choice++)
+        {
+            UnityEngine.Random.Choice=choice;controller.ChangePlaylist("mine",true);
+            var minePool=MasterAudio.GrabPlaylist(controller.LastPlaylist);
+            Check(minePool.MusicSettings.Count==3&&minePool.MusicSettings[choice].alias==controller.LastClip,"mine draws each actual song with one of three equal indices");
+        }
+        Check(mineSource.MusicSettings.Count==1&&mineSource.MusicSettings[0].volume==1,"mine keeps original source calibration data unchanged");
+        UnityEngine.Random.Choice=0;
         int lists=MasterAudio.All.Count;UnityEngine.Random.Choice=0;controller.ChangePlaylist("beach",true);
         Check(MasterAudio.All.Count==lists&&controller.LastClip.EndsWith(".original.0"),"repeat entry reuses pool and can select original song");
         controller.ChangePlaylist("layer-boss-intro",true,"intro");Check(!controller.isShuffle&&controller.LastPlaylist=="layer-boss-intro"&&controller.LastClip=="intro","layer boss retains ordered phase and explicit starting clip");
