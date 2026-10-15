@@ -33,6 +33,7 @@ namespace CluckmechCoop
             foreach (var info in ModuleCatalog.All)
                 preferences[info.Id] = info.Id == ModuleId.Expedition ? expeditionPreference : info.Id == ModuleId.Transfer ? transferPreference :
                     config.Bind("Modules", info.Id.ToString(), true, info.Description);
+            NativeRepairs.Enabled = Preference(ModuleId.NativeRepairs);
         }
         internal static bool ExpeditionPreference { get => expeditionPreference.Value; set => expeditionPreference.Value = value; }
         internal static bool TransferPreference { get => transferPreference.Value; set => transferPreference.Value = value; }

@@ -20,6 +20,44 @@ var original=Assembly.LoadFrom(Path.Combine(managed,"Assembly-CSharp.dll"));
 var mod=Assembly.LoadFrom(Path.Combine(root,"src/bin/Release/net472/CluckmechCoop.dll"));
 int checks=0;
 try{
+if(args.Length>2 && args[2]=="--native-repairs")
+{
+    foreach(var binding in new[]{
+        ("模块_随从状态机","Start","敌人身体"),
+        ("UI_突变模式信息显示","Start","数据库"),
+        ("UI_突变模式信息显示","Start","引用器"),
+        ("UI_突变模式信息显示","Start","全局存档")})
+    {
+        var type=original.GetType(binding.Item1,true);
+        if(AccessTools.Method(type,binding.Item2)==null || AccessTools.Field(type,binding.Item3)==null)throw new Exception("Repair field binding missing: "+binding);
+        checks++;
+    }
+    foreach(var binding in new[]{
+        ("模块_状态持续效果","状态持续","RepairDamageNotifications",3),
+        ("模块_受伤","受到伤害","RepairDamageNotifications",1),
+        ("词条_100067_定时出现火山岩浆气泡","Start","RepairLavaInitialization",1)})
+    {
+        var type=original.GetType(binding.Item1,true);
+        var method=binding.Item1=="模块_受伤"?AccessTools.Method(type,binding.Item2,new[]{original.GetType("世界类+伤害数据包",true)}):AccessTools.Method(type,binding.Item2);
+        var before=PatchProcessor.GetOriginalInstructions(method);
+        var patch=AccessTools.Method(mod.GetType("CluckmechCoop."+binding.Item3,true),"Transpiler");
+        var after=((IEnumerable<CodeInstruction>)patch.Invoke(null,new object[]{before})).ToList();
+        string helper=binding.Item3=="RepairDamageNotifications"?"Send":"Register";
+        if(after.Count(x=>x.operand is MethodInfo call && call.DeclaringType.Assembly==mod && call.Name==helper)!=binding.Item4)throw new Exception("Native repair replacement mismatch: "+binding);
+        checks++;ValidateStack(after);checks++;
+        foreach(string retained in binding.Item1=="词条_100067_定时出现火山岩浆气泡"?new[]{"Find","GetComponent"}:new[]{"实现伤害","伤害出现","伤害统计","Add","查询状态"})
+            if(before.Count(x=>x.operand is MethodInfo call&&call.Name==retained)!=after.Count(x=>x.operand is MethodInfo call&&call.Name==retained))throw new Exception("Native effect changed: "+retained);
+        checks++;
+    }
+    foreach(string name in new[]{"StaticTurretAnimation","RewardSceneContext","RepairRewardArrows","MenuBattleBonuses","MenuBattleControls"})
+        foreach(var method in (IEnumerable<MethodBase>)AccessTools.Method(mod.GetType("CluckmechCoop."+name,true),"TargetMethods").Invoke(null,null))
+        {if(method==null)throw new Exception("Repair target missing: "+name);checks++;}
+    var settings=mod.GetType("CluckmechCoop.NativeRepairs",true);
+    AccessTools.Field(settings,"Enabled").SetValue(null,true);
+    var lava=AccessTools.Method(mod.GetType("CluckmechCoop.RepairLavaInitialization",true),"Register");
+    lava.Invoke(null,new object[]{null,Activator.CreateInstance(original.GetType("世界类+词条数据包",true))});checks++;
+    Console.WriteLine($"PASS: {checks} repair bindings, native damage/terrain IL and optional terrain registration checks");return;
+}
 if(args.Length>2 && args[2]=="--shop-stock")
 {
     var method=AccessTools.Method(original.GetType("商店脚本",true),"商店商品运算");

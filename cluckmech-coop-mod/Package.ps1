@@ -28,7 +28,7 @@ $configDir = Join-Path $packageDir 'BepInEx\config'
 New-Item -ItemType Directory -Path $configDir -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $modRoot 'evidence\startup-destruction\BepInEx.cfg.updated') -Destination (Join-Path $configDir 'BepInEx.cfg') -Force
 [System.IO.File]::WriteAllText((Join-Path $configDir 'billy.cluckmech.coop.diagnostics.cfg'), "[Diagnostics]`r`nDetailedScan = false`r`n", [System.Text.UTF8Encoding]::new($false))
-[System.IO.File]::WriteAllText((Join-Path $configDir 'billy.cluckmech.coop.cfg'), "[Modules]`r`nSpeed = true`r`nCharacters = true`r`nEnergy = true`r`nMusic = true`r`nGrowth = true`r`nShop = true`r`nExpedition = true`r`nTransfer = true`r`nSkipSplash = true`r`nStratagems = true`r`n", [System.Text.UTF8Encoding]::new($false))
+[System.IO.File]::WriteAllText((Join-Path $configDir 'billy.cluckmech.coop.cfg'), "[Modules]`r`nSpeed = true`r`nCharacters = true`r`nEnergy = true`r`nMusic = true`r`nGrowth = true`r`nShop = true`r`nExpedition = true`r`nTransfer = true`r`nSkipSplash = true`r`nStratagems = true`r`nNativeRepairs = true`r`n", [System.Text.UTF8Encoding]::new($false))
 Copy-Item -LiteralPath (Join-Path $modRoot '使用说明.md') -Destination $packageDir -Force
 Copy-Item -LiteralPath (Join-Path $modRoot 'dependencies\BepInEx-LICENSE.txt') -Destination $packageDir -Force
 $archivePath = Join-Path $modRoot "release/Better-Cluckmech-Oasis-$version-Full.zip"
