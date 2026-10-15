@@ -12,8 +12,26 @@ internal static class Program
     { Check(Math.Abs(actual - expected) < .001f, message + $": {actual} != {expected}"); }
     private static StratagemParameters Params(int id, params int[] upgrades) => new StratagemParameters(id, upgrades);
     private sealed class Target{internal float Distance;internal bool Living=true;}
-    private static void Main()
+    private static void Main(string[] args)
     {
+        if(args.Contains("--rover-upgrades"))
+        {
+            var basic=Params(20007);Near(basic.Definition.Damage,40,"Rover base shot damage");
+            var red=Params(20007,25074);Near(red.DamageMultiplier,2,"Redline damage doubles");Near(red.HeatPerShot,4.6875f,"Redline heat increases fifty percent");
+            Near(red.Definition.Rate,basic.Definition.Rate,"Redline preserves attack frequency");
+            Check(Math.Ceiling(red.HeatCap/red.HeatPerShot)==22,"Redline has twenty-two base attacks before overheating");
+            Near(Params(20007,25071).HeatCap,150,"Larger cooler has 150 heat capacity");
+            var both=Params(20007,25071,25074,25077,25078);Check(both.Piercing&&both.HeatRecovery==10,"Both new upgrades compose");
+            Check(StratagemCatalog.UpgradePool(20007).OrderBy(x=>x).SequenceEqual(new[]{25071,25072,25074,25077,25078}),"Current upgrade pool is complete");
+            Check(!StratagemCatalog.CanChoose(25075,Array.Empty<int>())&&!StratagemCatalog.CanChoose(25076,Array.Empty<int>()),"Repair and burning are retired from new rolls");
+            Check(Params(20007,25076).BurningRover,"Existing burning upgrade still loads");
+            bool Hit(float x,float y,float ex,float ey,out float at)=>StratagemBeamGeometry.Intersects(0,0,1,0,4.5f,x,y,ex,ey,out at);
+            Check(Hit(1,0,.2f,.2f,out float first)&&Hit(3,0,.2f,.2f,out float second)&&first<second,"Beam reaches both near and far enemies in physical order");
+            Check(Hit(4.5f,0,0,0,out _)&&!Hit(4.7f,0,0,0,out _),"Fixed beam stops at its range endpoint");
+            Check(!Hit(2,1,.2f,.2f,out _)&&!Hit(-1,0,.2f,.2f,out _),"Off-axis and rear enemies are excluded");
+            Check(StratagemBeamGeometry.Intersects(0,0,0,1,4.5f,0,3,.2f,.2f,out _),"Vertical beam uses the same hit geometry");
+            Console.WriteLine($"PASS: {assertions} focused rover upgrade and beam checks");return;
+        }
         var ids = new HashSet<int>();
         var ledger = new StratagemSequence();
         Check(ledger.Accept(1) && !ledger.Accept(1) && !ledger.Accept(0) && ledger.Accept(3) && !ledger.Accept(2), "Placement sequence executes each operation once");
@@ -22,7 +40,7 @@ internal static class Program
         Check(StratagemCatalog.OwnsDeck(new[] {two,one,null,null,null},new[] {one,two}), "Reordered same-name cards keep exact upgrades and cap");
         Check(!StratagemCatalog.OwnsDeck(new[] {one,one,null,null,null},new[] {one,two}), "Deck cannot duplicate one inventory copy");
         Check(!StratagemCatalog.OwnsDeck(new[] {one.Copy()},new[] {two}), "Same identifier with different upgrades is rejected");
-        Check(StratagemCatalog.Units.Length==7&&StratagemCatalog.ActiveAffixes.Count()==33&&StratagemCatalog.Affixes.Length==42,"Seven machines, 33 candidates and 42 readable legacy identifiers");
+        Check(StratagemCatalog.Units.Length==7&&StratagemCatalog.ActiveAffixes.Count()==33&&StratagemCatalog.Affixes.Length==44,"Seven machines, 33 candidates and 44 readable identifiers");
         int[] counts={4,5,5,5,4,5,5};
         foreach (var unit in StratagemCatalog.Units)
         {
@@ -86,7 +104,7 @@ internal static class Program
         var mortar = Params(20005, 25051, 25052, 25053, 25055);
         Check(mortar.Gas && mortar.Stun == 0 && mortar.Slow == .5f, "Gas replaces stun while retaining slow");
         var rover = Params(20007, 25071, 25072, 25073, 25074);
-        Check(Math.Ceiling(rover.HeatCap / rover.HeatPerShot) == 38, "Heat capacity and redline output affect burst length");
+        Check(Math.Ceiling(rover.HeatCap / rover.HeatPerShot) == 32, "Heat capacity and redline output affect burst length");
         Near(rover.DockTime + 2 * rover.ReturnTime, 3.5f, "Upgraded return-dock-launch duration");
 
         Check(ShieldGeometry.Entry(-5,0,0,0,0,0,3,out var t), "Outside projectile enters shield"); Near(t,.4f,"Entry position");

@@ -129,12 +129,14 @@ namespace CluckmechCoop
             beamTarget = null;
         }
         internal void AttackAnimation() => rig.Shoot();
-        internal void DroneBeam(Vector2 point,float seconds,uint target)
+        internal void DroneBeam(Vector2 point,float seconds,uint target,float length)
         {
             if(seconds<=0){StopDroneBeam();return;}
             if(droneBeam==null)droneBeam=gameObject.AddComponent<StratagemDroneBeam>();
-            droneBeam.Set(this,point,seconds,target);
+            droneBeam.Set(this,point,seconds,target,length);
         }
+        public void 击杀判断(Vector3 point)
+        {if(Plugin.Role!=2&&Stats!=null&&Stats.ID==20102&&Parent!=null)Parent.GetComponent<StratagemRover>()?.Killed();}
         internal void StopDroneBeam() => droneBeam?.Stop();
         internal void Aim(Vector2 direction) => rig.Aim(direction);
         internal Vector2 Muzzle => rig.Muzzle;

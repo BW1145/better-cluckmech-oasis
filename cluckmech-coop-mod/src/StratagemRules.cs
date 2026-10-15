@@ -91,7 +91,7 @@ namespace CluckmechCoop
             new StratagemDefinition(20004, "飞鹰500kg", 5, 4, 6, 8, 1, 0, 3000, 1, 4, 45, 8, new[] {42,109,157,23,25,66,72}),
             new StratagemDefinition(20005, "EMS迫击炮", 0, 2, 4, 3, 450, 0, 0, .25f, 9, 25, 2, new[] {82,81,167,28,71,72}),
             new StratagemDefinition(20006, "FX-12护盾发生器", 1, 3, 5, 3, 5000, 15, 0, 0, 4.5f, 30, 3, new[] {27,28,29,39,71,112,72}),
-            new StratagemDefinition(20007, "AX/LAS-5激光护卫犬", 2, 3, 5, 3, 450, 0, 24, 4, 4.5f, 30, 3, new[] {143,105,146,255,462,23,72})
+            new StratagemDefinition(20007, "AX/LAS-5激光护卫犬", 2, 3, 5, 3, 450, 0, 40, 4, 4.5f, 30, 3, new[] {143,105,146,255,462,23,72})
         };
         internal static readonly StratagemAffix[] Affixes = {
             new StratagemAffix(25011,0,"扩充弹链","地雷上限+4，初次布雷+2；布防0.4秒，触发等待0.08秒。"),
@@ -130,14 +130,16 @@ namespace CluckmechCoop
             new StratagemAffix(25064,1,"稳态充电","未破盾再生等待2.5秒，每秒恢复150容量。"),
             new StratagemAffix(25065,1,"紧急泄压","破盾时眩晕并击退4格内敌人，眩晕0.6秒。"),
             new StratagemAffix(25066,2,"堡垒模式","护罩受到的弹丸伤害减少25%。"),
-            new StratagemAffix(25071,0,"大容量散热器","无人机热量容量提高至140。"),
+            new StratagemAffix(25071,0,"大容量散热器","无人机热量容量提高至150。"),
             new StratagemAffix(25072,0,"高效风冷","停靠充能缩短至3秒，返航速度翻倍；近距离返航与起飞最短0.25秒。"),
             new StratagemAffix(25073,0,"返航推进","返航和起飞各0.25秒，飞行速度提高至6。"),
-            new StratagemAffix(25074,1,"红线输出","激光伤害提高20%，每次攻击热量增加20%。"),
-            new StratagemAffix(25075,1,"自动维修","停靠时每秒恢复无人机15%最大生命。"),
-            new StratagemAffix(25076,2,"焦灼射线","激光附加持续2秒、每0.5秒4点灼烧。")
+            new StratagemAffix(25074,1,"红线输出","激光伤害提高100%，每次攻击热量增加50%；攻速保持不变。"),
+            new StratagemAffix(25075,1,"自动维修","停靠充能时自动维修已纳入无人机基础能力。"),
+            new StratagemAffix(25076,2,"焦灼射线","激光附加持续2秒、每0.5秒4点灼烧。"),
+            new StratagemAffix(25077,1,"贯穿光学","激光延伸至当前射程终点，贯穿沿线敌人；首个敌人承受全额伤害，后续各承受50%。"),
+            new StratagemAffix(25078,1,"余热回收","无人机每击杀一个敌人，降低10点热量。")
         };
-        private static readonly HashSet<int> retired = new HashSet<int> {25012,25013,25025,25034,25042,25054,25056,25066,25073};
+        private static readonly HashSet<int> retired = new HashSet<int> {25012,25013,25025,25034,25042,25054,25056,25066,25073,25075,25076};
         private static readonly Dictionary<int,StratagemAffix> affixesById = IndexAffixes();
         private static Dictionary<int,StratagemAffix> IndexAffixes()
         {
@@ -195,7 +197,8 @@ namespace CluckmechCoop
         internal float FieldDuration = 4, Slow = .35f, Stun = .6f, CapacityRatio = .4f;
         internal float Reboot = 10, RegenDelay = 4, Regen = 100, ShieldDamageFactor = 1;
         internal float HeatCap = 100, HeatPerShot = 3.125f, DockTime = 4.5f, ReturnTime = .5f, FlightSpeed = 5;
-        internal bool AntiTank, BurningMines, Scorch, Melt, Shock, Gas, DoubleMortar, Discharge, Repair, BurningRover;
+        internal bool AntiTank, BurningMines, Scorch, Melt, Shock, Gas, DoubleMortar, Discharge, BurningRover, Piercing;
+        internal float HeatRecovery;
 
         internal StratagemParameters(int id, ICollection<int> owned)
         {
@@ -256,12 +259,13 @@ namespace CluckmechCoop
                 case 25064: RegenDelay = 2.5f; Regen = 150; break;
                 case 25065: Discharge = true; break;
                 case 25066: ShieldDamageFactor = .75f; break;
-                case 25071: HeatCap = 140; break;
+                case 25071: HeatCap = 150; break;
                 case 25072: DockTime = 3; ReturnTime = .25f; break;
                 case 25073: ReturnTime = .25f; FlightSpeed = 6; break;
-                case 25074: DamageMultiplier *= 1.2f; HeatPerShot *= 1.2f; break;
-                case 25075: Repair = true; break;
+                case 25074: DamageMultiplier *= 2; HeatPerShot *= 1.5f; break;
                 case 25076: BurningRover = true; break;
+                case 25077: Piercing = true; break;
+                case 25078: HeatRecovery = 10; break;
             }
         }
         internal float EagleDamage(float distance)

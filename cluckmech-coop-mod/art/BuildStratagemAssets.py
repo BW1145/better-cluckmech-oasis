@@ -140,6 +140,8 @@ active=[25011,25014,25015,25016,25021,25022,25023,25024,25026,
         25051,25052,25053,25055,25061,25062,25063,25064,25065,
         25071,25072,25074,25075,25076]
 for index,affix in enumerate(active): add('affix.'+str(affix),grid('upgradeIcons',6,6,index),portrait=True)
+for index,affix in enumerate([25077,25078]): add('affix.'+str(affix),grid('roverUpgradeIcons',2,1,index),portrait=True,islands=True)
+active=[affix for affix in active if affix not in (25075,25076)]+[25077,25078]
 
 fx=['flash','fire-small','fire-big','fragments','smoke','smoke-thin','crater.0','crater.1','streak','core','shock','spark']
 for index,name in enumerate(fx):
@@ -158,6 +160,9 @@ for prefix,kind,row,count in [('ems-field',4,3,8),('gas-field',4,5,8),
                                ('laser-sparks',2,4,8)]:
     for column in range(count):
         tile=legacy(kind,row,column).resize((128,128),Image.Resampling.NEAREST)
+        if prefix=='laser-beam':
+            # The beam renderer stretches this entire sprite between its two endpoints.
+            tile=tile.crop(tile.getbbox())
         if prefix=='ems-field':
             # Keep source RGB intact; only the dark floor and bright arcs differ in alpha.
             pixels=np.array(tile)

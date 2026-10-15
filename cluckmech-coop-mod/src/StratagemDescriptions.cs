@@ -42,6 +42,9 @@ namespace CluckmechCoop
                     "·固定基座召唤1架激光无人机，可放置多个基座\n"+
                     "·无人机跟随所属角色，以连续激光攻击附近敌人，会受到敌人攻击\n"+
                     $"·过热返回自己的基座，充能{Duration(p.DockTime)}后再次出击\n"+
+                    "·停靠充能时自动修复，完成充能恢复满血\n"+
+                    (p.Piercing?"·激光贯穿至射程终点，首个敌人全额、后续各50%伤害\n":"")+
+                    (p.HeatRecovery>0?$"·每击杀一个敌人降低{p.HeatRecovery:0}热量\n":"")+
                     "·无人机被毁后自动再生；基座损毁后无人机消失";
                 default: return "";
             }
@@ -82,7 +85,7 @@ namespace CluckmechCoop
                     var rover = stats.GetComponent<StratagemRover>();
                     var sync = stats.GetComponent<联机_单位属性同步>();
                     string heat = instance ? $"{(rover != null ? rover.Heat : sync == null ? 0 : sync.进度条*p.HeatCap):0}/{p.HeatCap:0}" : $"{p.HeatCap:0}";
-                    return common+$"每个基座1架无人机\n热量 {heat}　停靠充能 {p.DockTime:0.#}秒\n单次伤害 {damage*p.DamageMultiplier:0.#}　射程 {range:0.#}";
+                    return common+$"每个基座1架无人机\n热量 {heat}　停靠充能 {p.DockTime:0.#}秒\n充能期间自动修复，完成恢复满血\n单次伤害 {damage*p.DamageMultiplier:0.#}　射程 {range:0.#}";
             }
         }
     }
@@ -90,7 +93,7 @@ namespace CluckmechCoop
     internal static class StratagemOverview
     {
         private static bool Prefix(模块_基本属性 __instance,ref string __result)
-        { if (!StratagemCatalog.IsUnit(__instance.ID) && __instance.ID != 20101 && __instance.ID != 20102) return true; __result = __instance.ID == 20101 ? "·地面敌人触发后爆炸\n·播撒器损毁后仍可引爆" : __instance.ID == 20102 ? "·跟随所属角色，以连续激光攻击附近敌人\n·过热后返回固定基座充能，再次起飞" : StratagemDescriptions.Summary(__instance); return false; }
+        { if (!StratagemCatalog.IsUnit(__instance.ID) && __instance.ID != 20101 && __instance.ID != 20102) return true; __result = __instance.ID == 20101 ? "·地面敌人触发后爆炸\n·播撒器损毁后仍可引爆" : __instance.ID == 20102 ? "·跟随所属角色，以连续激光攻击附近敌人\n·过热返回自己的基座充能并自动修复，完成恢复满血" : StratagemDescriptions.Summary(__instance); return false; }
     }
     [HarmonyPatch(typeof(模块_基本属性),"说明")]
     internal static class StratagemDetails

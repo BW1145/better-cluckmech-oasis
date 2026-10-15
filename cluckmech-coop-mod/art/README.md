@@ -16,6 +16,7 @@
 | roverDock.png | 固定地面充能座：水平停靠槽、导向护栏、接触点、金属脚架；深灰装甲、警示黄与绿色状态灯，透明背景 |
 | roverRearViews.png | 2列×1行：双涵道无人机的左右后斜视方向，保持两侧风扇及后部散热结构 |
 | upgradeIcons.png | 6列×6行：按有效强化编号顺序使用前33格；弹链、弹头、准星、镜片、线圈、电容、散热器等各有独立外形 |
+| roverUpgradeIcons.png | 两列一行：贯穿透镜与余热换热盘管，分别用于25077、25078；透明背景，38像素主体 |
 | vfxParts.png | 4列×3行：闪光、小爆炸、大火球、碎片、两种烟尘、两种弹坑、尾迹、落地光核、冲击环、火花；轮廓完全包含在透明格内 |
 
 MD-6参考[原版装备截图](https://www.gamesradar.com/helldivers-2-minefield-anti-personnel/)，EMS参考[原版游戏截图](https://steamcommunity.com/sharedfiles/filedetails/?id=3198345382)。运行图集由`BuildStratagemAssets.py`整理主轮廓、独立留白和部件枢轴，游戏不读取制作源图。

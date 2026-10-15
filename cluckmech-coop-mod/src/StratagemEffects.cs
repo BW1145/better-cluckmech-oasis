@@ -89,7 +89,7 @@ namespace CluckmechCoop
                     burst.gameObject.AddComponent<StratagemExpansion>().Set(.85f,1.1f,.4f);break;
                 case 13:
                     root?.Aim(end-point);root?.AttackAnimation();
-                    root?.DroneBeam(end,message.Duration,message.Target);
+                    root?.DroneBeam(end,message.Duration,message.Target,message.Radius);
                     break;
                 case 14:root?.RigDeath();break;
                 case 15:root?.MineSetup(message.Target,message.EndX,message.Duration);break;

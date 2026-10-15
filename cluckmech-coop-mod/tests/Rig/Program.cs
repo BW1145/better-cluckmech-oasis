@@ -12,6 +12,7 @@ namespace UnityEngine
     public class MonoBehaviour
     {
         public GameObject gameObject;public Transform transform=>gameObject.transform;
+        public T GetComponent<T>()=>gameObject.GetComponent<T>();
     }
     public static class Object{public static void Destroy(object value){if(value is GameObject go)go.Renderers.Clear();}}
     public sealed class Shader{public static Shader Find(string name)=>new();}
@@ -28,13 +29,15 @@ namespace UnityEngine
     public sealed class GameObject
     {
         public Transform transform;public readonly List<SpriteRenderer> Renderers=new();
+        public readonly Dictionary<Type,object> Components=new();
+        public T GetComponent<T>()=>Components.TryGetValue(typeof(T),out var value)?(T)value:default;
         public GameObject(){transform=new Transform(this);}
         public GameObject(string name):this(){}
         public T AddComponent<T>() where T:new(){var value=new T();if(value is LineRenderer line){line.gameObject=this;LineRenderer.All.Add(line);}return value;}
     }
     public sealed class Transform
     {
-        public GameObject owner;public Transform parent;public Vector3 position,localPosition,localScale=Vector3.one;public Quaternion localRotation;
+        public GameObject owner;public Transform parent;public Vector3 position,localPosition,localScale=Vector3.one;public Quaternion localRotation,rotation;
         public Transform(GameObject owner){this.owner=owner;}
         public Vector3 TransformPoint(Vector3 p)=>localPosition+new Vector3(p.x*localScale.x,p.y*localScale.y,0);
     }
@@ -53,6 +56,7 @@ namespace UnityEngine
     public struct Vector2
     {
         public float x,y;public Vector2(float x,float y){this.x=x;this.y=y;}public float sqrMagnitude=>x*x+y*y;
+        public float magnitude=>(float)Math.Sqrt(sqrMagnitude);
         public Vector2 normalized=>sqrMagnitude>0?this/(float)Math.Sqrt(sqrMagnitude):zero;
         public static Vector2 zero=>new(0,0);public static Vector2 up=>new(0,1);public static Vector2 left=>new(-1,0);
         public static Vector2 operator +(Vector2 a,Vector2 b)=>new(a.x+b.x,a.y+b.y);
@@ -81,13 +85,19 @@ namespace UnityEngine
         public static float LerpAngle(float a,float b,float t){float d=Repeat(b-a,360);if(d>180)d-=360;return a+d*Clamp01(t);}
     }
 }
-public sealed class 模块_基本属性 {public int ID;}
+public sealed class 模块_基本属性 {public int ID;public float 当前生命值=100;public GameObject gameObject=new();public Transform transform=>gameObject.transform;}
 namespace CluckmechCoop
 {
+    internal static class StratagemWorld
+    {
+        internal static 模块_基本属性 Target(Vector2 p,float r,bool boss)=>null;
+        internal static 模块_基本属性 Enemy(uint id)=>null;
+    }
     internal enum StratagemKind {Mines,Barrage,Laser,Eagle,Mortar,Shield,Rover}
     public sealed class StratagemUnit:MonoBehaviour
     {
         internal 模块_基本属性 Stats=new();internal StratagemKind Kind;
+        internal bool Alive=>true;internal Vector2 Muzzle=>transform.position;
         public T[] GetComponentsInChildren<T>(bool inactive)=>gameObject.Renderers.OfType<T>().ToArray();
     }
     internal static class StratagemAssets
@@ -118,6 +128,23 @@ static class Program
         string root=Path.GetFullPath(args[0]);
         StratagemAssets.Boxes=JsonSerializer.Deserialize<Dictionary<string,Dictionary<string,float>>>(File.ReadAllText(Path.Combine(root,"src/StratagemAssets/stratagem-v2.json")));
         var frames=new List<object>();
+        if(args.Length>1&&args[1]=="--rover-beam")
+        {
+            var go=new GameObject();var unit=new StratagemUnit{gameObject=go,Stats=new(){ID=20102},Kind=StratagemKind.Rover};
+            var rig=new StratagemRig{gameObject=go};rig.Build(unit);go.Components[typeof(StratagemRig)]=rig;
+            var beam=new StratagemDroneBeam{gameObject=go};
+            var tick=typeof(StratagemDroneBeam).GetMethod("LateUpdate",BindingFlags.NonPublic|BindingFlags.Instance);
+            foreach(float aim in new[]{1f,3f})
+            {
+                beam.Set(unit,new Vector2(aim,0),1,0,4.5f);tick.Invoke(beam,null);
+                var ray=StratagemAssets.LaserParts[0];
+                Check(Math.Abs(ray.sprite.bounds.size.y*ray.transform.localScale.y-4.5f)<.0001f,"Piercing laser has fixed range independent of target distance");
+                Check(Math.Abs(ray.transform.position.x-2.25f)<.0001f,"Fixed beam center corresponds to its full endpoint");
+                frames.Add(new{aim,parts=StratagemAssets.LaserParts.Select(x=>new{name=x.sprite.Name,x=x.transform.position.x,y=x.transform.position.y,z=x.transform.position.z,sx=x.transform.localScale.x,sy=x.transform.localScale.y,angle=x.transform.rotation.z,alpha=x.color.a}).ToArray()});
+            }
+            beam.Stop();Check(StratagemAssets.LaserParts.All(x=>!x.enabled),"Beam and contact stop together");
+            File.WriteAllText(args[2],JsonSerializer.Serialize(frames));Console.WriteLine($"PASS: {checks} fixed beam visual checks");return;
+        }
         if(args.Length>1&&args[1]=="--dock-alignment")
         {
             var go=new GameObject();var unit=new StratagemUnit{gameObject=go,Stats=new(){ID=20102},Kind=StratagemKind.Rover};

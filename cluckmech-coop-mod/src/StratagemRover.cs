@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using 函数库;
 
@@ -11,10 +12,14 @@ namespace CluckmechCoop
         private 模块_基本属性 target;
         private 模块_基本属性 owner;
         private 模块_移动属性 movement,ownerMovement;
+        private 模块_受伤 healing;
         private float nextSearch,nextHeatSync,heat,shots,repairWait = 6;
         private int phase;
         private 联机_单位属性同步 sync;
         private Vector2 offset;
+        private bool spawned;
+        private struct BeamHit {internal 模块_基本属性 Unit;internal float Distance;}
+        private readonly List<BeamHit> beamHits=new List<BeamHit>();
         internal float Heat => heat;
         private Vector2 DockPoint => (Vector2)transform.position+Vector2.up*(.18f*StratagemRig.ModelScale);
         internal void Initialize(StratagemUnit source)
@@ -31,22 +36,26 @@ namespace CluckmechCoop
         {
             while (root.Alive)
             {
-                if (drone == null)
+                if (drone == null || !drone.Alive)
                 {
+                    if(spawned)
+                    {
+                        SetPhase(4);drone=null;
+                        yield return new WaitForSeconds(repairWait);
+                        if(!root.Alive)yield break;
+                    }
+                    spawned=true;
                     SpawnDrone();
                     while (root.Alive && drone != null && drone.Damage == null) yield return null;
                     if (drone == null) { yield return new WaitForSeconds(repairWait); continue; }
                     movement = drone.GetComponent<模块_移动属性>();
+                    healing=drone.GetComponent<模块_受伤>();
                     movement.移动速度 = root.Parameters.FlightSpeed; movement.运算移动速度();
-                    heat = shots = 0;
+                    heat = shots = 0;target=null;nextSearch=0;
                     SetPhase(3);
                     yield return Transit(root.Parameters.ReturnTime,false);
                     if(drone==null||!drone.Alive)continue;
                     SetPhase(0);
-                }
-                if (!drone.Alive)
-                {
-                    SetPhase(4); drone = null; yield return new WaitForSeconds(repairWait); continue;
                 }
                 if (phase == 0)
                 {
@@ -66,11 +75,15 @@ namespace CluckmechCoop
                         while (shots >= 1 && phase == 0 && StratagemWorld.Living(target))
                         {
                             shots--;
-                            drone.Damage.Hit(target,drone.Damage.Attack*root.Parameters.DamageMultiplier,drone.Damage.Critical());
-                            if (root.Parameters.BurningRover) drone.Damage.Burn(target,4,2);
-                            StratagemEffects.Emit(drone,13,drone.transform.position,1,1/drone.Damage.Rate+.08f,StratagemWorld.Id(target.gameObject),target.transform.position);
-                            heat += root.Parameters.HeatPerShot;
-                            if (heat >= root.Parameters.HeatCap) SetPhase(1);
+                            Fire();
+                            heat = Mathf.Min(root.Parameters.HeatCap,heat+root.Parameters.HeatPerShot);
+                            if (heat >= root.Parameters.HeatCap)break;
+                        }
+                        // The native death Update sends kill credit before the next coroutine tick.
+                        if(heat>=root.Parameters.HeatCap)
+                        {
+                            yield return null;
+                            if(drone!=null&&drone.Alive&&heat>=root.Parameters.HeatCap){shots=0;SetPhase(1);}
                         }
                     }
                     else { drone.StopDroneBeam(); heat = Mathf.Max(0,heat-20*Time.deltaTime); shots = 0; }
@@ -82,13 +95,17 @@ namespace CluckmechCoop
                     SetPhase(2);
                     foreach (var collider in drone.GetComponents<Collider2D>()) collider.enabled = false;
                     float until = Time.time+root.Parameters.DockTime;
+                    float repairElapsed=0;
                     while (root.Alive && drone != null && drone.Alive && Time.time < until)
                     {
                         PlaceDrone(DockPoint);
-                        if (root.Parameters.Repair) drone.SendMessage("受到治疗",drone.Stats.当前生命值上限*.15f*Time.deltaTime,SendMessageOptions.DontRequireReceiver);
+                        repairElapsed+=Time.deltaTime;
+                        if(repairElapsed>=.25f)
+                        {healing.受到治疗(drone.Stats.当前生命值上限/root.Parameters.DockTime*repairElapsed);repairElapsed=0;}
                         yield return null;
                     }
                     if (!root.Alive || drone == null || !drone.Alive) continue;
+                    healing.受到治疗(drone.Stats.当前生命值上限);
                     SetPhase(3);
                     yield return Transit(root.Parameters.ReturnTime,false);
                     if (drone == null) continue;
@@ -99,6 +116,39 @@ namespace CluckmechCoop
                 {sync.Network进度条=heat/root.Parameters.HeatCap;nextHeatSync=Time.time+.2f;}
                 yield return null;
             }
+        }
+        internal void Killed()
+        {heat=Mathf.Max(0,heat-root.Parameters.HeatRecovery);}
+        private void Fire()
+        {
+            Vector2 aim=target.transform.position,start=drone.Muzzle;
+            uint targetId=StratagemWorld.Id(target.gameObject);
+            Vector2 direction=(aim-start).normalized;
+            bool critical=drone.Damage.Critical();
+            float damage=drone.Damage.Attack*root.Parameters.DamageMultiplier;
+            if(root.Parameters.Piercing)
+            {
+                beamHits.Clear();
+                foreach(var enemy in StratagemWorld.Enemies)
+                {
+                    if(!StratagemWorld.Living(enemy))continue;
+                    var collider=enemy.GetComponent<Collider2D>();
+                    var bounds=collider==null?new Bounds(enemy.transform.position,Vector3.zero):collider.bounds;
+                    if(StratagemBeamGeometry.Intersects(start.x,start.y,direction.x,direction.y,drone.Damage.Range,
+                        bounds.center.x,bounds.center.y,bounds.extents.x,bounds.extents.y,out float distance))
+                        beamHits.Add(new BeamHit{Unit=enemy,Distance=distance});
+                }
+                beamHits.Sort((a,b)=>a.Distance.CompareTo(b.Distance));
+                for(int i=0;i<beamHits.Count;i++)Hit(beamHits[i].Unit,damage*(i==0?1:.5f),critical);
+            }
+            else Hit(target,damage,critical);
+            StratagemEffects.Emit(drone,13,drone.transform.position,root.Parameters.Piercing?drone.Damage.Range:0,
+                1/drone.Damage.Rate+.08f,targetId,aim);
+        }
+        private void Hit(模块_基本属性 enemy,float damage,bool critical)
+        {
+            drone.Damage.Hit(enemy,damage,critical);
+            if(root.Parameters.BurningRover)drone.Damage.Burn(enemy,4,2);
         }
         private void SpawnDrone()
         {
