@@ -20,6 +20,15 @@ var original=Assembly.LoadFrom(Path.Combine(managed,"Assembly-CSharp.dll"));
 var mod=Assembly.LoadFrom(Path.Combine(root,"src/bin/Release/net472/CluckmechCoop.dll"));
 int checks=0;
 try{
+if(args.Length>2 && args[2]=="--particle-init")
+{
+    var begin=AccessTools.Method(mod.GetType("CluckmechCoop.StratagemNativeParticles",true),"Begin");
+    var code=PatchProcessor.GetOriginalInstructions(begin);
+    int lookup=code.FindIndex(x=>x.operand is MethodInfo m&&m.Name=="GetComponentInChildren"&&m.IsGenericMethod&&m.GetGenericArguments()[0].Name=="SpriteRenderer");
+    if(lookup<1||code[lookup-1].opcode!=OpCodes.Ldc_I4_1)throw new Exception("Particle sorting must use an inactive child renderer; native tower root has none");
+    checks++;ValidateStack(code);checks++;
+    Console.WriteLine($"PASS: {checks} particle initialization child-renderer and IL checks");return;
+}
 if(args.Length>2 && args[2]=="--native-repairs")
 {
     foreach(var binding in new[]{

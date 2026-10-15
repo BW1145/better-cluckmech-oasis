@@ -11,7 +11,7 @@ namespace CluckmechCoop
         {
             var effects=GameObject.Find(函数库.常数类.命名_世界).GetComponent<效果物体引用器>().特效;
             sparks=effects.普通攻击效果;smoke=effects.烟雾效果;electric=effects.感电效果;
-            var model=StratagemRegistry.Prefab(20001).GetComponent<SpriteRenderer>();
+            var model=StratagemRegistry.Prefab(20001).GetComponentInChildren<SpriteRenderer>(true);
             sortingLayer=model.sortingLayerID;sortingOrder=model.sortingOrder;
         }
         internal static void Clear(){sparks=smoke=electric=null;}
