@@ -20,6 +20,35 @@ var original=Assembly.LoadFrom(Path.Combine(managed,"Assembly-CSharp.dll"));
 var mod=Assembly.LoadFrom(Path.Combine(root,"src/bin/Release/net472/CluckmechCoop.dll"));
 int checks=0;
 try{
+if(args.Length>2 && args[2]=="--shop-stock")
+{
+    var method=AccessTools.Method(original.GetType("商店脚本",true),"商店商品运算");
+    var patchType=mod.GetType("CluckmechCoop.NewShopStock",true);
+    var instructions=PatchProcessor.GetOriginalInstructions(method);
+    var changed=((IEnumerable<CodeInstruction>)AccessTools.Method(patchType,"Transpiler").Invoke(null,new object[]{instructions})).ToList();
+    if(changed.Count(x=>x.operand is MethodInfo call&&call.Name=="SpecialOfferCount")!=1)throw new Exception("Shop candidate filter binding mismatch");
+    checks++;ValidateStack(changed);checks++;
+    foreach(string nativeCall in new[]{"Range","商店_同步商店栏位","保存单局存档"})
+        if(instructions.Count(x=>x.operand is MethodInfo call&&call.Name==nativeCall)!=changed.Count(x=>x.operand is MethodInfo call&&call.Name==nativeCall))throw new Exception("Native shop draw or persistence changed");
+    checks++;
+    var shop=System.Runtime.Serialization.FormatterServices.GetUninitializedObject(method.DeclaringType);
+    var stockField=AccessTools.Field(method.DeclaringType,"当前商品");
+    var vectorType=stockField.FieldType.GetElementType();
+    var moduleType=mod.GetType("CluckmechCoop.ModuleSettings",true);
+    var modules=AccessTools.Field(moduleType,"Extra").GetValue(null);
+    var enabled=AccessTools.Field(modules.GetType(),"Shop");
+    var filter=AccessTools.Method(patchType,"SpecialOfferCount");
+    foreach(int slots in new[]{3,4})
+    {
+        var stock=Array.CreateInstance(vectorType,slots);
+        stock.SetValue(Activator.CreateInstance(vectorType,new object[]{7,100,0}),1);stockField.SetValue(shop,stock);
+        enabled.SetValue(modules,true);var candidates=new List<int>{5,7,9};
+        if((int)filter.Invoke(null,new object[]{candidates,shop})!=2||!candidates.SequenceEqual(new[]{5,9}))throw new Exception("Preferred machine repeated in special candidate pool");checks++;
+    }
+    enabled.SetValue(modules,false);var untouched=new List<int>{5,7,9};
+    if((int)filter.Invoke(null,new object[]{untouched,shop})!=3||untouched.Count!=3)throw new Exception("Disabled module changed native candidates");checks++;
+    Console.WriteLine($"PASS: {checks} shop selection, native IL stack and retained pricing/persistence checks");return;
+}
 foreach(var binding in new[]{
     ("词条_100159_肚子鳄","吞噬触发","SwallowExecution"),
     ("词条_100176_水母骑士","吞噬触发","SwallowExecution"),

@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
@@ -129,6 +131,30 @@ namespace CluckmechCoop
     {
         private static void Prefix(商店脚本 __instance) { if (ShopFeatures.Enabled) ShopFeatures.For(__instance).PrepareStock(); }
         private static void Postfix(商店脚本 __instance) { if (ShopFeatures.Enabled) ShopFeatures.For(__instance).StockReady(false); }
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var code = instructions.ToList();
+            var range = AccessTools.Method(typeof(UnityEngine.Random), nameof(UnityEngine.Random.Range), new[] { typeof(int), typeof(int) });
+            var item = AccessTools.PropertyGetter(typeof(List<int>), "Item");
+            var count = AccessTools.PropertyGetter(typeof(List<int>), "Count");
+            var setId = AccessTools.PropertySetter(typeof(Vector3Int), "x");
+            int draws = 0;
+            for (int i = 1; i + 2 < code.Count; i++)
+            {
+                if (!code[i].Calls(range) || !code[i+1].Calls(item) || !code[i+2].Calls(setId) || ++draws != 3) continue;
+                if (!code[i-1].Calls(count)) throw new InvalidOperationException("Special shop offer count binding changed");
+                code[i-1] = new CodeInstruction(OpCodes.Ldarg_0).MoveLabelsFrom(code[i-1]);
+                code.Insert(i, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(NewShopStock), nameof(SpecialOfferCount))));
+                return code;
+            }
+            throw new InvalidOperationException("Special shop offer selection binding missing");
+        }
+        private static int SpecialOfferCount(List<int> candidates, 商店脚本 shop)
+        {
+            // The native preferred-slot replacement leaves its new ID in this pool.
+            if (ModuleSettings.Extra.Shop) candidates.Remove(shop.当前商品[1].x);
+            return candidates.Count;
+        }
     }
     [HarmonyPatch(typeof(商店脚本), "读取储存的商店信息")]
     internal static class RestoreShopStock

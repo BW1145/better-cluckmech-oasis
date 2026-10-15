@@ -93,7 +93,9 @@ namespace CluckmechCoop
             }
             stats.启用建筑体积 = id < 20100 && unit.Kind != StratagemKind.Rover && unit.Health > 1;
             stats.建筑体积 = new Vector2(1,1);
-            prefab.GetComponent<BoxCollider2D>().size = stats.启用建筑体积 ? stats.建筑体积-new Vector2(.35f,.35f) : Vector2.zero;
+            var buildingCollider = prefab.GetComponent<BoxCollider2D>();
+            if (buildingCollider != null)
+                buildingCollider.size = stats.启用建筑体积 ? stats.建筑体积-new Vector2(.35f,.35f) : Vector2.zero;
             stats.图标 = stats.名片 = StratagemAssets.Icon(unit.Kind, id);
             stats.预放置图片 = id < 20100 ? StratagemAssets.Preview(id) : stats.图标;
             var attack = prefab.GetComponent<模块_攻击属性>();
