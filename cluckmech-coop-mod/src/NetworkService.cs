@@ -89,10 +89,10 @@ namespace CluckmechCoop
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
         private static bool ValidProgress(PlayerProgress progress)
         {
-            if (progress == null || progress.Coupons < 0 || progress.Regions == null || progress.RepairNodes == null || progress.Shops == null || progress.StratagemCooldowns == null) return false;
+            if (progress == null || progress.Coupons < 0 || !progress.ValidGrowthRewards() || progress.Regions == null || progress.RepairNodes == null || progress.Shops == null || progress.StratagemCooldowns == null) return false;
             foreach (string node in progress.RepairNodes) if (string.IsNullOrWhiteSpace(node)) return false;
             foreach (var cooldown in progress.StratagemCooldowns)
-                if (cooldown == null || string.IsNullOrWhiteSpace(cooldown.Node) || cooldown.Slot < 0 || cooldown.Slot >= 5 ||
+                if (cooldown == null || string.IsNullOrWhiteSpace(cooldown.Node) || cooldown.Slot < 0 || cooldown.Slot >= 5+progress.ExtraCarrySlots ||
                     !Rules.ValidMachine(cooldown.Machine) || !StratagemCatalog.IsUnit(cooldown.Machine.Id) || !Finite(cooldown.Remaining) || cooldown.Remaining < 0) return false;
             foreach (var shop in progress.Shops.Values)
                 if (shop == null || shop.Sold == null || shop.Sold.Length != 4 || shop.Refreshes < 0 || shop.FourthPrice < 0 || shop.FourthId < -1) return false;
@@ -106,14 +106,14 @@ namespace CluckmechCoop
                 case "swallow": case "swallow-request":
                     return !string.IsNullOrWhiteSpace(message.Token) && message.Unit != 0 && message.Revision > 0 && message.Targets != null && message.Targets.Length <= 32;
                 case "stratagem-carry":
-                    if (string.IsNullOrWhiteSpace(message.Token) || message.Cards == null || message.Cards.Length != 5) return false;
+                    if (string.IsNullOrWhiteSpace(message.Token) || message.Cards == null || message.Cards.Length < 5 || message.Cards.Length > 6) return false;
                     foreach (var card in message.Cards) if (card != null && !Rules.ValidMachine(card)) return false;
                     return true;
                 case "stratagem-place":
                     var placement = message.Placement;
-                    return !string.IsNullOrWhiteSpace(message.Token) && placement != null && placement.Slot >= 0 && placement.Slot < 5 && placement.Sequence > 0 &&
+                    return !string.IsNullOrWhiteSpace(message.Token) && placement != null && placement.Slot >= 0 && placement.Slot < 6 && placement.Sequence > 0 &&
                         Rules.ValidMachine(placement.Machine) && StratagemCatalog.IsUnit(placement.Machine.Id) && Finite(placement.X) && Finite(placement.Y);
-                case "stratagem-placed": return !string.IsNullOrWhiteSpace(message.Token) && message.Stage >= 0 && message.Stage < 5 && message.Revision > 0 && message.Delay <= 600 && message.X >= 0 && message.X <= 100;
+                case "stratagem-placed": return !string.IsNullOrWhiteSpace(message.Token) && message.Stage >= 0 && message.Stage < 6 && message.Revision > 0 && message.Delay <= 600 && message.X >= 0 && message.X <= 100;
                 case "stratagem-effect": return !string.IsNullOrWhiteSpace(message.Token) && message.Effect != null && message.Effect.Valid;
                 case "settings":
                     if (message.Revision < 0 || message.Delay > 10 || (message.Choice != null && (string.IsNullOrWhiteSpace(message.Choice.Token) || message.Choice.RewardId < -1 || message.Choice.RewardId > 2))) return false;
@@ -184,6 +184,7 @@ namespace CluckmechCoop
                 ModuleSettings.Choice = message.Choice;
                 ModuleSettings.Extra = message.Modules ?? new GameplayModules();
                 ModuleSettings.Progress = message.Progress ?? new RunProgress();
+                CarryCapacity.RefreshPreparation();
                 if (Plugin.Combat != null) { Plugin.Combat.Token = message.Token; Plugin.Combat.Synchronize(message.Held, message.Delay); StratagemDeployment.Begin(); }
                 revision = acknowledged = message.Revision; peer = true; Status = "";
                 Send(new SessionMessage { Type = "ack", Revision = revision });

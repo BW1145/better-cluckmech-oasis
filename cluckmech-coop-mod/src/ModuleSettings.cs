@@ -52,6 +52,7 @@ namespace CluckmechCoop
             InRun = Expedition = Transfer = false;
             Choice = null; Extra = new GameplayModules(); Progress = new RunProgress(); Music = false;
             ClearScene();
+            CarryCapacity.Apply();
         }
         internal static void ClearScene() { rewards = null; rewardList = null; }
         internal static bool Active => InRun && Expedition && Choice != null && Choice.Enabled;
@@ -165,9 +166,9 @@ namespace CluckmechCoop
             foreach (var entry in progress.Players)
             {
                 var player = entry.Value;
-                if (entry.Key < 0 || entry.Key > 2 || player == null || player.Coupons < 0 || player.Regions == null || player.RepairNodes == null || player.Shops == null || player.StratagemCooldowns == null) return false;
+                if (entry.Key < 0 || entry.Key > 2 || player == null || player.Coupons < 0 || !player.ValidGrowthRewards() || player.Regions == null || player.RepairNodes == null || player.Shops == null || player.StratagemCooldowns == null) return false;
                 foreach (var cooldown in player.StratagemCooldowns)
-                    if (cooldown == null || string.IsNullOrWhiteSpace(cooldown.Node) || cooldown.Slot < 0 || cooldown.Slot >= 5 ||
+                    if (cooldown == null || string.IsNullOrWhiteSpace(cooldown.Node) || cooldown.Slot < 0 || cooldown.Slot >= 5+player.ExtraCarrySlots ||
                         !Rules.ValidMachine(cooldown.Machine) || !StratagemCatalog.IsUnit(cooldown.Machine.Id) || cooldown.Remaining < 0 ||
                         float.IsNaN(cooldown.Remaining) || float.IsInfinity(cooldown.Remaining)) return false;
                 var fields = players[entry.Key.ToString(System.Globalization.CultureInfo.InvariantCulture)] as JObject;

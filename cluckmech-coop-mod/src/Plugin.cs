@@ -14,7 +14,7 @@ namespace CluckmechCoop
     [BepInPlugin("billy.cluckmech.coop", "更好的鸡械绿洲", Version)]
     public sealed class Plugin : BaseUnityPlugin
     {
-        internal const string Version = "0.5.2";
+        internal const string Version = "0.5.3";
         internal static Plugin Instance;
         internal static TransferService Transfers;
         internal static NetworkService Network;
@@ -69,7 +69,7 @@ namespace CluckmechCoop
                 if (canvas != null) NativeUi.Capture(canvas.transform);
             }
             Network.BeginHandshake();
-            Panel.RefreshState(); GrowthPanel.ShowPending();
+            CarryCapacity.Apply();Panel.RefreshState(); GrowthPanel.ShowPending();
         }
         internal static void BindSpawner(刷怪器 spawner)
         {
@@ -97,6 +97,7 @@ namespace CluckmechCoop
             SceneManager.sceneLoaded -= Loaded;
             Difficulty.Reset(); patches?.UnpatchSelf();
             NativeUi.ReleaseTransferSkin();
+            CarryCapacity.Release();
         }
         internal static 总结脚本 Summary => summary;
         internal static dw单位库 Units { get { if (units == null) units = UnityEngine.Object.FindObjectOfType<dw单位库>(); return units; } }
@@ -127,6 +128,7 @@ namespace CluckmechCoop
         {
             if (__instance.总结 != null) Plugin.BindSummary(__instance.总结);
             ModuleSettings.Prepare();
+            CarryCapacity.Prepare(__instance);
             PreparationPanel.Attach(__instance);
             Plugin.Panel.RefreshState();
         }

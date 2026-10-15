@@ -249,9 +249,13 @@ static class Program
 {
     private static int checks;
     private static void Check(bool value, string name) { if (!value) throw new Exception(name); checks++; }
-    static void Main()
+    static void Main(string[] args)
     {
         ModuleSettings.Initialize(new BepInEx.Configuration.ConfigFile());
+        if(args.Length==1 && args[0]=="--growth-events")
+        {
+            GrowthEventChecks.Run(Check);Console.WriteLine($"PASS: {checks} growth-event reward, persistence and six-slot protocol checks");return;
+        }
         ModuleSettings.MainMenu();
         var global = new 存档脚本 { 文件名 = "quanju", 后缀 = ".qjcd" };
         ModuleSettings.Load(global);

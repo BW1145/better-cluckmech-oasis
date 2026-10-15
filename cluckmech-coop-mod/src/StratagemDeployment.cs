@@ -10,7 +10,7 @@ namespace CluckmechCoop
     internal sealed class DeploymentState
     {
         internal Machine[] Cards;
-        internal float[] Ready = new float[5];
+        internal float[] Ready;
         internal StratagemSequence Sequence = new StratagemSequence();
     }
     internal static class StratagemDeployment
@@ -59,17 +59,17 @@ namespace CluckmechCoop
         {
             build = value; node = ModuleSettings.NodeKey;
             if (!ModuleSettings.Extra.Stratagems || Plugin.Summary == null) return;
-            var cards = new Machine[5];
-            for (int i = 0; i < Math.Min(5,Plugin.Summary.当前携带炮台.Count); i++) cards[i] = Snapshot(Plugin.Summary.当前携带炮台[i]);
-            var state = new DeploymentState { Cards = cards };
+            var cards = new Machine[CarryCapacity.Slots];
+            for (int i = 0; i < cards.Length; i++) cards[i] = Snapshot(Plugin.Summary.当前携带炮台[i]);
+            var state = new DeploymentState { Cards = cards, Ready = new float[cards.Length] };
             roles.TryGetValue(Plugin.Role,out var prior);
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < cards.Length; i++)
             {
                 if (cards[i] == null || !StratagemCatalog.IsUnit(cards[i].Id)) continue;
                 var p = new StratagemParameters(cards[i].Id,cards[i].Upgrades);
                 var item = build.建造单位信息列表[i];
                 var saved = ModuleSettings.LocalProgress.StratagemCooldowns.FirstOrDefault(x => x.Node == node && x.Slot == i && Rules.SameMachine(cards[i],x.Machine));
-                float remaining = prior != null && Rules.SameMachine(prior.Cards[i],cards[i]) ? Mathf.Max(0,prior.Ready[i]-Time.time) : saved == null ? item.剩余cd时间 : saved.Remaining;
+                float remaining = prior != null && i < prior.Cards.Length && Rules.SameMachine(prior.Cards[i],cards[i]) ? Mathf.Max(0,prior.Ready[i]-Time.time) : saved == null ? item.剩余cd时间 : saved.Remaining;
                 item.cd时间 = p.Cooldown; item.花费动力 = item.当前花费动力 = p.Power;
                 item.剩余cd时间 = remaining; item.是否cd完毕 = remaining <= 0; item.百分比 = remaining/p.Cooldown;
                 state.Ready[i] = Time.time+remaining;
@@ -85,11 +85,11 @@ namespace CluckmechCoop
         }
         internal static void Carry(int role,Machine[] cards)
         {
-            if (role != 2 || cards == null || cards.Length != 5 || roles.ContainsKey(role)) return;
+            if (role != 2 || cards == null || cards.Length != CarryCapacity.SlotsFor(role) || roles.ContainsKey(role)) return;
             var owned = Steam联机管理器.玩家_客户端?.Network总结数据_联机?.当前拥有炮台;
             if (owned == null) return;
             if (!StratagemCatalog.OwnsDeck(cards,owned.ConvertAll(Snapshot))) return;
-            var state = new DeploymentState { Cards = cards };
+            var state = new DeploymentState { Cards = cards, Ready = new float[cards.Length] };
             for (int i = 0; i < cards.Length; i++)
             {
                 if (cards[i] == null || !StratagemCatalog.IsUnit(cards[i].Id)) continue;
@@ -133,7 +133,7 @@ namespace CluckmechCoop
         internal static void Place(int role,StratagemPlacement request)
         {
             if (!Plugin.InCombat || !ModuleSettings.Extra.Stratagems) return;
-            if (!roles.TryGetValue(role,out var state) || !Rules.SameMachine(state.Cards[request.Slot],request.Machine))
+            if (!roles.TryGetValue(role,out var state) || request.Slot >= state.Cards.Length || !Rules.SameMachine(state.Cards[request.Slot],request.Machine))
             {
                 float currentPower = role == 2 ? Steam联机管理器.玩家_客户端.当前动力 : 模块_玩家_动力.当前动力;
                 if (role <= 1) Applied(role,request.Sequence,request.Slot,0,currentPower,false);
@@ -186,13 +186,13 @@ namespace CluckmechCoop
         {
             if (node == null) return;
             if (build != null && roles.TryGetValue(Plugin.Role,out var local))
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < local.Cards.Length; i++)
                     if (local.Cards[i] != null && StratagemCatalog.IsUnit(local.Cards[i].Id)) local.Ready[i] = Time.time+Mathf.Max(0,build.建造单位信息列表[i].剩余cd时间);
             foreach (var role in roles)
             {
                 var saved = ModuleSettings.Progress.Player(role.Key).StratagemCooldowns;
                 saved.Clear();
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < role.Value.Cards.Length; i++)
                     if (role.Value.Cards[i] != null && StratagemCatalog.IsUnit(role.Value.Cards[i].Id))
                         saved.Add(new StratagemCooldown { Node = node, Slot = i, Machine = role.Value.Cards[i].Copy(), Remaining = Mathf.Max(0,role.Value.Ready[i]-Time.time) });
             }

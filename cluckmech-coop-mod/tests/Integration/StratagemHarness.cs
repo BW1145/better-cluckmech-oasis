@@ -5,6 +5,11 @@ using Newtonsoft.Json.Linq;
 using CluckmechCoop;
 namespace CluckmechCoop
 {
+    internal static class CarryCapacity
+    {
+        internal static void Apply() { }
+        internal static void RefreshPreparation() { }
+    }
     internal static class SwallowTargets { internal static bool Handle(SessionMessage message,int role,bool server)=>true; }
     internal static class StratagemDeployment
     {
@@ -19,6 +24,36 @@ namespace CluckmechCoop
     {
         internal static int Count;
         internal static void Play(StratagemEffectMessage message) { Count++; }
+    }
+}
+static class GrowthEventChecks
+{
+    internal static void Run(Action<bool,string> check)
+    {
+        using(Harness.Use(new Context(0)))
+        {
+            ModuleSettings.MainMenu();ModuleSettings.EnterRun();
+            var player=ModuleSettings.LocalProgress;
+            check(player.ClaimGrowthEvent(88) && !player.ClaimGrowthEvent(88) && player.Coupons==20,"event grants twenty retained rerolls once");
+            check(!player.SpendCoupon(1) && player.Coupons==20 && player.SpendCoupon(0) && player.Coupons==19,"native free refreshes precede event coupons");
+            check(player.ClaimGrowthEvent(89) && !player.ClaimGrowthEvent(89) && player.ExtraCarrySlots==1,"carry event grants one sixth slot");
+            check(player.ClaimGrowthEvent(90) && !player.ClaimGrowthEvent(90) && player.ExtraPowerCapacity==5,"power event raises capacity by five once");
+            player.StratagemCooldowns.Add(new StratagemCooldown { Node="page:node",Slot=5,Machine=new Machine { Id=20004,UpgradeLimit=6 },Remaining=10 });
+            ModuleSettings.Progress.GrowthPoolsAdded=true;
+            ModuleSettings.Save(Harness.Current.Save);ModuleSettings.MainMenu();ModuleSettings.Load(Harness.Current.Save);
+            player=ModuleSettings.LocalProgress;
+            check(player.Coupons==19 && player.ExtraCarrySlots==1 && player.ExtraPowerCapacity==5 && player.GrowthEvents.Count==3 && ModuleSettings.Progress.GrowthPoolsAdded,"save restores event rewards and extended deck cooldown");
+            var valid=typeof(NetworkService).GetMethod("ValidProgress",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static);
+            check((bool)valid.Invoke(null,new object[]{player}),"network accepts the sixth slot cooldown");
+            player.StratagemCooldowns[0].Slot=6;
+            check(!(bool)valid.Invoke(null,new object[]{player}),"network rejects a slot beyond the expanded deck");
+            player.StratagemCooldowns.Clear();
+            var data=JObject.Parse(JsonConvert.SerializeObject(ModuleSettings.Progress));data.Remove("GrowthPoolsAdded");
+            var legacy=(JObject)data["Players"]["0"];legacy.Remove("ExtraCarrySlots");legacy.Remove("ExtraPowerCapacity");legacy.Remove("GrowthEvents");
+            ES3.Save("CluckmechCoop.Progress.v4",data.ToString(),"danju_m.cd",new ES3Settings(ES3.Location.Cache));
+            ModuleSettings.MainMenu();ModuleSettings.Load(Harness.Current.Save);player=ModuleSettings.LocalProgress;
+            check(player.Coupons==19 && player.ExtraCarrySlots==0 && player.ExtraPowerCapacity==0 && player.GrowthEvents.Count==0,"legacy saves initialize event fields and preserve existing coupons");
+        }
     }
 }
 static class StratagemHarness
