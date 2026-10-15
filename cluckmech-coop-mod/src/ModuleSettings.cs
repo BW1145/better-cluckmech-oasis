@@ -162,7 +162,7 @@ namespace CluckmechCoop
         }
         private static bool ValidProgress(JObject data, RunProgress progress)
         {
-            if (!HasFields(data, JTokenType.Boolean, "EnergyUsed") || !(data["Players"] is JObject players) || progress.Players == null) return false;
+            if (!HasFields(data, JTokenType.Boolean, "EnergyUsed") || !progress.ValidEnergy || !(data["Players"] is JObject players) || progress.Players == null) return false;
             foreach (var entry in progress.Players)
             {
                 var player = entry.Value;

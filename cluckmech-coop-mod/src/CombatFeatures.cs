@@ -43,8 +43,8 @@ namespace CluckmechCoop
             var keyboard = Keyboard.current;
             if (ModuleSettings.Extra.Speed)
             {
-                bool held = Application.isFocused && !Typing() && keyboard != null && keyboard.leftCtrlKey.isPressed && Plugin.Network.SettingsReady;
-                if (held != localHeld) SendHold(held);
+                if (Application.isFocused && !Typing() && keyboard != null && keyboard.leftShiftKey.wasPressedThisFrame && Plugin.Network.SettingsReady)
+                    SendHold(!speedWanted);
                 ApplySpeed();
             }
             if (ModuleSettings.Extra.Energy && keyboard != null && keyboard.fKey.wasPressedThisFrame && !Typing() && Time.timeScale > 0 && Application.isFocused)
@@ -62,7 +62,9 @@ namespace CluckmechCoop
         }
         internal void HostHold(int role, bool value)
         {
-            if (!Holds.Set(role, value)) return;
+            bool previous=Holds.Active;
+            Holds.Clear();Holds.Set(role,value);
+            if (previous==value) return;
             SetSpeed(Holds.Active);
             Plugin.Network.Broadcast(new SessionMessage { Type = "speed", Token = Token, Held = Holds.Active });
         }
@@ -71,7 +73,7 @@ namespace CluckmechCoop
             SetSpeed(held);
             if (baseStats != null) ApplyEnergy(energy); else pendingEnergy = energy;
         }
-        internal void SetSpeed(bool value) { speedWanted = value; ApplySpeed(); }
+        internal void SetSpeed(bool value) { localHeld = speedWanted = value; ApplySpeed(); }
         internal void NativeSpeed(float value)
         {
             if (applyingTime || value <= .2f) return;
@@ -89,10 +91,10 @@ namespace CluckmechCoop
         }
         internal bool StartEnergy()
         {
-            if (!ModuleSettings.Extra.Energy || !Plugin.InCombat || baseStats == null || baseStats.当前生命值 <= 0 || !ModuleSettings.Progress.UseEnergy()) return false;
+            if (!ModuleSettings.Extra.Energy || !Plugin.InCombat || EnergyActive || baseStats == null || baseStats.当前生命值 <= 0 || !ModuleSettings.Progress.UseEnergy()) return false;
             ModuleSettings.SaveProgress(); ApplyEnergy(10);
             Plugin.Network.Broadcast(new SessionMessage { Type = "energy", Token = Token, Delay = 10 });
-            Plugin.Log("[Energy] Activated once for this run; duration 10, attack +500, resistance 100%");
+            Plugin.Log("[Energy] Activated; remaining "+ModuleSettings.Progress.EnergyRemaining+"; duration 10, attack +500, resistance 100%");
             return true;
         }
         internal void ApplyEnergy(float seconds)

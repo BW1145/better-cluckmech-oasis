@@ -21,7 +21,8 @@ namespace CluckmechCoop
         internal readonly HashSet<StratagemUnit> Mines = new HashSet<StratagemUnit>();
         private static readonly Dictionary<uint,StratagemUnit> networkUnits = new Dictionary<uint,StratagemUnit>();
         internal static readonly List<StratagemUnit> Rovers = new List<StratagemUnit>();
-        private SpriteRenderer image, beam, core,flow;
+        private SpriteRenderer image;
+        private StratagemLaserVisual laserVisual;
         private StratagemRig rig;
         private 模块_基本属性 beamTarget;
         private Vector2 beamPosition;
@@ -91,20 +92,11 @@ namespace CluckmechCoop
                     lastDronePosition = transform.position;
                 }
             }
-            if (beam == null) return;
+            if (laserVisual == null) return;
             if (Time.time >= beamUntil) { EndBeam(); return; }
             if (beamTarget != null && beamTarget.当前生命值 > 0)
                 beamPosition = Vector2.MoveTowards(beamPosition,beamTarget.transform.position,(Parameters?.TrackSpeed ?? 4)*Time.deltaTime);
-            float remaining=beamUntil-Time.time;
-            float strength=Mathf.Min(Mathf.Clamp01(remaining/.25f),Mathf.Clamp01((Time.time-beamStarted)/.15f));
-            beam.color=new Color(1,1,1,strength*(.86f+.08f*Mathf.Sin(Time.time*22)));
-            beam.transform.position = new Vector3(beamPosition.x,beamPosition.y+4,(beamPosition.y+10000)*.01f-.2f);
-            beam.transform.localScale = new Vector3(beamRadius*2/beam.sprite.bounds.size.x*strength,8/beam.sprite.bounds.size.y,1);
-            core.color=new Color(1,1,1,strength*.7f);
-            core.transform.position = new Vector3(beamPosition.x,beamPosition.y,(beamPosition.y+10000)*.01f-.03f);
-            float pulse=Mathf.Repeat((Time.time-beamStarted)*3,1);
-            flow.transform.position=new Vector3(beamPosition.x,beamPosition.y+(1-pulse)*7,beam.transform.position.z-.001f);
-            flow.color=new Color(1,1,1,strength*.55f*Mathf.Sin(pulse*Mathf.PI));
+            laserVisual.Tick(beamPosition,Time.time-beamStarted,beamUntil-Time.time);
             if(Time.time>=nextBeamSound)
             {
                 nextBeamSound=Time.time+.2f;
@@ -120,20 +112,20 @@ namespace CluckmechCoop
             rig.Fade(.15f);
             beamSound=StratagemAudio.BeamStarted(point);nextBeamSound=Time.time+.2f;beamGain=StratagemAudio.Gain(point);
             beamPosition = point; beamStarted=Time.time;beamUntil = Time.time+duration; beamRadius = radius;
-            beam = StratagemAssets.Renderer(null,StratagemAssets.Frame(StratagemKind.Laser,1,0),radius*2);
-            core = StratagemAssets.Renderer(null,StratagemAssets.Named("fx.core"),radius*2);
-            flow=StratagemAssets.Renderer(null,StratagemAssets.Named("fx.streak"),radius*.18f);
+            laserVisual=new StratagemLaserVisual(radius,image);
+            laserVisual.Tick(point,0,duration);
         }
         internal void BeamTarget(uint id,Vector2 point)
         { if (Plugin.Role == 2) { beamTarget = StratagemWorld.Enemy(id); beamPosition = point; } }
         internal void EndBeam()
         {
             StratagemAudio.BeamEnded(beamSound);beamSound=null;
-            if (beam != null) Destroy(beam.gameObject);
-            if (core != null) Destroy(core.gameObject);
-            if(flow!=null)Destroy(flow.gameObject);
-            if(beam!=null&&Plugin.InCombat)StratagemAssets.Effect("fx.crater.1",beamPosition,beamRadius*2,6,ground:true,opacity:.35f);
-            beam = core = flow = null; beamTarget = null;
+            if(laserVisual!=null)
+            {
+                laserVisual.Dispose();laserVisual=null;
+                if(Plugin.InCombat)StratagemAssets.Effect("fx.crater.1",beamPosition,beamRadius*2,6,ground:true,opacity:.35f);
+            }
+            beamTarget = null;
         }
         internal void AttackAnimation() => rig.Shoot();
         internal void Aim(Vector2 direction) => rig.Aim(direction);

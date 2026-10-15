@@ -37,7 +37,7 @@ namespace UnityEngine.UI { public class InputField { } }
 namespace UnityEngine.InputSystem
 {
     public class TestKey { public bool isPressed, wasPressedThisFrame; }
-    public class Keyboard { public static Keyboard current = new Keyboard(); public TestKey leftCtrlKey = new TestKey(), fKey = new TestKey(); }
+    public class Keyboard { public static Keyboard current = new Keyboard(); public TestKey leftCtrlKey = new TestKey(), leftShiftKey=new TestKey(), fKey = new TestKey(); }
 }
 public class 设置管理器 { }
 public class yy引用实例数据库 { public UnityEngine.GameObject 基地车; }
@@ -68,7 +68,7 @@ namespace CluckmechCoop
 static class ExpansionHarness
 {
     internal static void Call(Type type, string method, params object[] args) => type.GetMethod(method, BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static).Invoke(null, args);
-    private static void Update(CombatFeatures combat) => typeof(CombatFeatures).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(combat, null);
+    internal static void Update(CombatFeatures combat) => typeof(CombatFeatures).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(combat, null);
     internal static void Run(Action<bool, string> check)
     {
         using (Harness.Use(new Context(0)))
@@ -116,7 +116,7 @@ static class ExpansionHarness
         check(UnityEngine.Time.timeScale == 2 && Harness.Guest.TimeScale == 2, "host hold accelerates both peers through production protocol");
         using (Harness.Use(Harness.Guest)) Plugin.Network.Send(new SessionMessage { Type = "speed-request", Token = "battle-1", Held = true });
         Plugin.Network.Send(new SessionMessage { Type = "speed-request", Token = "battle-1", Held = false });
-        check(UnityEngine.Time.timeScale == 2 && Harness.Guest.TimeScale == 2, "one peer release retains speed while other holds");
+        check(UnityEngine.Time.timeScale == 1 && Harness.Guest.TimeScale == 1, "either peer can disable shared speed");
         using (Harness.Use(Harness.Guest)) Plugin.Network.Send(new SessionMessage { Type = "speed-request", Token = "battle-1", Held = false });
         check(UnityEngine.Time.timeScale == 1 && Harness.Guest.TimeScale == 1, "both releases restore both peers");
         Plugin.Network.Send(new SessionMessage { Type = "speed-request", Token = "previous-battle", Held = true });
@@ -144,11 +144,11 @@ static class ExpansionHarness
         ModuleSettings.Save(Harness.Host.Save); ModuleSettings.MainMenu(); ModuleSettings.Load(Harness.Host.Save);
         check(ModuleSettings.Progress.EnergyUsed, "shared energy remains spent after save and continue");
         ModuleSettings.Extra.Speed = true; UnityEngine.Time.timeScale = 1;
-        UnityEngine.InputSystem.Keyboard.current.leftCtrlKey.isPressed = true; Update(Plugin.Combat);
+        UnityEngine.InputSystem.Keyboard.current.leftShiftKey.wasPressedThisFrame = true; Update(Plugin.Combat);
+        UnityEngine.InputSystem.Keyboard.current.leftShiftKey.wasPressedThisFrame = false;
         check(UnityEngine.Time.timeScale == 2, "input press calls speed protocol");
         typeof(CombatFeatures).GetMethod("OnApplicationFocus", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(Plugin.Combat, new object[] { false });
         check(UnityEngine.Time.timeScale == 1 && Harness.Guest.TimeScale == 1, "focus loss sends release and restores both peers");
-        UnityEngine.InputSystem.Keyboard.current.leftCtrlKey.isPressed = false;
         using (Harness.Use(Harness.Guest))
         {
             ModuleSettings.LocalProgress.Coupons = 7; Plugin.Network.SendProgress(ModuleSettings.LocalProgress);

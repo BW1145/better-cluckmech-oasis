@@ -118,7 +118,7 @@ namespace CluckmechCoop
                 case "settings":
                     if (message.Revision < 0 || message.Delay > 10 || (message.Choice != null && (string.IsNullOrWhiteSpace(message.Choice.Token) || message.Choice.RewardId < -1 || message.Choice.RewardId > 2))) return false;
                     if (message.Progress == null) return true;
-                    if (message.Progress.Players == null) return false;
+                    if (message.Progress.Players == null || !message.Progress.ValidEnergy) return false;
                     foreach (var player in message.Progress.Players)
                         if (player.Key < 0 || player.Key > 2 || !ValidProgress(player.Value)) return false;
                     return true;
@@ -126,6 +126,7 @@ namespace CluckmechCoop
                 case "hello": case "ack": return message.Revision >= 0;
                 case "playback": return !string.IsNullOrWhiteSpace(message.Token) && message.Stage >= 0;
                 case "energy": return !string.IsNullOrWhiteSpace(message.Token) && message.Delay <= 10;
+                case "growth-event": return !string.IsNullOrWhiteSpace(message.Token) && message.Stage>=88 && message.Stage<=92 && message.Revision>=0 && message.Revision<=1 && (message.Role==0 || message.Role==20);
                 case "complete": case "speed": case "growth": case "speed-request": case "energy-request": case "rabbit-aim":
                     return !string.IsNullOrWhiteSpace(message.Token);
                 default: return false;
@@ -195,6 +196,7 @@ namespace CluckmechCoop
                 StratagemDeployment.Applied(message.Role,message.Revision,message.Stage,message.Delay,message.X,message.Held);
             else if (message.Token == Plugin.Combat?.Token && ModuleSettings.Extra.Stratagems && message.Type == "stratagem-effect")
                 StratagemEffects.Play(message.Effect);
+            else if (message.Type=="growth-event") GrowthEventPanel.Receive(message);
             else if (FeatureNetwork.Receive(message)) return;
             else if (message.Type == "complete" && ModuleSettings.Active && ModuleSettings.Choice?.Token != null && ModuleSettings.Choice.Token == message.Token)
                 Difficulty.ClientFinished();

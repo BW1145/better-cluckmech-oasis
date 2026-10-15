@@ -10,6 +10,13 @@ namespace CluckmechCoop
 {
     internal static class GrowthFeatures
     {
+        internal static bool Pending => ModuleSettings.LocalProgress.PendingRegion!=null || ModuleSettings.LocalProgress.PendingMachineUpgrade;
+        internal static int CapacityGain(int id,bool any=false)
+        {
+            if(any)return 1;
+            int tier=Plugin.Units.获取单位单元(id).单位等级;
+            return tier==1?3:tier==2?1:0;
+        }
         private static readonly HashSet<string> regionBosses = new HashSet<string> { "王_幽灵白桦树", "王_石像仙人掌", "王_酒精红头孢", "王_PlantDos", "王_水果海盗团", "王_玉米蜗牛", "王_矿洞盆栽" };
         internal static string Region;
         internal static void Inspect(刷怪器 spawner)
@@ -35,6 +42,7 @@ namespace CluckmechCoop
     public sealed class GrowthPanel : MonoBehaviour
     {
         private static GrowthPanel active;
+        private static bool resumeMap;
         private RectTransform panel, content;
         private sealed class GrowthCard
         {
@@ -54,7 +62,7 @@ namespace CluckmechCoop
         private readonly Dictionary<int, 模块_基本属性> attributes = new Dictionary<int, 模块_基本属性>();
         internal static void ShowPending()
         {
-            if (SceneManager.GetActiveScene().buildIndex == 常数类.场景id_异步加载场景 || active != null || !ModuleSettings.Extra.Growth || ModuleSettings.LocalProgress.PendingRegion == null || Plugin.InCombat || Plugin.Summary == null || Plugin.Summary.当前拥有炮台.Count == 0) return;
+            if (SceneManager.GetActiveScene().buildIndex == 常数类.场景id_异步加载场景 || active != null || !ModuleSettings.Extra.Growth || !GrowthFeatures.Pending || Plugin.InCombat || Plugin.Summary == null) return;
             var cursor = Object.FindObjectOfType<光标管理器>();
             var canvas = cursor != null ? cursor.GetComponentInParent<Canvas>().rootCanvas : Object.FindObjectOfType<Canvas>()?.rootCanvas;
             if (canvas == null) return;
@@ -69,6 +77,7 @@ namespace CluckmechCoop
             }
         }
         internal static void Close() { if (active != null) Object.Destroy(active.gameObject); active = null; }
+        internal static void HoldMapExit(){resumeMap=true;ShowPending();}
         internal static void InventoryChanged() { if (active != null) active.Refresh(); else ShowPending(); }
         private void Build()
         {
@@ -78,10 +87,11 @@ namespace CluckmechCoop
             panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(.5f, .5f); panel.anchoredPosition = Vector2.zero;
             NativeUi.Image(panel, NativeUi.TransferPanel, Color.white);
             NativeUi.Label(panel, "增加强化上限", 28, 22, 840, 48, 32);
-            NativeUi.Label(panel, "选择一台鸡械，强化上限+1", 28, 78, 840, 40, 24);
+            NativeUi.Label(panel, ModuleSettings.LocalProgress.PendingMachineUpgrade?"选择任意一台鸡械，强化上限+1":"选择C级鸡械上限+3，或B级鸡械上限+1", 28, 78, 840, 40, 24);
             NativeUi.ScrollArea(panel, "Machines", 28, 142, 836, 418, out content);
-            chosen = NativeUi.Label(panel, "", 28, 586, 514, 60, 25);
-            confirm = NativeUi.TransferAction(panel, "确认", 592, 588, 290, 54, Confirm);
+            chosen = NativeUi.Label(panel, "", 28, 586, 420, 60, 25);
+            NativeUi.TransferAction(panel,"跳过",452,588,180,54,Skip);
+            confirm = NativeUi.TransferAction(panel, "确认", 652, 588, 230, 54, Confirm);
             Refresh(); Resize();
         }
         private void Refresh()
@@ -95,10 +105,13 @@ namespace CluckmechCoop
                 if (i == cards.Count) cards.Add(CreateCard(i));
                 var card = cards[i]; card.Button.gameObject.SetActive(true); card.Item = bag[i];
                 var item = card.Item;
+                int gain=GrowthFeatures.CapacityGain(item.炮台id,ModuleSettings.LocalProgress.PendingMachineUpgrade);
+                card.Button.interactable=gain>0;
+                card.Icon.color=gain>0?Color.white:new Color(.45f,.45f,.45f);
                 if (Rules.SameMachine(item.炮台id, item.强化上限, item.强化词条, card.Snapshot)) continue;
                 card.Snapshot = new Machine { Id = item.炮台id, UpgradeLimit = item.强化上限, Upgrades = new List<int>(item.强化词条) };
                 if (!attributes.TryGetValue(item.炮台id, out var stats)) attributes[item.炮台id] = stats = Plugin.Units.获取单位(item.炮台id).GetComponent<模块_基本属性>();
-                card.Icon.sprite = stats.图标; card.Name.text = stats.名称(); card.Count.text = item.强化词条.Count + "/" + item.强化上限;
+                card.Icon.sprite = stats.图标; card.Name.text = stats.名称(); card.Count.text = item.强化词条.Count + "/" + item.强化上限+(gain>0?"  +"+gain:"");
             }
             for (int i = bag.Count; i < cards.Count; i++) { cards[i].Item = null; cards[i].Button.gameObject.SetActive(false); }
         }
@@ -120,18 +133,32 @@ namespace CluckmechCoop
             if (item == null || !Plugin.Summary.当前拥有炮台.Contains(item) || !Rules.SameMachine(item.炮台id, item.强化上限, item.强化词条, card.Snapshot)) { Refresh(); return; }
             if (selectedCard != null) selectedCard.Marker.enabled = false;
             selectedCard = card; card.Marker.enabled = true; selected = item; snapshot = card.Snapshot;
-            chosen.text = attributes[item.炮台id].名称() + "  " + item.强化上限 + " → " + (item.强化上限 + 1); confirm.interactable = true;
+            int gain=GrowthFeatures.CapacityGain(item.炮台id,ModuleSettings.LocalProgress.PendingMachineUpgrade);
+            chosen.text = attributes[item.炮台id].名称() + "  " + item.强化上限 + " → " + (item.强化上限 + gain); confirm.interactable = gain>0;
         }
         private void Confirm()
         {
             if (selected == null || !Plugin.Summary.当前拥有炮台.Contains(selected) || !Rules.SameMachine(selected.炮台id, selected.强化上限, selected.强化词条, snapshot)) { Refresh(); return; }
-            if (!ModuleSettings.LocalProgress.ClaimRegion()) return;
-            selected.强化上限++;
-            Plugin.Log("[Growth] Upgrade limit +1: machine " + selected.炮台id + ", new limit " + selected.强化上限);
+            int gain=GrowthFeatures.CapacityGain(selected.炮台id,ModuleSettings.LocalProgress.PendingMachineUpgrade);
+            if(gain<=0 || !ConsumePending())return;
+            selected.强化上限+=gain;
+            Plugin.Log("[Growth] Upgrade limit +"+gain+": machine " + selected.炮台id + ", new limit " + selected.强化上限);
             if (Plugin.Role != 0) Plugin.LocalPlayer?.上传玩家总结数据();
             ModuleSettings.SaveProgress(); Plugin.Summary.保存单局存档();
             foreach (var bag in Object.FindObjectsOfType<玩家背包脚本>()) bag.更新背包();
-            Plugin.Panel.RefreshInventory(); Close();
+            Plugin.Panel.RefreshInventory(); Finish();
+        }
+        private static bool ConsumePending()
+        {
+            if(ModuleSettings.LocalProgress.PendingMachineUpgrade){ModuleSettings.LocalProgress.PendingMachineUpgrade=false;return true;}
+            return ModuleSettings.LocalProgress.ClaimRegion();
+        }
+        private void Skip(){if(!ConsumePending())return;ModuleSettings.SaveProgress();Finish();}
+        private void Finish()
+        {
+            Close();
+            if(GrowthFeatures.Pending)ShowPending();
+            else if(resumeMap){resumeMap=false;场景函数.切换场景(常数类.场景id_选择地图);}
         }
         private void Resize()
         {
@@ -140,7 +167,7 @@ namespace CluckmechCoop
             panel.localScale = Vector3.one * Mathf.Min(bounds.height / 1080, (bounds.width - 40) / 920, (bounds.height - 40) / 690);
         }
         private void OnRectTransformDimensionsChange() => Resize();
-        private void OnDestroy() { if (Plugin.Summary != null) Plugin.Summary.是否光标位于UI界面 = previousUi; if (active == this) active = null; }
+        private void OnDestroy() { if (Plugin.Summary != null && (active==this || active==null)) Plugin.Summary.是否光标位于UI界面 = previousUi; if (active == this) active = null; }
     }
 
     [HarmonyPatch(typeof(刷怪器), "结算界面切换")]
@@ -154,8 +181,8 @@ namespace CluckmechCoop
     {
         private static bool Prefix(int __0)
         {
-            if (__0 != 常数类.场景id_选择地图 || !ModuleSettings.Extra.Growth || ModuleSettings.LocalProgress.PendingRegion == null || Plugin.Summary == null || Plugin.Summary.当前拥有炮台.Count == 0) return true;
-            GrowthPanel.ShowPending(); return false;
+            if (__0 != 常数类.场景id_选择地图 || !ModuleSettings.Extra.Growth || !GrowthFeatures.Pending || Plugin.Summary == null) return true;
+            GrowthPanel.HoldMapExit(); return false;
         }
     }
 }

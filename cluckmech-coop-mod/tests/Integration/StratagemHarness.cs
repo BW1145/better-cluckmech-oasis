@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using CluckmechCoop;
 namespace CluckmechCoop
 {
+    internal static class GrowthEventPanel{internal static void Receive(SessionMessage message){}}
     internal static class CarryCapacity
     {
         internal static void Apply() { }
@@ -28,21 +29,50 @@ namespace CluckmechCoop
 }
 static class GrowthEventChecks
 {
+    internal static void Update055(Action<bool,string> check)
+    {
+        using(Harness.Use(new Context(0)))
+        {
+            ModuleSettings.MainMenu();ModuleSettings.EnterRun();
+            var player=ModuleSettings.LocalProgress;
+            check(player.ClaimGrowthEvent(88)&&player.Coupons==6&&!player.ClaimGrowthEvent(88,1,20),"six guaranteed coupons and one-time event");
+            var win=new PlayerProgress();var lose=new PlayerProgress();
+            check(win.ClaimGrowthEvent(88,1,20)&&win.Coupons==20&&lose.ClaimGrowthEvent(88,1,0)&&lose.Coupons==0,"both lottery outcomes are exact");
+            check(player.ClaimGrowthEvent(89,1)&&player.ExtraCarrySlots==0&&player.ClaimGrowthEvent(90,1)&&player.ExtraPowerCapacity==0,"cash choices do not grant capacity");
+            check(player.ClaimGrowthEvent(91,1)&&player.PendingMachineUpgrade&&player.ClaimGrowthEvent(92,0)&&player.ValidGrowthRewards(),"new event identifiers and pending any-rank upgrade persist");
+            var run=ModuleSettings.Progress;
+            check(run.UseEnergy()&&!run.UseEnergy(),"initial shared energy remains one use");
+            run.EnergyBonus=2;
+            check(run.EnergyRemaining==2&&run.UseEnergy()&&run.EnergyRemaining==1,"supply adds two uses after initial use");
+            ModuleSettings.Save(Harness.Current.Save);ModuleSettings.MainMenu();ModuleSettings.Load(Harness.Current.Save);
+            check(ModuleSettings.Progress.EnergyRemaining==1&&ModuleSettings.LocalProgress.PendingMachineUpgrade&&ModuleSettings.LocalProgress.Coupons==6,"continue preserves remaining charges and event rewards");
+            check(ModuleSettings.Progress.UseEnergy()&&!ModuleSettings.Progress.UseEnergy(),"supplementary uses cannot exceed the awarded two");
+            Plugin.Combat.Token="toggle-check";
+            var key=UnityEngine.InputSystem.Keyboard.current.leftShiftKey;
+            key.wasPressedThisFrame=true;ExpansionHarness.Update(Plugin.Combat);key.wasPressedThisFrame=false;
+            check(UnityEngine.Time.timeScale==2,"first Shift press enables speed");
+            ExpansionHarness.Update(Plugin.Combat);check(UnityEngine.Time.timeScale==2,"release leaves speed enabled");
+            key.wasPressedThisFrame=true;ExpansionHarness.Update(Plugin.Combat);key.wasPressedThisFrame=false;
+            check(UnityEngine.Time.timeScale==1,"second Shift press disables speed");
+            var legacy=JsonConvert.DeserializeObject<RunProgress>("{\"EnergyUsed\":true,\"Players\":{}}");
+            check(legacy.ValidEnergy&&legacy.EnergyRemaining==0,"legacy consumed energy does not reset");
+        }
+    }
     internal static void Run(Action<bool,string> check)
     {
         using(Harness.Use(new Context(0)))
         {
             ModuleSettings.MainMenu();ModuleSettings.EnterRun();
             var player=ModuleSettings.LocalProgress;
-            check(player.ClaimGrowthEvent(88) && !player.ClaimGrowthEvent(88) && player.Coupons==20,"event grants twenty retained rerolls once");
-            check(!player.SpendCoupon(1) && player.Coupons==20 && player.SpendCoupon(0) && player.Coupons==19,"native free refreshes precede event coupons");
+            check(player.ClaimGrowthEvent(88) && !player.ClaimGrowthEvent(88) && player.Coupons==6,"event grants six retained rerolls once");
+            check(!player.SpendCoupon(1) && player.Coupons==6 && player.SpendCoupon(0) && player.Coupons==5,"native free refreshes precede event coupons");
             check(player.ClaimGrowthEvent(89) && !player.ClaimGrowthEvent(89) && player.ExtraCarrySlots==1,"carry event grants one sixth slot");
             check(player.ClaimGrowthEvent(90) && !player.ClaimGrowthEvent(90) && player.ExtraPowerCapacity==5,"power event raises capacity by five once");
             player.StratagemCooldowns.Add(new StratagemCooldown { Node="page:node",Slot=5,Machine=new Machine { Id=20004,UpgradeLimit=6 },Remaining=10 });
             ModuleSettings.Progress.GrowthPoolsAdded=true;
             ModuleSettings.Save(Harness.Current.Save);ModuleSettings.MainMenu();ModuleSettings.Load(Harness.Current.Save);
             player=ModuleSettings.LocalProgress;
-            check(player.Coupons==19 && player.ExtraCarrySlots==1 && player.ExtraPowerCapacity==5 && player.GrowthEvents.Count==3 && ModuleSettings.Progress.GrowthPoolsAdded,"save restores event rewards and extended deck cooldown");
+            check(player.Coupons==5 && player.ExtraCarrySlots==1 && player.ExtraPowerCapacity==5 && player.GrowthEvents.Count==3 && ModuleSettings.Progress.GrowthPoolsAdded,"save restores event rewards and extended deck cooldown");
             var valid=typeof(NetworkService).GetMethod("ValidProgress",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static);
             check((bool)valid.Invoke(null,new object[]{player}),"network accepts the sixth slot cooldown");
             player.StratagemCooldowns[0].Slot=6;
@@ -52,7 +82,7 @@ static class GrowthEventChecks
             var legacy=(JObject)data["Players"]["0"];legacy.Remove("ExtraCarrySlots");legacy.Remove("ExtraPowerCapacity");legacy.Remove("GrowthEvents");
             ES3.Save("CluckmechCoop.Progress.v4",data.ToString(),"danju_m.cd",new ES3Settings(ES3.Location.Cache));
             ModuleSettings.MainMenu();ModuleSettings.Load(Harness.Current.Save);player=ModuleSettings.LocalProgress;
-            check(player.Coupons==19 && player.ExtraCarrySlots==0 && player.ExtraPowerCapacity==0 && player.GrowthEvents.Count==0,"legacy saves initialize event fields and preserve existing coupons");
+            check(player.Coupons==5 && player.ExtraCarrySlots==0 && player.ExtraPowerCapacity==0 && player.GrowthEvents.Count==0,"legacy saves initialize event fields and preserve existing coupons");
         }
     }
 }

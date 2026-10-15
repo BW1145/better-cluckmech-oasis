@@ -252,6 +252,8 @@ static class Program
     static void Main(string[] args)
     {
         ModuleSettings.Initialize(new BepInEx.Configuration.ConfigFile());
+        if(args.Length==1 && args[0]=="--growth-055")
+        { GrowthEventChecks.Update055(Check);Console.WriteLine($"PASS: {checks} updated event, shared energy, toggle and persistence checks");return; }
         if(args.Length==1 && args[0]=="--growth-events")
         {
             GrowthEventChecks.Run(Check);Console.WriteLine($"PASS: {checks} growth-event reward, persistence and six-slot protocol checks");return;

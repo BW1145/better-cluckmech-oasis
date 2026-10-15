@@ -13,10 +13,24 @@ namespace UnityEngine
     {
         public GameObject gameObject;public Transform transform=>gameObject.transform;
     }
+    public static class Object{public static void Destroy(object value){if(value is GameObject go)go.Renderers.Clear();}}
+    public sealed class Shader{public static Shader Find(string name)=>new();}
+    public sealed class Material{public Material(Shader shader){}}
+    public struct Keyframe{public float time,value;public Keyframe(float time,float value){this.time=time;this.value=value;}}
+    public sealed class AnimationCurve{public Keyframe[] keys;public AnimationCurve(params Keyframe[] keys){this.keys=keys;}}
+    public sealed class LineRenderer
+    {
+        public static readonly List<LineRenderer> All=new();
+        public GameObject gameObject;public Material sharedMaterial;public bool useWorldSpace;public int sortingLayerID,sortingOrder,positionCount;
+        public AnimationCurve widthCurve;public float widthMultiplier;public Color startColor,endColor;public Vector3[] positions=new Vector3[12];
+        public void SetPosition(int index,Vector3 point)=>positions[index]=point;
+    }
     public sealed class GameObject
     {
         public Transform transform;public readonly List<SpriteRenderer> Renderers=new();
         public GameObject(){transform=new Transform(this);}
+        public GameObject(string name):this(){}
+        public T AddComponent<T>() where T:new(){var value=new T();if(value is LineRenderer line){line.gameObject=this;LineRenderer.All.Add(line);}return value;}
     }
     public sealed class Transform
     {
@@ -26,6 +40,7 @@ namespace UnityEngine
     }
     public sealed class SpriteRenderer
     {
+        public GameObject gameObject=>transform.owner;
         public Sprite sprite;public bool enabled=true;public int sortingLayerID,sortingOrder;public Color color=Color.white;public Transform transform;
     }
     public sealed class Sprite {public string Name;public Bounds bounds;}
@@ -60,6 +75,7 @@ namespace UnityEngine
         public const float PI=(float)Math.PI,Rad2Deg=180/PI;
         public static float Atan2(float y,float x)=>(float)Math.Atan2(y,x);public static int RoundToInt(float x)=>(int)Math.Round(x);
         public static float Clamp01(float x)=>Math.Clamp(x,0,1);public static float Sin(float x)=>(float)Math.Sin(x);
+        public static float Cos(float x)=>(float)Math.Cos(x);public static float Repeat(float x,float length)=>x-(float)Math.Floor(x/length)*length;
         public static float Lerp(float a,float b,float t)=>a+(b-a)*t;public static float SmoothStep(float a,float b,float t)=>Lerp(a,b,t*t*(3-2*t));
     }
 }
@@ -74,6 +90,10 @@ namespace CluckmechCoop
     }
     internal static class StratagemAssets
     {
+        internal static readonly List<SpriteRenderer> LaserParts=new();
+        internal static float Z(float y)=>(y+10000)*.01f;
+        internal static SpriteRenderer Renderer(Transform parent,Sprite sprite,float width=2)
+        {var obj=new GameObject();var image=new SpriteRenderer{sprite=sprite,transform=obj.transform};obj.Renderers.Add(image);LaserParts.Add(image);return image;}
         internal static Dictionary<string,Dictionary<string,float>> Boxes;
         internal static Sprite Named(string name){var b=Boxes[name];return new Sprite{Name=name,bounds=new Bounds{size=new Vector3(b["W"]/32,b["H"]/32,0)}};}
         internal static Vector3 Muzzle(string name){var b=Boxes[name];return new Vector3(b["MX"],b["MY"],0);}
@@ -96,6 +116,19 @@ static class Program
         string root=Path.GetFullPath(args[0]);
         StratagemAssets.Boxes=JsonSerializer.Deserialize<Dictionary<string,Dictionary<string,float>>>(File.ReadAllText(Path.Combine(root,"src/StratagemAssets/stratagem-v2.json")));
         var frames=new List<object>();
+        if(args.Length>1 && args[1]=="--laser")
+        {
+            var laser=new StratagemLaserVisual(.85f,new SpriteRenderer());
+            for(int i=0;i<36;i++)
+            {
+                float t=i*.05f;laser.Tick(new Vector2(t*.35f,0),t,2-t);
+                frames.Add(new{time=t,lines=LineRenderer.All.Select(x=>new{width=x.widthMultiplier,color=new[]{x.startColor.r,x.startColor.g,x.startColor.b,x.startColor.a},points=x.positions.Select(p=>new[]{p.x,p.y}).ToArray(),curve=x.widthCurve.keys.Select(k=>new[]{k.time,k.value}).ToArray()}).ToArray(),parts=StratagemAssets.LaserParts.Select(x=>new{name=x.sprite.Name,x=x.transform.position.x,y=x.transform.position.y,z=x.transform.position.z,sx=x.transform.localScale.x,sy=x.transform.localScale.y,angle=x.transform.localRotation.z,alpha=x.color.a,r=x.color.r,g=x.color.g,b=x.color.b}).ToArray()});
+            }
+            Check(StratagemAssets.LaserParts.Count==21&&LineRenderer.All.Count==3,"Laser reuses 21 visual parts and three animated mesh columns");
+            Directory.CreateDirectory(Path.Combine(root,"evidence/0.5.5"));
+            File.WriteAllText(Path.Combine(root,"evidence/0.5.5/laser-poses.json"),JsonSerializer.Serialize(frames));
+            laser.Dispose();Console.WriteLine("PASS: production laser poses exported for one visual review");return;
+        }
         foreach(int id in new[]{20001,20002,20003,20004,20005,20006,20007,20101,20102})
         {
             Time.time=0;var go=new GameObject();var unit=new StratagemUnit{gameObject=go,Stats=new(){ID=id},Kind=(StratagemKind)(id==20101?0:id==20102?6:id-20001)};

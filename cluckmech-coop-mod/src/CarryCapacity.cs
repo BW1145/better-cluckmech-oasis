@@ -31,11 +31,7 @@ namespace CluckmechCoop
             var original=bag.单元[4];
             var extra=UnityEngine.Object.Instantiate(original,original.transform.parent);
             extra.name="战斗背包格子5";extra.代表id号=5;extra.当前背包id号=-1;
-            var icon=NativeUi.Rect(extra.transform,"第六格鸡械",0,0,0,0);
-            icon.anchorMin=Vector2.zero;icon.anchorMax=Vector2.one;
-            icon.offsetMin=new Vector2(8,8);icon.offsetMax=new Vector2(-8,-8);
-            extra.炮台图片=NativeUi.Image(icon,null,Color.white);extra.炮台图片.raycastTarget=false;
-            extra.炮台图片.preserveAspect=true;extra.炮台图片.enabled=false;
+            foreach(var native in extra.GetComponentsInChildren<背包类单元>(true))native.背包id号=5;
             var button=extra.GetComponent<Button>();button.onClick=new Button.ButtonClickedEvent();
             button.onClick.AddListener(()=>
             {
@@ -52,6 +48,7 @@ namespace CluckmechCoop
                 rect.anchorMax=new Vector2(.03f+(i+1)*.94f/Slots-.01f,.955f);
                 rect.offsetMin=rect.offsetMax=Vector2.zero;
                 if(cell.炮台图片!=null)cell.炮台图片.preserveAspect=true;
+                foreach(var native in cell.GetComponentsInChildren<携带背包单元脚本>(true))native.图标图片.preserveAspect=true;
             }
         }
         internal static void Build(建造系统 build)
@@ -74,17 +71,9 @@ namespace CluckmechCoop
             // Instantiating the whole slot preserves native drag, hover, cooldown and selection references.
             var key=root.transform.Find("快捷键提示").GetComponent<Image>();
             var sprite=key.sprite;
-            if(sixthKey==null)sixthKey=Sprite.Create(sprite.texture,sprite.rect,new Vector2(.5f,.5f),sprite.pixelsPerUnit,0,SpriteMeshType.FullRect,new Vector4(3,3,3,3));
+            if(sixthKey==null)sixthKey=CreateSixthKey(sprite);
             key.sprite=sixthKey;
-            key.type=Image.Type.Sliced;key.fillCenter=false;
-            var face=NativeUi.Rect(key.transform,"按键底色",0,0,0,0);
-            face.anchorMin=new Vector2(3f/9,3f/11);face.anchorMax=new Vector2(6f/9,8f/11);
-            face.offsetMin=face.offsetMax=Vector2.zero;
-            NativeUi.Image(face,null,new Color(86f/255,97f/255,117f/255)).raycastTarget=false;
-            var label=UnityEngine.Object.Instantiate(extra.cd数字,key.transform);
-            label.name="第六格按键";label.text="6";label.fontSize=32;label.alignment=TextAnchor.MiddleCenter;label.raycastTarget=false;
-            label.rectTransform.anchorMin=Vector2.zero;label.rectTransform.anchorMax=Vector2.one;
-            label.rectTransform.offsetMin=label.rectTransform.offsetMax=Vector2.zero;
+            key.type=Image.Type.Simple;key.preserveAspect=true;
             var controllerHint=extra.框选图片.transform.Find("手柄UI_Y");
             if(controllerHint!=null)controllerHint.gameObject.SetActive(false);
             cells.Add(extra);
@@ -97,12 +86,35 @@ namespace CluckmechCoop
                 rect.sizeDelta=new Vector2(0,rect.sizeDelta.y);rect.anchoredPosition=new Vector2(0,rect.anchoredPosition.y);
             }
         }
+        private static Sprite CreateSixthKey(Sprite source)
+        {
+            var area=source.textureRect;
+            int width=(int)area.width,height=(int)area.height;
+            var previous=RenderTexture.active;
+            var target=RenderTexture.GetTemporary(width,height,0,RenderTextureFormat.ARGB32);
+            var texture=new Texture2D(width,height,TextureFormat.RGBA32,false){filterMode=FilterMode.Point};
+            try
+            {
+                Graphics.Blit(source.texture,target,new Vector2(area.width/source.texture.width,area.height/source.texture.height),new Vector2(area.x/source.texture.width,area.y/source.texture.height));
+                RenderTexture.active=target;texture.ReadPixels(new Rect(0,0,width,height),0,0);
+            }
+            finally{RenderTexture.active=previous;RenderTexture.ReleaseTemporary(target);}
+            var background=texture.GetPixel(width/2-2,height/2);
+            Color ink=Color.black;
+            for(int y=2;y<height-2;y++)for(int x=2;x<width-2;x++)
+            {var pixel=texture.GetPixel(x,y);if(pixel.grayscale>ink.grayscale)ink=pixel;}
+            for(int y=2;y<height-2;y++)for(int x=2;x<width-2;x++)texture.SetPixel(x,y,background);
+            string[] glyph={"111","100","100","111","101","101","111"};
+            for(int y=0;y<7;y++)for(int x=0;x<3;x++)if(glyph[y][x]=='1')texture.SetPixel((width-3)/2+x,(height+7)/2-1-y,ink);
+            texture.Apply(false,true);
+            return Sprite.Create(texture,new Rect(0,0,width,height),new Vector2(.5f,.5f),source.pixelsPerUnit);
+        }
         internal static void RefreshPreparation()
         {
             Apply();
             foreach(var bag in UnityEngine.Object.FindObjectsOfType<战斗背包>())Prepare(bag);
         }
-        internal static void Release(){if(sixthKey!=null)UnityEngine.Object.Destroy(sixthKey);sixthKey=null;}
+        internal static void Release(){if(sixthKey!=null){UnityEngine.Object.Destroy(sixthKey.texture);UnityEngine.Object.Destroy(sixthKey);}sixthKey=null;}
     }
 
     [HarmonyPatch(typeof(战斗背包),"Update")]
@@ -112,10 +124,6 @@ namespace CluckmechCoop
         {
             if(CarryCapacity.Slots==5 || __instance.单元.Count<6)return;
             __instance.选择同步(5);
-            var cell=__instance.单元[5];int id=__instance.总结.当前携带炮台[5].炮台id;
-            cell.炮台图片.enabled=id!=0;
-            if(id!=0)cell.炮台图片.sprite=Plugin.Units.获取单位(id).GetComponent<模块_基本属性>().图标;
-            var text=cell.GetComponentInChildren<Text>(true);if(text!=null)text.enabled=id==0;
         }
     }
     [HarmonyPatch(typeof(选择携带炮台脚本),"Start")]

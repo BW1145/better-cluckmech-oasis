@@ -16,11 +16,11 @@ namespace CluckmechCoop
     internal static class ModuleCatalog
     {
         internal static readonly ModuleInfo[] All = {
-            new ModuleInfo(ModuleId.Speed, "倍速", "按住左Ctrl加快战斗，松开恢复。", "左Ctrl：2倍速\n联机时任意一人按住，双方一起加速；全部松开后恢复。移动、攻击、刷怪、冷却和持续效果同步加速。"),
+            new ModuleInfo(ModuleId.Speed, "倍速", "左Shift切换战斗2倍速。", "左Shift：按一下开启2倍速，再按一下关闭。\n联机任意玩家均可切换双方速度。移动、攻击、刷怪、冷却和持续效果同步加速。"),
             new ModuleInfo(ModuleId.Characters, "更好的角色右键强化", "增强角色右键，并改善鼠标吞噬选择。", "战斗鸡：三连霰弹，间隔0.2秒，冷却4秒。\n工程狮：集结时移速提高30%、蓄力时间×0.75；松手后集结战士伤害提高25%、攻速提高20%，持续4秒，冷却8秒。\n肌肉鼠：移动治疗；按下额外治疗20%最大生命，冷却10秒。\n阿法狗：召唤并自爆，伤害300，冷却30秒；召唤物前5秒生命、格挡×2。\n八酱兔：向鼠标处召唤；前5秒伤害提高50%、移速提高30%。\n肚子鳄、水母骑士：优先吞噬范围内鼠标指向的合法目标；空地仍选最近目标。"),
-            new ModuleInfo(ModuleId.Energy, "基地车后备隐藏能源", "按F强化基地车，整局共用一次。", "F：启动后备隐藏能源\n受到伤害减少100%，攻击力增加500，持续10秒。整局双方共用一次。"),
+            new ModuleInfo(ModuleId.Energy, "基地车后备隐藏能源", "按F强化基地车，可通过事件补充次数。", "F：启动后备隐藏能源\n受到伤害减少100%，攻击力增加500，持续10秒。初始整局双方共用一次；第二层事件可补充2次。"),
             new ModuleInfo(ModuleId.Music, "音乐扩展", "主菜单播放《春日影》，扩展战斗音乐。", "主菜单播放《春日影 (MyGO!!!!! ver.)》。\n矿洞：原版、《岩窟快车》《矿脉引擎》各有1/3概率。其他六个区域：原版与新增各有50%概率。\n普通Boss从原版两首和《铜管通缉令》中随机选一首，各占1/3。\n响度统一，使用原版音乐音量设置。"),
-            new ModuleInfo(ModuleId.Growth, "强化成长", "扩充强化空间，并增加成长事件与工匠刷新机会。", "区域关底完成后，每人选一台鸡械，强化上限+1。\n工匠刷新券：30金币增加1次刷新，每家限购一次；维修节点额外赠送1次。\n第二层问号事件：退休工程狮，获得20次工匠强化刷新。\n第三层问号事件：多带一件，携带上限5→6；电容还没坏，战斗动力上限20→25。\n事件效果与剩余刷新次数本局保留。第六格使用数字键6。"),
+            new ModuleInfo(ModuleId.Growth, "强化成长", "扩充强化空间，并增加成长事件与工匠刷新机会。", "区域关底完成后，每人选C级鸡械上限+3，或B级上限+1；可以跳过。\n工匠刷新券：30金币增加1次刷新，每家限购一次；维修节点额外赠送1次。\n第二层问号事件：6次工匠刷新或50%获得20次；所有C级鸡械上限+3或指定任意鸡械上限+1；后备隐藏能源+2次或100金币。\n第三层问号事件：携带上限5→6或150金币；战斗动力上限20→25或150金币。\n事件效果与剩余刷新次数本局保留。第六格使用数字键6。"),
             new ModuleInfo(ModuleId.Shop, "商店扩展", "同一家商店刷新3次后提供4台鸡械。", "成功付费刷新达到3次后，每次提供4台鸡械供购买。刷新价格沿用原版，新商店重新累计。"),
             new ModuleInfo(ModuleId.Expedition, "强化远征", "追加强化敌人，并增强绿洲最终Boss。", "进关前独立选择。原版敌人全部出完并消灭后，再出现一次；生命×1.5，攻击×2。\n绿洲最终Boss只出现一次，生命×10、攻击×2。\n完成后获得显示的额外奖励。"),
             new ModuleInfo(ModuleId.Transfer, "队友转交", "向队友转交金币或指定鸡械。", "在路线地图等关间界面打开队友转交。鸡械保留强化词条与强化上限，选中后确认转交。"),
@@ -48,11 +48,12 @@ namespace CluckmechCoop
         public List<StratagemCooldown> StratagemCooldowns = new List<StratagemCooldown>();
         public int Coupons;
         public int ExtraCarrySlots, ExtraPowerCapacity;
+        public bool PendingMachineUpgrade;
         public HashSet<int> GrowthEvents = new HashSet<int>();
         public bool ValidGrowthRewards()
         {
             if(GrowthEvents==null || ExtraCarrySlots<0 || ExtraCarrySlots>1 || ExtraPowerCapacity<0 || ExtraPowerCapacity>5)return false;
-            foreach(int id in GrowthEvents)if(id<88 || id>90)return false;
+            foreach(int id in GrowthEvents)if(id<88 || id>92)return false;
             return true;
         }
         public string PendingRegion;
@@ -90,12 +91,13 @@ namespace CluckmechCoop
             if (freeRefreshes > 0 || Coupons <= 0) return false;
             Coupons--; return true;
         }
-        public bool ClaimGrowthEvent(int id)
+        public bool ClaimGrowthEvent(int id, int choice=0, int gamble=0)
         {
-            if (id < 88 || id > 90 || !GrowthEvents.Add(id)) return false;
-            if (id == 88) Coupons += 20;
-            else if (id == 89) ExtraCarrySlots = 1;
-            else ExtraPowerCapacity = 5;
+            if (id < 88 || id > 92 || choice<0 || choice>1 || (gamble!=0 && gamble!=20) || !GrowthEvents.Add(id)) return false;
+            if (id == 88) Coupons += choice==0 ? 6 : gamble;
+            else if (id == 89 && choice==0) ExtraCarrySlots = 1;
+            else if (id == 90 && choice==0) ExtraPowerCapacity = 5;
+            else if (id == 91 && choice==1) PendingMachineUpgrade = true;
             return true;
         }
     }
@@ -104,6 +106,10 @@ namespace CluckmechCoop
     {
         public bool EnergyUsed;
         public bool GrowthPoolsAdded;
+        public int GrowthEventVersion;
+        public int EnergyBonus, EnergyBonusUsed;
+        internal int EnergyRemaining => (EnergyUsed ? 0 : 1)+EnergyBonus-EnergyBonusUsed;
+        internal bool ValidEnergy => EnergyBonus>=0 && EnergyBonus<=2 && EnergyBonusUsed>=0 && EnergyBonusUsed<=EnergyBonus;
         public Dictionary<int, PlayerProgress> Players = new Dictionary<int, PlayerProgress>();
         public PlayerProgress Player(int role)
         {
@@ -112,8 +118,9 @@ namespace CluckmechCoop
         }
         public bool UseEnergy()
         {
-            if (EnergyUsed) return false;
-            EnergyUsed = true; return true;
+            if (!EnergyUsed) { EnergyUsed = true; return true; }
+            if (EnergyBonusUsed>=EnergyBonus) return false;
+            EnergyBonusUsed++;return true;
         }
     }
 
