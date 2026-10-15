@@ -12,20 +12,24 @@ namespace CluckmechCoop
         private static readonly HashSet<模块_基本属性> enemySet = new HashSet<模块_基本属性>();
         internal static readonly List<模块_基本属性> Players = new List<模块_基本属性>();
         internal static GameObject Base;
+        internal static PolyNav.PolyNavMap GroundMap;
         internal static void Begin()
         {
             Enemies.Clear(); enemySet.Clear(); Players.Clear();
             if (!ModuleSettings.Extra.Stratagems) return;
+            GroundMap = 函数库.常用函数.搜索物体并返回物体内组件<导航管理器>(函数库.常数类.命名_导航管理器)?.地面导航地图;
             foreach (var stats in 世界事件系统.场上所有单位) Add(stats);
             Base = Plugin.Spawner?.GetComponent<yy引用实例数据库>()?.基地车;
             StratagemAudio.Begin();
+            StratagemNativeParticles.Begin();
         }
         internal static void Clear()
         {
             StratagemDeployment.Capture();
             StratagemAudio.Clear();
+            StratagemNativeParticles.Clear();
             StratagemSurface.Clear();
-            Enemies.Clear(); enemySet.Clear(); Players.Clear(); Base = null;
+            Enemies.Clear(); enemySet.Clear(); Players.Clear(); Base = null; GroundMap = null;
             StratagemUnit.Clear(); StratagemFields.Clear(); StratagemShields.Clear(); StratagemDeployment.Clear();
         }
         internal static void Add(模块_基本属性 stats)

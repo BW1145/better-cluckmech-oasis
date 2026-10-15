@@ -21,8 +21,11 @@ namespace CluckmechCoop
         internal readonly HashSet<StratagemUnit> Mines = new HashSet<StratagemUnit>();
         private static readonly Dictionary<uint,StratagemUnit> networkUnits = new Dictionary<uint,StratagemUnit>();
         internal static readonly List<StratagemUnit> Rovers = new List<StratagemUnit>();
+        private static readonly HashSet<StratagemUnit> placedMines = new HashSet<StratagemUnit>();
         private SpriteRenderer image;
         private StratagemLaserVisual laserVisual;
+        private StratagemDroneBeam droneBeam;
+        private StratagemNativeParticle beamParticles;
         private StratagemRig rig;
         private 模块_基本属性 beamTarget;
         private Vector2 beamPosition;
@@ -40,7 +43,7 @@ namespace CluckmechCoop
         internal bool HasDependents => Mines.Count > 0 || ActiveFields > 0;
         internal int Role => Stats == null ? 0 : (int)Stats.所属玩家;
         internal static bool TryFind(uint id, out StratagemUnit unit) => networkUnits.TryGetValue(id,out unit) && unit != null;
-        internal static void Clear() { networkUnits.Clear(); Rovers.Clear(); }
+        internal static void Clear() { networkUnits.Clear(); Rovers.Clear(); placedMines.Clear(); }
         private IEnumerator Start()
         {
             Stats = GetComponent<模块_基本属性>();
@@ -57,14 +60,14 @@ namespace CluckmechCoop
             if (netId != 0) networkUnits[netId] = this;
             if (Stats.ID == 20101)
             {
-                if(Parent!=null)rig.LaunchMine((Vector2)Parent.transform.position+Vector2.up*.8f,.3f);
+                if(Parent!=null)rig.LaunchMine((Vector2)Parent.transform.position+Vector2.up*(.8f*StratagemRig.ModelScale),.3f);
                 if (Plugin.Role != 2 && Parent != null) StartCoroutine(Mine());
                 yield break;
             }
             if (Stats.ID == 20102) yield break;
             if (Kind == StratagemKind.Rover)
             {
-                gauge = new StratagemGauge(transform,.95f,new Color(1,.4f,.1f));
+                gauge = new StratagemGauge(transform,.95f*StratagemRig.ModelScale,new Color(1,.4f,.1f));
                 progressSync = GetComponent<联机_单位属性同步>();
             }
             if (Kind == StratagemKind.Shield) { gameObject.AddComponent<StratagemShield>().Initialize(this); yield break; }
@@ -97,6 +100,7 @@ namespace CluckmechCoop
             if (beamTarget != null && beamTarget.当前生命值 > 0)
                 beamPosition = Vector2.MoveTowards(beamPosition,beamTarget.transform.position,(Parameters?.TrackSpeed ?? 4)*Time.deltaTime);
             laserVisual.Tick(beamPosition,Time.time-beamStarted,beamUntil-Time.time);
+            if(beamParticles!=null)beamParticles.Move(beamPosition);
             if(Time.time>=nextBeamSound)
             {
                 nextBeamSound=Time.time+.2f;
@@ -113,12 +117,14 @@ namespace CluckmechCoop
             beamSound=StratagemAudio.BeamStarted(point);nextBeamSound=Time.time+.2f;beamGain=StratagemAudio.Gain(point);
             beamPosition = point; beamStarted=Time.time;beamUntil = Time.time+duration; beamRadius = radius;
             laserVisual=new StratagemLaserVisual(radius,image);
+            beamParticles=StratagemNativeParticles.Play(StratagemParticleKind.Sparks,point,.65f,duration,true);
             laserVisual.Tick(point,0,duration);
         }
         internal void BeamTarget(uint id,Vector2 point)
         { if (Plugin.Role == 2) { beamTarget = StratagemWorld.Enemy(id); beamPosition = point; } }
         internal void EndBeam()
         {
+            if(beamParticles!=null){beamParticles.Stop();beamParticles=null;}
             StratagemAudio.BeamEnded(beamSound);beamSound=null;
             if(laserVisual!=null)
             {
@@ -128,6 +134,13 @@ namespace CluckmechCoop
             beamTarget = null;
         }
         internal void AttackAnimation() => rig.Shoot();
+        internal void DroneBeam(Vector2 point,float seconds,uint target)
+        {
+            if(seconds<=0){StopDroneBeam();return;}
+            if(droneBeam==null)droneBeam=gameObject.AddComponent<StratagemDroneBeam>();
+            droneBeam.Set(this,point,seconds,target);
+        }
+        internal void StopDroneBeam() => droneBeam?.Stop();
         internal void Aim(Vector2 direction) => rig.Aim(direction);
         internal Vector2 Muzzle => rig.Muzzle;
         internal void ShieldState(bool open,float capacity) => rig.ShieldState(open,capacity);
@@ -138,6 +151,7 @@ namespace CluckmechCoop
         internal void Dock(int phase) => rig.Dock(phase,Parent?.Parameters.ReturnTime??.5f);
         internal void DronePhase(int phase, uint parent)
         {
+            if(phase!=0)StopDroneBeam();
             if (parent != 0 && TryFind(parent,out var source)) Parent = source;
             Dock(phase);
         }
@@ -162,27 +176,67 @@ namespace CluckmechCoop
             count = Math.Min(count,Parameters.MineCap-Mines.Count-pendingMines);
             pendingMines += count;
             if (count > 0) rig.Shoot(.8f);
-            var navigation = Plugin.Spawner?.GetComponent<导航管理器>();
             for (int i = 0; i < count; i++)
             {
                 pendingMines--;
                 if (!Alive) { pendingMines -= count-i-1; yield break; }
-                Vector2 spot = default; bool found = false;
-                for (int attempt = 0; attempt < 8; attempt++)
-                {
-                    spot = (Vector2)transform.position+UnityEngine.Random.insideUnitCircle.normalized*UnityEngine.Random.Range(1.2f,3.2f);
-                    if (navigation == null || navigation.地面导航地图 == null || navigation.地面导航地图.PointIsValid(spot)) { found = true; break; }
-                }
-                if (found)
+                if (MineSpot(out var spot))
                 {
                     var obj = UnityEngine.Object.Instantiate(StratagemRegistry.Prefab(20101),spot,Quaternion.identity);
                     var mine = obj.GetComponent<StratagemUnit>(); mine.Parent = this; mine.MineDamage = Damage.Attack*Parameters.DamageMultiplier;
                     Mines.Add(mine);
+                    placedMines.Add(mine);
                     obj.GetComponent<模块_基本属性>().所属玩家 = Stats.所属玩家;
                     if (Plugin.Role == 1) { obj.GetComponent<联机_单位属性同步>().Network所属玩家 = Stats.所属玩家; NetworkServer.Spawn(obj); }
                 }
                 yield return new WaitForSeconds(.1f);
             }
+        }
+        private bool MineGround(Vector2 spot)
+        {
+            var map = StratagemWorld.GroundMap;
+            if (map == null || map.nodesCount < 3 || !map.PointIsValid(spot)) return false;
+            // Test the whole footprint, including the edge of walls and water.
+            const float edge = .2f;
+            if (!map.PointIsValid(spot+new Vector2(edge,edge)) || !map.PointIsValid(spot+new Vector2(-edge,edge)) ||
+                !map.PointIsValid(spot+new Vector2(edge,-edge)) || !map.PointIsValid(spot-new Vector2(edge,edge))) return false;
+            return StratagemDeployment.ValidPoint(spot,new Vector2(.5f,.5f));
+        }
+        private float MineSpace(Vector2 spot)
+        {
+            float nearest = 9;
+            foreach (var mine in placedMines)
+                if (mine != null) nearest = Mathf.Min(nearest,((Vector2)mine.transform.position-spot).sqrMagnitude);
+            return nearest;
+        }
+        private bool MineSpot(out Vector2 spot)
+        {
+            Vector2 center = transform.position;
+            spot = default;
+            float best = -1;
+            // Occupied ground wins only when it is legal and has room for a new mine.
+            foreach (var enemy in StratagemWorld.Enemies)
+            {
+                if (!StratagemWorld.Living(enemy) || enemy.单位类型 == 模块_基本属性.单位类型枚举.飞行单位) continue;
+                Vector2 point = enemy.transform.position;
+                float distance = (point-center).sqrMagnitude;
+                if (distance > 3.2f*3.2f || distance < .8f*.8f) continue;
+                float space = MineSpace(point);
+                if (space < .6f*.6f || space <= best || !MineGround(point)) continue;
+                spot = point; best = space;
+            }
+            if (best >= 0) return true;
+            float angle = UnityEngine.Random.Range(0,Mathf.PI*2);
+            for (int i = 0; i < 64; i++)
+            {
+                float a = angle+i*2.399963f;
+                float r = Mathf.Sqrt(.9f*.9f+(3.2f*3.2f-.9f*.9f)*(i+.5f)/64);
+                Vector2 point = center+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*r;
+                float space = MineSpace(point);
+                if (space < .6f*.6f || space <= best || !MineGround(point)) continue;
+                spot = point; best = space;
+            }
+            return best >= 0;
         }
         private IEnumerator Mine()
         {
@@ -198,7 +252,7 @@ namespace CluckmechCoop
         {
             if (parent != 0 && TryFind(parent,out var source)) Parent = source;
             MineDamage = damage; Parent?.Mines.Add(this);
-            if(Plugin.Role==2&&Parent!=null)rig.LaunchMine((Vector2)Parent.transform.position+Vector2.up*.8f,.3f);
+            if(Plugin.Role==2&&Parent!=null)rig.LaunchMine((Vector2)Parent.transform.position+Vector2.up*(.8f*StratagemRig.ModelScale),.3f);
             if (Plugin.Role == 2) StartCoroutine(MineLamp(armTime));
         }
         private IEnumerator MineLamp(float delay)
@@ -411,6 +465,7 @@ namespace CluckmechCoop
             uint id = StratagemWorld.Id(gameObject);
             if (id != 0) networkUnits.Remove(id);
             Rovers.Remove(this);
+            placedMines.Remove(this);
             if (Parent != null) Parent.Mines.Remove(this);
             if (!heldSource) foreach (var mine in Mines) if (mine != null) mine.Parent = null;
         }

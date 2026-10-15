@@ -5,17 +5,44 @@ namespace CluckmechCoop
 {
     internal static class StratagemDescriptions
     {
-        internal static string Summary(int id)
+        private static string Direction(string text) => "<color=orange>强化方向："+text+"</color>\n";
+        private static string Duration(float seconds) => "<color=red>"+seconds.ToString("0.#")+"秒</color>";
+        internal static string Summary(模块_基本属性 stats)
         {
-            switch (id)
+            var p=new StratagemParameters(stats.ID,stats.强化词条列表);
+            switch (stats.ID)
             {
-                case 20001: return "自动布设地雷，阻截地面敌人。";
-                case 20002: return "呼叫多批随机轨道炮击，覆盖大片区域。";
-                case 20003: return "呼叫追踪光束，持续攻击高生命目标。";
-                case 20004: return "呼叫飞鹰投下重型炸弹，中心造成大量伤害。";
-                case 20005: return "远距离投射静电场，眩晕并减速敌人。";
-                case 20006: return "吸引敌人攻击，展开拦截弹丸的护罩。";
-                case 20007: return "随身背包部署激光无人机，过热后返航充能。";
+                case 20001: return Direction("攻击力、攻速、布雷")+
+                    "·会受到敌人攻击\n"+
+                    $"·首次布设{p.MineInitial}颗雷，每{p.RefillInterval:0.#}秒补{p.MineRefill}颗，上限{p.MineCap}颗\n"+
+                    "·优先向敌人脚下空位布雷，只由地面敌人触发\n"+
+                    "·播撒器损毁后，已布地雷仍可引爆";
+                case 20002: return Direction("攻击力、攻速、范围")+
+                    "·不会受到敌人攻击\n"+
+                    $"·呼叫{Duration(p.CallDelay)}后，向指定区域随机炮击{p.Salvos}批，每批3发\n"+
+                    "·攻速加快炮击节奏，最后一批结束后消失";
+                case 20003: return Direction("攻击力、攻速、持续照射")+
+                    "·不会受到敌人攻击\n"+
+                    $"·呼叫{Duration(p.CallDelay)}后持续照射{Duration(p.Duration)}，自动追踪高生命目标\n"+
+                    "·照射附带<color=red>灼烧</color>，结束后消失";
+                case 20004: return Direction("攻击力、爆炸范围")+
+                    "·不会受到敌人攻击\n"+
+                    $"·呼叫{Duration(1.8f+p.CallDelay)}后爆炸，中心{p.InnerRadius:0.#}格内造成全额伤害\n"+
+                    $"·外圈伤害随距离衰减，最远{p.BlastRadius:0.#}格；爆炸后消失";
+                case 20005: return Direction("攻速、范围、控制")+
+                    "·会受到敌人攻击，自动优先攻击未覆盖的敌群\n"+
+                    $"·每弹形成持续{Duration(p.FieldDuration)}的区域，使敌人<color=green>减速{p.Slow*100:0}%</color>\n"+
+                    (p.Gas?"·瓦斯附加中毒，替代首次眩晕":$"·首次进入眩晕{Duration(p.Stun)}，同一敌人每5秒最多眩晕一次");
+                case 20006: return Direction("生命值、格挡、护罩")+
+                    "·会受到敌人攻击，吸引附近敌人的仇恨\n"+
+                    $"·展开半径{p.BlastRadius:0.#}格护罩，拦截从罩外射入的敌方弹丸\n"+
+                    $"·容量为本体最大生命的{p.CapacityRatio*100:0}%，破盾{Duration(p.Reboot)}后重新展开\n"+
+                    "·敌人可走进护罩，近战仍可攻击本体";
+                case 20007: return Direction("衍生物攻击力、攻速、生命值")+
+                    "·固定基座召唤1架激光无人机，可放置多个基座\n"+
+                    "·无人机自动攻击附近敌人，会受到敌人攻击\n"+
+                    $"·过热返回自己的基座，充能{Duration(p.DockTime)}后再次出击\n"+
+                    "·无人机被毁后自动再生；基座损毁后无人机消失";
                 default: return "";
             }
         }
@@ -63,7 +90,7 @@ namespace CluckmechCoop
     internal static class StratagemOverview
     {
         private static bool Prefix(模块_基本属性 __instance,ref string __result)
-        { if (!StratagemCatalog.IsUnit(__instance.ID) && __instance.ID != 20101 && __instance.ID != 20102) return true; __result = __instance.ID == 20101 ? "敌人触发后爆炸的地雷。" : __instance.ID == 20102 ? "随身护卫无人机，过热后返航充能。" : StratagemDescriptions.Summary(__instance.ID); return false; }
+        { if (!StratagemCatalog.IsUnit(__instance.ID) && __instance.ID != 20101 && __instance.ID != 20102) return true; __result = __instance.ID == 20101 ? "·地面敌人触发后爆炸\n·播撒器损毁后仍可引爆" : __instance.ID == 20102 ? "·自动以激光攻击附近敌人\n·过热后返回固定基座充能，再次起飞" : StratagemDescriptions.Summary(__instance); return false; }
     }
     [HarmonyPatch(typeof(模块_基本属性),"说明")]
     internal static class StratagemDetails

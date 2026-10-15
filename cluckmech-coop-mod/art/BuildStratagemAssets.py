@@ -65,7 +65,7 @@ def add(name, tile, anchor=(.5,.5), portrait=False, islands=False):
         y,x=np.nonzero(a>=144)
         if not len(x): raise ValueError(name)
         tile=tile.crop((int(x.min()),int(y.min()),int(x.max()+1),int(y.max()+1)))
-    limit=38 if portrait else 88
+    limit=(32 if name.startswith('icon.') else 38) if portrait else 88
     scale=limit/max(tile.size)
     size=(max(1,round(tile.width*scale)),max(1,round(tile.height*scale)))
     tile=tile.resize(size,Image.Resampling.NEAREST)
@@ -127,7 +127,7 @@ for n,tile in enumerate(icons):
         add('preview-source',source_tile)
         image,pivot=assembled([('preview-source',1.2,0,0)])
         del frames['preview-source']
-    frames['preview.'+str(unit)]=(image,pivot,False,64)
+    frames['preview.'+str(unit)]=(image,pivot,False,64/.75)
 add('icon.20101',grid('md6Parts',3,2,5),portrait=True)
 add('icon.20102',grid('roverParts',3,3,1),portrait=True)
 
@@ -147,20 +147,52 @@ for kind,selections in selected.items():
             anchor=(.5,0) if (kind==1 and row in [2,3]) or (kind==3 and row in [2,3]) else (.5,.5)
             add('old.'+str(kind)+'.'+str(row)+'.'+str(column),legacy(kind,row,column),anchor)
 
-CELL=160
-columns=16
-lines=(len(frames)+columns-1)//columns
-atlas=Image.new('RGBA',(columns*CELL,lines*CELL))
+# Whole cells retain the same pivot and size for every animation frame.
+# Keep disconnected arcs, glow and particles inside their own original cell.
+for prefix,kind,row,count in [('ems-field',4,3,8),('gas-field',4,5,8),
+                               ('laser-beam',2,1,8),('laser-contact',2,2,8),
+                               ('laser-sparks',2,4,8)]:
+    for column in range(count):
+        tile=legacy(kind,row,column).resize((128,128),Image.Resampling.NEAREST)
+        frames['fx.'+prefix+'.'+str(column)]=(tile,(.5,.5),False,32)
+for n,column in enumerate([5,6,7,6]):
+    frames['fx.shield-shell.'+str(n)]=(legacy(5,2,column).resize((128,128),Image.Resampling.NEAREST),(.5,.28),False,32)
+for prefix,kind,sequence in [('blast-small',1,[(2,c) for c in range(8)]),
+                              ('blast-heavy',3,[(r,c) for r in (2,3) for c in range(8)]),
+                              ('blast-dust',1,[(3,c) for c in range(8)])]:
+    for n,(row,column) in enumerate(sequence):
+        frames['fx.'+prefix+'.'+str(n)]=(legacy(kind,row,column).resize((128,128),Image.Resampling.NEAREST),(.5,.15),False,32)
+
+laser_sheet=Image.open(SOURCES/'orbitalLaserPhases.png').convert('RGBA')
+for row,phase in enumerate(['start','loop','end']):
+    # These are the actual generated row boundaries; all cells keep a fixed canvas.
+    top=[0,418,836][row]
+    for column in range(8):
+        tile=laser_sheet.crop((round(column*laser_sheet.width/8),top,round((column+1)*laser_sheet.width/8),top+400))
+        tile=tile.resize((128,320),Image.Resampling.NEAREST)
+        frames[f'fx.orbital.{phase}.beam.{column}']=(tile.crop((0,0,128,272)),(.5,0),False,32)
+        frames[f'fx.orbital.{phase}.ground.{column}']=(tile.crop((0,272,128,320)),(.5,2/3),False,32)
+
+atlas_width=2048
+placements={}
+ox=oy=row_height=0
+for name,(tile,pivot,portrait,ppu) in frames.items():
+    w,h=(50,50) if portrait else tile.size
+    if ox+w+4>atlas_width:
+        ox=0;oy+=row_height+4;row_height=0
+    placements[name]=(ox+2,oy+2)
+    ox+=w+4;row_height=max(row_height,h)
+atlas=Image.new('RGBA',(atlas_width,oy+row_height+4))
 metadata={}
 for index,(name,(tile,pivot,portrait,ppu)) in enumerate(frames.items()):
-    ox,oy=(index%columns)*CELL,(index//columns)*CELL
+    ox,oy=placements[name]
     if portrait:
         canvas=Image.new('RGBA',(50,50))
         canvas.alpha_composite(tile,((50-tile.width)//2,(50-tile.height)//2))
         atlas.alpha_composite(canvas,(ox,oy))
         x,y,w,h=ox,oy,50,50
     else:
-        x,y=ox+(CELL-tile.width)//2,oy+(CELL-tile.height)//2
+        x,y=ox,oy
         w,h=tile.size
         atlas.alpha_composite(tile,(x,y))
     metadata[name]={'X':x,'Y':y,'W':w,'H':h,'PX':pivot[0],'PY':pivot[1],'PPU':ppu}

@@ -53,7 +53,7 @@ internal static class Program
         Near(Params(20006,25062).CapacityRatio,.55f,"Capacitor scales from native maximum health");
         Near(Params(20007,25072).ReturnTime,.25f,"Cooling includes return and launch");
         var mines = Params(20001, 25011, 25012, 25014, 25016);
-        Check(mines.MineCap == 8 && mines.MineInitial == 6 && mines.MineRefill == 4 && mines.Power == 5, "Mine ammunition upgrades combine");
+        Check(mines.MineCap == 8 && mines.MineInitial == 6 && mines.MineRefill == 4 && mines.Power == 4, "Mine ammunition upgrades combine");
         Near(mines.MineInterval(.12f), 8 / 1.2f, "Attack speed accelerates refill");
         Check(float.IsPositiveInfinity(mines.MineInterval(0)), "Zero attack rate pauses refill");
         var barrage = Params(20002, 25022, 25025);

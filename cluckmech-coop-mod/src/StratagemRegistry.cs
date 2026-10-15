@@ -89,9 +89,9 @@ namespace CluckmechCoop
             if (unit.Kind == StratagemKind.Rover)
             {
                 var body = prefab.GetComponent<Rigidbody2D>(); body.bodyType = RigidbodyType2D.Kinematic; body.gravityScale = 0;
-                foreach (var collider in prefab.GetComponents<Collider2D>()) collider.isTrigger = true;
+                if(id == 20102) foreach (var collider in prefab.GetComponents<Collider2D>()) collider.isTrigger = true;
             }
-            stats.启用建筑体积 = id < 20100 && unit.Kind != StratagemKind.Rover && unit.Health > 1;
+            stats.启用建筑体积 = id < 20100 && unit.Health > 1;
             stats.建筑体积 = new Vector2(1,1);
             var buildingCollider = prefab.GetComponent<BoxCollider2D>();
             if (buildingCollider != null)

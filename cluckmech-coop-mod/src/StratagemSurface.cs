@@ -15,13 +15,15 @@ namespace CluckmechCoop
         private int overlaps;
         private string token;
         private bool field;
-        private Mesh[] electricMeshes;
-        private MeshRenderer[] electricRenderers;
+        private SpriteRenderer textureLayer;
+        private string texturePrefix;
+        private int textureFrames;
+        private float textureOpacity;
         internal static StratagemSurface Create(StratagemSurfaceKind kind,Vector2 point,float radius,float duration,Transform parent=null)
         {
             var obj=new GameObject("StratagemSurface");
             if(parent!=null) obj.transform.SetParent(parent,false);
-            else obj.transform.position=new Vector3(point.x,point.y,StratagemAssets.Z(point.y+radius)+.08f);
+            else obj.transform.position=new Vector3(point.x,point.y,StratagemAssets.Z(point.y)+.4f);
             var surface=obj.AddComponent<StratagemSurface>();
             surface.radius=radius;surface.started=Time.time;surface.duration=duration;surface.token=Plugin.Combat?.Token;
             surface.field=kind==StratagemSurfaceKind.StaticField||kind==StratagemSurfaceKind.Gas;
@@ -30,41 +32,35 @@ namespace CluckmechCoop
             surface.renderer.sharedMaterial=material;
             surface.mesh=Build(kind,radius);
             obj.AddComponent<MeshFilter>().sharedMesh=surface.mesh;
-            if(kind==StratagemSurfaceKind.StaticField)
+            if(surface.field||kind==StratagemSurfaceKind.Shield||kind==StratagemSurfaceKind.Fire)
             {
-                surface.electricMeshes=new Mesh[3];surface.electricRenderers=new MeshRenderer[3];
-                for(int phase=0;phase<3;phase++)
-                {
-                    var arcs=new GameObject("EMSArcs");arcs.transform.SetParent(obj.transform,false);
-                    arcs.transform.localPosition=new Vector3(0,0,-.001f);
-                    surface.electricMeshes[phase]=Build(kind,radius,phase);
-                    arcs.AddComponent<MeshFilter>().sharedMesh=surface.electricMeshes[phase];
-                    var renderer=arcs.AddComponent<MeshRenderer>();renderer.sharedMaterial=material;
-                    surface.electricRenderers[phase]=renderer;
-                }
+                surface.texturePrefix=kind==StratagemSurfaceKind.StaticField?"fx.ems-field.":
+                    kind==StratagemSurfaceKind.Gas?"fx.gas-field.":kind==StratagemSurfaceKind.Shield?"fx.shield-shell.":"fx.fire-small";
+                surface.textureFrames=kind==StratagemSurfaceKind.Shield?4:kind==StratagemSurfaceKind.Fire?1:8;
+                surface.textureOpacity=kind==StratagemSurfaceKind.Shield?.16f:kind==StratagemSurfaceKind.Gas?.28f:.3f;
+                surface.textureLayer=StratagemAssets.Renderer(obj.transform,StratagemAssets.Named(surface.texturePrefix+(surface.textureFrames>1?"0":"")),radius*2.15f);
+                surface.textureLayer.transform.localPosition=new Vector3(0,0,-.001f);
             }
             if(surface.field)
             {
                 foreach(var other in fields) if(surface.Overlaps(other)){surface.overlaps++;other.overlaps++;}
                 fields.Add(surface);
             }
+            if(kind==StratagemSurfaceKind.StaticField)
+                StratagemNativeParticles.Play(StratagemParticleKind.Electric,point,radius*.55f,duration,true,obj.transform);
             return surface;
         }
         private bool Overlaps(StratagemSurface other) => ((Vector2)transform.position-(Vector2)other.transform.position).sqrMagnitude<(radius+other.radius)*(radius+other.radius);
         internal void Visible(bool visible)
-        {renderer.enabled=visible;if(electricRenderers!=null)foreach(var arc in electricRenderers)arc.enabled=visible;}
+        {renderer.enabled=visible;if(textureLayer!=null)textureLayer.enabled=visible;}
         internal void Strength(float strength)
         {
             properties.SetColor("_Color",new Color(1,1,1,strength/(1+.5f*overlaps)));
             renderer.SetPropertyBlock(properties);
-            if(electricRenderers!=null)
+            if(textureLayer!=null)
             {
-                int active=Mathf.FloorToInt((Time.time-started)*8)%3;
-                for(int phase=0;phase<electricRenderers.Length;phase++)
-                {
-                    properties.SetColor("_Color",new Color(1,1,1,strength*(phase==active?1:.08f)/(1+.5f*overlaps)));
-                    electricRenderers[phase].SetPropertyBlock(properties);
-                }
+                if(textureFrames>1)textureLayer.sprite=StratagemAssets.Named(texturePrefix+(Mathf.FloorToInt((Time.time-started)*12)%textureFrames));
+                textureLayer.color=new Color(1,1,1,textureOpacity*strength/(1+.5f*overlaps));
             }
         }
         private void Update()
@@ -79,7 +75,6 @@ namespace CluckmechCoop
         {
             if(field && fields.Remove(this)) foreach(var other in fields) if(Overlaps(other))other.overlaps--;
             if(mesh!=null)Destroy(mesh);
-            if(electricMeshes!=null)foreach(var arc in electricMeshes)Destroy(arc);
         }
         internal static void Clear()
         { foreach(var field in fields.ToArray()) if(field!=null)Destroy(field.gameObject);fields.Clear(); }

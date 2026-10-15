@@ -75,6 +75,28 @@ namespace CluckmechCoop
             renderer.gameObject.AddComponent<StratagemAnimation>().Set(renderer,duration,delay,grow,rise,ground);
             return renderer;
         }
+        internal static void Flipbook(string prefix,int count,Vector2 point,float width,float duration,float delay=0,bool ground=false,float opacity=1)
+        {
+            var image=Effect(prefix+"0",point,width,duration,delay,ground,opacity:opacity);
+            image.gameObject.AddComponent<StratagemFlipbook>().Set(image,prefix,count,duration,delay);
+        }
+    }
+    public sealed class StratagemFlipbook : MonoBehaviour
+    {
+        private SpriteRenderer image;
+        private Sprite[] frames;
+        private float started,duration;
+        internal void Set(SpriteRenderer renderer,string prefix,int count,float seconds,float delay)
+        {
+            image=renderer;frames=new Sprite[count];
+            for(int i=0;i<count;i++)frames[i]=StratagemAssets.Named(prefix+i);
+            started=Time.time+delay;duration=seconds;
+        }
+        private void Update()
+        {
+            float elapsed=Time.time-started;
+            if(elapsed>=0)image.sprite=frames[Mathf.Min(frames.Length-1,Mathf.FloorToInt(elapsed/duration*frames.Length))];
+        }
     }
     public sealed class StratagemAnimation : MonoBehaviour
     {

@@ -125,8 +125,8 @@ namespace CluckmechCoop
             maximum = root.Stats.当前生命值上限*root.Parameters.CapacityRatio; capacity = maximum;
             sync = GetComponent<联机_单位属性同步>();
             dome=StratagemSurface.Create(StratagemSurfaceKind.Shield,transform.position,Radius,0,transform);
-            dome.transform.localPosition=new Vector3(0,0,-.015f);dome.Visible(false);
-            gauge = new StratagemGauge(transform,1.45f,new Color(1,.75f,.15f));
+            dome.transform.localPosition=new Vector3(0,0,.4f);dome.Visible(false);
+            gauge = new StratagemGauge(transform,1.45f*StratagemRig.ModelScale,new Color(1,.75f,.15f));
             StratagemShields.Add(this);
         }
         private void Update()
@@ -151,7 +151,7 @@ namespace CluckmechCoop
                     {
                         if (!StratagemWorld.Living(enemy)) continue;
                         float distance = Vector2.Distance(enemy.transform.position,transform.position);
-                        if (distance <= 4) enemy.SendMessage("增加固定仇恨",new 世界类.仇恨数据包 { 仇恨目标 = gameObject, 仇恨值 = 10000/Mathf.Max(.1f,distance)+10000 },SendMessageOptions.DontRequireReceiver);
+                        if (distance <= Radius) enemy.SendMessage("增加固定仇恨",new 世界类.仇恨数据包 { 仇恨目标 = gameObject, 仇恨值 = 10000/Mathf.Max(.1f,distance)+10000 },SendMessageOptions.DontRequireReceiver);
                     }
                 }
             }

@@ -31,11 +31,13 @@ namespace CluckmechCoop
         {
             float width=radius*2;
             StratagemAssets.Effect("fx.flash",point,width*.5f,.13f,grow:.4f,opacity:.8f);
-            StratagemAssets.Effect(heavy?"fx.fire-big":"fx.fire-small",point,width*(heavy?.85f:.7f),heavy?.65f:.4f,delay:.03f,grow:.18f);
+            StratagemAssets.Flipbook(heavy?"fx.blast-heavy.":"fx.blast-small.",heavy?16:8,point,Mathf.Min(5,width*.85f),heavy?1:.65f,delay:.03f);
             var ring=StratagemSurface.Create(StratagemSurfaceKind.Ripple,point,radius,heavy?.45f:.25f);
             ring.gameObject.AddComponent<StratagemExpansion>().Set(.35f,1.15f,heavy?.45f:.25f);
             StratagemAssets.Effect("fx.fragments",point,width*.6f,.45f,grow:.5f,rise:.3f);
-            StratagemAssets.Effect(heavy?"fx.smoke":"fx.smoke-thin",point+Vector2.up*.2f,width*.6f,heavy?1.3f:.8f,delay:.18f,grow:.5f,rise:heavy?.8f:.45f,opacity:.45f);
+            StratagemAssets.Flipbook("fx.blast-dust.",8,point+Vector2.up*.1f,Mathf.Min(4,width*.65f),heavy?1.3f:.8f,delay:.3f,opacity:.4f);
+            StratagemNativeParticles.Play(StratagemParticleKind.Smoke,point,heavy?1.1f:.6f,.7f);
+            StratagemNativeParticles.Play(StratagemParticleKind.Sparks,point,heavy?.8f:.4f,.25f);
             StratagemAssets.Effect(heavy?"fx.crater.1":"fx.crater.0",point,width*.55f,heavy?12:8,delay:.12f,ground:true,opacity:.55f);
         }
         private static void PlayReady(StratagemEffectMessage message,StratagemUnit localRoot=null)
@@ -87,11 +89,7 @@ namespace CluckmechCoop
                     burst.gameObject.AddComponent<StratagemExpansion>().Set(.85f,1.1f,.4f);break;
                 case 13:
                     root?.Aim(end-point);root?.AttackAnimation();
-                    Vector2 source=root!=null?root.Muzzle:point;
-                    var ray=StratagemAssets.Effect("old.2.1.0",(source+end)*.5f,.04f,.09f,opacity:.7f);
-                    Vector2 difference=end-source;
-                    ray.transform.rotation=Quaternion.Euler(0,0,Mathf.Atan2(difference.y,difference.x)*Mathf.Rad2Deg-90);
-                    ray.transform.localScale=new Vector3(.04f/ray.sprite.bounds.size.x,difference.magnitude/ray.sprite.bounds.size.y,1);
+                    root?.DroneBeam(end,message.Duration,message.Target);
                     break;
                 case 14:root?.RigDeath();break;
                 case 15:root?.MineSetup(message.Target,message.EndX,message.Duration);break;

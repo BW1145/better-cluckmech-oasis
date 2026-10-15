@@ -8,9 +8,9 @@ namespace CluckmechCoop
     public sealed class StratagemRover : MonoBehaviour
     {
         private StratagemUnit root,drone;
-        private 模块_基本属性 owner,target;
+        private 模块_基本属性 target;
         private 模块_移动属性 movement;
-        private float nextOwner,nextSearch,heat,shots,repairWait = 6;
+        private float nextSearch,heat,shots,repairWait = 6;
         private int phase;
         private 联机_单位属性同步 sync;
         internal float Heat => heat;
@@ -21,24 +21,6 @@ namespace CluckmechCoop
             foreach (int word in root.Stats.强化词条列表) if (word == 143) repairWait--;
             repairWait = Mathf.Max(2,repairWait);
             StartCoroutine(Operate());
-        }
-        private void Update()
-        {
-            if (root == null || !root.Alive || Plugin.Role == 2) return;
-            if (owner == null || owner.当前生命值 <= 0 || Time.time >= nextOwner)
-            { owner = StratagemWorld.Player(root.Role); nextOwner = Time.time+.5f; }
-            var anchor = owner != null ? owner.gameObject : StratagemWorld.Base;
-            if (anchor == null) return;
-            int index = 0;
-            foreach (var other in StratagemUnit.Rovers)
-            {
-                if (other == root) break;
-                if (other != null && other.Role == root.Role) index++;
-            }
-            float side = index%2 == 0 ? -1 : 1;
-            Vector2 destination = (Vector2)anchor.transform.position+new Vector2(side*(.55f+index/2*.3f),-.35f-index/2*.2f);
-            Vector2 position = Vector2.MoveTowards(transform.position,destination,10*Time.deltaTime);
-            transform.position = new Vector3(position.x,position.y,(position.y+10000)*.01f);
         }
         private IEnumerator Operate()
         {
@@ -79,12 +61,12 @@ namespace CluckmechCoop
                             shots--;
                             drone.Damage.Hit(target,drone.Damage.Attack*root.Parameters.DamageMultiplier,drone.Damage.Critical());
                             if (root.Parameters.BurningRover) drone.Damage.Burn(target,4,2);
-                            StratagemEffects.Emit(drone,13,drone.transform.position,1,.1f,0,target.transform.position);
+                            StratagemEffects.Emit(drone,13,drone.transform.position,1,1/drone.Damage.Rate+.08f,StratagemWorld.Id(target.gameObject),target.transform.position);
                             heat += root.Parameters.HeatPerShot;
                             if (heat >= root.Parameters.HeatCap) SetPhase(1);
                         }
                     }
-                    else { heat = Mathf.Max(0,heat-20*Time.deltaTime); shots = 0; }
+                    else { drone.StopDroneBeam(); heat = Mathf.Max(0,heat-20*Time.deltaTime); shots = 0; }
                 }
                 if (phase == 1)
                 {
@@ -118,6 +100,7 @@ namespace CluckmechCoop
         private void SetPhase(int value)
         {
             phase = value;
+            if(value!=0&&drone!=null)drone.StopDroneBeam();
             if(drone!=null)drone.Dock(value);
             if (drone != null) StratagemEffects.Emit(drone,16,drone.transform.position,0,value,StratagemWorld.Id(root.gameObject));
         }

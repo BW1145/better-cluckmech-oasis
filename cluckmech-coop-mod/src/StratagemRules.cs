@@ -85,13 +85,13 @@ namespace CluckmechCoop
     internal static class StratagemCatalog
     {
         internal static readonly StratagemDefinition[] Units = {
-            new StratagemDefinition(20001, "MD-6地雷播撒器", 4, 2, 4, 4, 650, 0, 100, .1f, 3.2f, 30, 2, new[] {42,109,157,23,25,66,82,72}),
+            new StratagemDefinition(20001, "MD-6地雷播撒器", 4, 2, 4, 3, 650, 0, 100, .1f, 3.2f, 30, 2, new[] {42,109,157,23,25,66,82,72}),
             new StratagemDefinition(20002, "380mm轨道火力网", 5, 4, 6, 9, 1, 0, 1200, 1, 4.5f, 60, 12, new[] {42,109,157,23,25,66,82,72}),
             new StratagemDefinition(20003, "轨道激光", 5, 4, 6, 8, 1, 0, 250, 4, 6, 60, 12, new[] {109,157,23,66,82,181,182,183,72}),
             new StratagemDefinition(20004, "飞鹰500kg", 5, 4, 6, 8, 1, 0, 3000, 1, 4, 45, 8, new[] {42,109,157,23,25,66,72}),
             new StratagemDefinition(20005, "EMS迫击炮", 0, 2, 4, 3, 450, 0, 0, .25f, 9, 25, 2, new[] {82,81,167,28,71,72}),
-            new StratagemDefinition(20006, "FX-12护盾发生器", 1, 3, 5, 5, 2500, 5, 0, 0, 4, 30, 3, new[] {27,28,29,39,71,112,72}),
-            new StratagemDefinition(20007, "AX/LAS-5激光护卫犬", 2, 3, 5, 5, 450, 0, 24, 4, 4.5f, 30, 3, new[] {143,105,146,255,462,23,72})
+            new StratagemDefinition(20006, "FX-12护盾发生器", 1, 3, 5, 3, 5000, 15, 0, 0, 4.5f, 30, 3, new[] {27,28,29,39,71,112,72}),
+            new StratagemDefinition(20007, "AX/LAS-5激光护卫犬", 2, 3, 5, 3, 450, 0, 24, 4, 4.5f, 30, 3, new[] {143,105,146,255,462,23,72})
         };
         internal static readonly StratagemAffix[] Affixes = {
             new StratagemAffix(25011,0,"扩充弹链","地雷上限+4，初次布雷+2；布防0.4秒，触发等待0.08秒。"),
@@ -124,7 +124,7 @@ namespace CluckmechCoop
             new StratagemAffix(25054,1,"稳定脉冲","首次眩晕提高至1秒。",25055),
             new StratagemAffix(25055,1,"瓦斯弹头","保留减速，施加持续2秒、每0.5秒5点中毒，替代首次眩晕。",25053),
             new StratagemAffix(25056,2,"紧急拦阻","每第三次发射，额外向另一名靠近基地的敌人发射一弹。"),
-            new StratagemAffix(25061,0,"扩域线圈","护罩半径增加至3.5。"),
+            new StratagemAffix(25061,0,"扩域线圈","护罩半径增加至5.5。"),
             new StratagemAffix(25062,0,"备用电容","护罩容量提高至本体最大生命的55%。"),
             new StratagemAffix(25063,0,"快速复位","破盾后重启时间缩短至7秒。"),
             new StratagemAffix(25064,1,"稳态充电","未破盾再生等待2.5秒，每秒恢复150容量。"),
@@ -208,7 +208,7 @@ namespace CluckmechCoop
                 case StratagemKind.Laser: BlastRadius = .85f; CallDelay = 1.5f; break;
                 case StratagemKind.Eagle: InnerRadius = 2.5f; BlastRadius = 4; CallDelay = 1; break;
                 case StratagemKind.Mortar: BlastRadius = 1.8f; break;
-                case StratagemKind.Shield: BlastRadius = 3; break;
+                case StratagemKind.Shield: BlastRadius = 4.5f; break;
             }
             if (owned == null) return;
             foreach (int affix in owned) Apply(affix);
@@ -250,7 +250,7 @@ namespace CluckmechCoop
                 case 25054: Stun = 1; break;
                 case 25055: Gas = true; Stun = 0; break;
                 case 25056: DoubleMortar = true; break;
-                case 25061: BlastRadius = 3.5f; break;
+                case 25061: BlastRadius = 5.5f; break;
                 case 25062: CapacityRatio = .55f; break;
                 case 25063: Reboot = 7; break;
                 case 25064: RegenDelay = 2.5f; Regen = 150; break;

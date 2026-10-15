@@ -75,6 +75,7 @@ namespace UnityEngine
         public const float PI=(float)Math.PI,Rad2Deg=180/PI;
         public static float Atan2(float y,float x)=>(float)Math.Atan2(y,x);public static int RoundToInt(float x)=>(int)Math.Round(x);
         public static float Clamp01(float x)=>Math.Clamp(x,0,1);public static float Sin(float x)=>(float)Math.Sin(x);
+        public static int FloorToInt(float x)=>(int)Math.Floor(x);public static int Min(int a,int b)=>Math.Min(a,b);
         public static float Cos(float x)=>(float)Math.Cos(x);public static float Repeat(float x,float length)=>x-(float)Math.Floor(x/length)*length;
         public static float Lerp(float a,float b,float t)=>a+(b-a)*t;public static float SmoothStep(float a,float b,float t)=>Lerp(a,b,t*t*(3-2*t));
     }
@@ -116,18 +117,38 @@ static class Program
         string root=Path.GetFullPath(args[0]);
         StratagemAssets.Boxes=JsonSerializer.Deserialize<Dictionary<string,Dictionary<string,float>>>(File.ReadAllText(Path.Combine(root,"src/StratagemAssets/stratagem-v2.json")));
         var frames=new List<object>();
-        if(args.Length>1 && args[1]=="--laser")
+        if(args.Length>1 && args[1]=="--laser-seam")
         {
-            var laser=new StratagemLaserVisual(.85f,new SpriteRenderer());
-            for(int i=0;i<36;i++)
+            var laser=new StratagemLaserVisual(.85f,new SpriteRenderer());laser.Tick(new Vector2(0,0),1,14);
+            var beam=StratagemAssets.LaserParts[0];var ground=StratagemAssets.LaserParts[1];
+            float groundTop=ground.transform.position.y+(1-StratagemAssets.Boxes[ground.sprite.Name]["PY"])*ground.sprite.bounds.size.y*ground.transform.localScale.y;
+            Check(Math.Abs(beam.transform.position.y-groundTop)<.00001f,"Beam and ground texture meet at the same pixel boundary");
+            File.WriteAllText(args[2],JsonSerializer.Serialize(StratagemAssets.LaserParts.Select(x=>new{name=x.sprite.Name,x=x.transform.position.x,y=x.transform.position.y,z=x.transform.position.z,sx=x.transform.localScale.x,sy=x.transform.localScale.y,alpha=x.color.a}).ToArray()));
+            laser.Dispose();Console.WriteLine("PASS: beam-ground texture join");return;
+        }
+        if(args.Length>1 && args[1]=="--revision")
+        {
+            foreach(int id in new[]{20001,20002,20003,20004,20005,20006,20007})
             {
-                float t=i*.05f;laser.Tick(new Vector2(t*.35f,0),t,2-t);
-                frames.Add(new{time=t,lines=LineRenderer.All.Select(x=>new{width=x.widthMultiplier,color=new[]{x.startColor.r,x.startColor.g,x.startColor.b,x.startColor.a},points=x.positions.Select(p=>new[]{p.x,p.y}).ToArray(),curve=x.widthCurve.keys.Select(k=>new[]{k.time,k.value}).ToArray()}).ToArray(),parts=StratagemAssets.LaserParts.Select(x=>new{name=x.sprite.Name,x=x.transform.position.x,y=x.transform.position.y,z=x.transform.position.z,sx=x.transform.localScale.x,sy=x.transform.localScale.y,angle=x.transform.localRotation.z,alpha=x.color.a,r=x.color.r,g=x.color.g,b=x.color.b}).ToArray()});
+                Time.time=0;var go=new GameObject();var unit=new StratagemUnit{gameObject=go,Stats=new(){ID=id},Kind=(StratagemKind)(id-20001)};
+                var rig=new StratagemRig{gameObject=go};rig.Build(unit);Time.time=1;update.Invoke(rig,null);
+                float expected=id==20001||id==20005||id==20006?1.8f:id==20007?.85f:1.2f;
+                Check(Math.Abs(rig.Body.sprite.bounds.size.x*rig.Body.transform.localScale.x-expected*.75f)<.001f,"Deployed visual width follows 75 percent scale");
+                frames.Add(new{type="rig",id,time=1f,parts=go.Renderers.Where(x=>x.enabled).Select(x=>new{name=x.sprite.Name,x=x.transform.localPosition.x,y=x.transform.localPosition.y,z=x.transform.localPosition.z,sx=x.transform.localScale.x,sy=x.transform.localScale.y,alpha=x.color.a}).ToArray()});
             }
-            Check(StratagemAssets.LaserParts.Count==21&&LineRenderer.All.Count==3,"Laser reuses 21 visual parts and three animated mesh columns");
-            Directory.CreateDirectory(Path.Combine(root,"evidence/0.5.5"));
-            File.WriteAllText(Path.Combine(root,"evidence/0.5.5/laser-poses.json"),JsonSerializer.Serialize(frames));
-            laser.Dispose();Console.WriteLine("PASS: production laser poses exported for one visual review");return;
+            var laser=new StratagemLaserVisual(.85f,new SpriteRenderer());
+            foreach(var phase in new[]{"start","loop","end"})for(int i=0;i<8;i++)
+            {
+                float t=phase=="start"?i*.04f+.001f:phase=="loop"?1+i*.0625f:14.681f+i*.04f;
+                laser.Tick(new Vector2(t*.1f,0),t,15-t);
+                var parts=StratagemAssets.LaserParts.ToArray();
+                Check(parts.Length==2&&LineRenderer.All.Count==0,"Texture column and ground are reused without line geometry");
+                Check(parts[0].sprite.Name.StartsWith("fx.orbital."+phase+".beam.")&&parts[1].sprite.Name.StartsWith("fx.orbital."+phase+".ground."),"Three phases select their own drawn frames");
+                Check(parts[1].transform.position.z>parts[0].transform.position.z,"Ground contact sorts behind the column");
+                frames.Add(new{type="laser",phase,time=t,parts=parts.Select(x=>new{name=x.sprite.Name,x=x.transform.position.x,y=x.transform.position.y,z=x.transform.position.z,sx=x.transform.localScale.x,sy=x.transform.localScale.y,alpha=x.color.a}).ToArray()});
+            }
+            File.WriteAllText(args[2],JsonSerializer.Serialize(frames));
+            laser.Dispose();Console.WriteLine($"PASS: {checks} focused size, phase and layering checks");return;
         }
         foreach(int id in new[]{20001,20002,20003,20004,20005,20006,20007,20101,20102})
         {

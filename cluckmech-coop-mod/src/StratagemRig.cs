@@ -17,10 +17,11 @@ namespace CluckmechCoop
         private float mineStarted,mineFlight;
         private float fadeStarted,fadeDuration;
         internal SpriteRenderer Body => body;
-        internal Vector2 Muzzle => barrel != null ? (Vector2)barrel.transform.TransformPoint(StratagemAssets.Muzzle("mortar-barrel."+facing)) : (Vector2)transform.position+aim*.3f;
+        internal const float ModelScale=.75f;
+        internal Vector2 Muzzle => barrel != null ? (Vector2)barrel.transform.TransformPoint(StratagemAssets.Muzzle("mortar-barrel."+facing)) : (Vector2)transform.position+aim*(.3f*ModelScale);
         private SpriteRenderer Part(string name,float width,float x,float y,float z)
         {
-            var renderer=StratagemAssets.Part(transform,name,width,new Vector3(x,y,z));parts.Add(renderer);return renderer;
+            var renderer=StratagemAssets.Part(transform,name,width*ModelScale,new Vector3(x*ModelScale,y*ModelScale,z));parts.Add(renderer);return renderer;
         }
         internal void Build(StratagemUnit source)
         {
@@ -61,14 +62,14 @@ namespace CluckmechCoop
             if (unit.Kind==StratagemKind.Mortar)
             {
                 upper.sprite=StratagemAssets.Named("mortar-housing."+next);
-                upper.transform.localScale=Vector3.one*(1.4f/upper.sprite.bounds.size.y);
+                upper.transform.localScale=Vector3.one*(1.4f*ModelScale/upper.sprite.bounds.size.y);
                 barrel.sprite=StratagemAssets.Named("mortar-barrel."+next);
-                barrel.transform.localScale=Vector3.one*(.95f/barrel.sprite.bounds.size.y);
+                barrel.transform.localScale=Vector3.one*(.95f*ModelScale/barrel.sprite.bounds.size.y);
             }
             else if (unit.Stats.ID==20102)
             {
                 body.sprite=StratagemAssets.Named("rover-drone."+next);
-                body.transform.localScale=Vector3.one*(.85f/body.sprite.bounds.size.x);
+                body.transform.localScale=Vector3.one*(.85f*ModelScale/body.sprite.bounds.size.x);
             }
             facing=next;
         }
@@ -105,25 +106,25 @@ namespace CluckmechCoop
             if(unit.Stats.ID==20102)
             {
                 dockBlend=dockDuration>0?Mathf.Lerp(dockFrom,dockTo,Mathf.Clamp01((Time.time-dockStarted)/dockDuration)):dockTo;
-                body.transform.localScale=Vector3.one*(.85f/body.sprite.bounds.size.x)*(1-.42f*dockBlend);
-                body.transform.localPosition=new Vector3(.28f*dockBlend,.05f+Mathf.Sin(Time.time*7)*.018f*(1-dockBlend),-.01f);
-                if(light!=null){light.enabled=Time.time-shot<.1f;light.transform.localPosition=new Vector3(aim.x*.3f,aim.y*.3f,-.02f);light.color=new Color(1,.85f,.3f,.65f);}
+                body.transform.localScale=Vector3.one*(.85f*ModelScale/body.sprite.bounds.size.x)*(1-.42f*dockBlend);
+                body.transform.localPosition=new Vector3(.28f*dockBlend*ModelScale,(.05f+Mathf.Sin(Time.time*7)*.018f*(1-dockBlend))*ModelScale,-.01f);
+                if(light!=null){light.enabled=Time.time-shot<.1f;light.transform.localPosition=new Vector3(aim.x*.3f*ModelScale,aim.y*.3f*ModelScale,-.02f);light.color=new Color(1,.85f,.3f,.35f);}
             }
             else if(unit.Kind==StratagemKind.Mines)
             {
-                upper.transform.localPosition=new Vector3(0,.32f-.25f*(1-deploy)+(Time.time-shot<shotLength?Mathf.Sin(attack*Mathf.PI*4)*.012f:0),-.012f);
+                upper.transform.localPosition=new Vector3(0,(.32f-.25f*(1-deploy)+(Time.time-shot<shotLength?Mathf.Sin(attack*Mathf.PI*4)*.012f:0))*ModelScale,-.012f);
                 left.transform.localRotation=Quaternion.Euler(0,0,-18*(1-deploy)-recoil*5);
                 right.transform.localRotation=Quaternion.Euler(0,0,18*(1-deploy)+recoil*5);
             }
             else if(unit.Kind==StratagemKind.Mortar && barrel!=null)
             {
                 Vector2 axis=StratagemAssets.Muzzle("mortar-barrel."+facing).normalized;
-                upper.transform.localPosition=new Vector3(0,.3f-.15f*(1-deploy),-.012f);
-                Vector2 position=new Vector2(0,.86f-.15f*(1-deploy))-axis*(recoil*.065f);
+                upper.transform.localPosition=new Vector3(0,(.3f-.15f*(1-deploy))*ModelScale,-.012f);
+                Vector2 position=(new Vector2(0,.86f-.15f*(1-deploy))-axis*(recoil*.065f))*ModelScale;
                 barrel.transform.localPosition=new Vector3(position.x,position.y,-.014f);
             }
             else if(unit.Kind==StratagemKind.Shield)
-                upper.transform.localPosition=new Vector3(0,.35f-.3f*(1-deploy),-.01f);
+                upper.transform.localPosition=new Vector3(0,(.35f-.3f*(1-deploy))*ModelScale,-.01f);
             else if(unit.Kind==StratagemKind.Barrage||unit.Kind==StratagemKind.Laser||unit.Kind==StratagemKind.Eagle)
                 body.color=new Color(1,1,1,.85f+.15f*Mathf.Sin(Time.time*6));
             if(fadeDuration>0)
@@ -141,13 +142,13 @@ namespace CluckmechCoop
             if(unit.Stats.ID>=20100){StratagemAssets.Effect("fx.fragments",point,.45f,.4f);return;}
             if(unit.Kind==StratagemKind.Mines)
             {
-                StratagemAssets.Effect("mine-base",point,1.8f,3,ground:true);
-                StratagemAssets.Effect("mine-drum",point+Vector2.up*.32f,.96f,.6f,rise:-.25f);
+                StratagemAssets.Effect("mine-base",point,1.8f*ModelScale,3,ground:true);
+                StratagemAssets.Effect("mine-drum",point+Vector2.up*(.32f*ModelScale),.96f*ModelScale,.6f,rise:-.25f*ModelScale);
             }
             else if(unit.Kind==StratagemKind.Shield)
             {
-                StratagemAssets.Effect("shield-base",point,1.8f,3,ground:true);
-                StratagemAssets.Effect("shield-tower",point+Vector2.up*.35f,.76f,.6f,rise:-.3f);
+                StratagemAssets.Effect("shield-base",point,1.8f*ModelScale,3,ground:true);
+                StratagemAssets.Effect("shield-tower",point+Vector2.up*(.35f*ModelScale),.76f*ModelScale,.6f,rise:-.3f*ModelScale);
             }
             StratagemAssets.Effect("fx.fragments",point,.9f,.6f,grow:.2f);
         }
