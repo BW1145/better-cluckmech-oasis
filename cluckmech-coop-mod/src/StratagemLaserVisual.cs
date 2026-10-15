@@ -25,11 +25,11 @@ namespace CluckmechCoop
             var column=parts[0];column.sprite=StratagemAssets.Named("fx.orbital."+phase+".beam."+frame);
             column.transform.position=new Vector3(point.x,point.y+.4f,StratagemAssets.Z(point.y)-.04f);
             column.transform.localScale=new Vector3(radius*3.2f/column.sprite.bounds.size.x,8.2f/column.sprite.bounds.size.y,1);
-            column.color=new Color(1,1,1,.8f);
+            column.color=Color.white;
             var contact=parts[1];contact.sprite=StratagemAssets.Named("fx.orbital."+phase+".ground."+frame);
             contact.transform.position=new Vector3(point.x,point.y,StratagemAssets.Z(point.y)+.4f);
             contact.transform.localScale=new Vector3(radius*3.2f/contact.sprite.bounds.size.x,1.2f/contact.sprite.bounds.size.y,1);
-            contact.color=new Color(1,1,1,.65f);
+            contact.color=new Color(1,1,1,.95f);
         }
         internal void Dispose()
         {foreach(var image in parts)if(image!=null)Object.Destroy(image.gameObject);}

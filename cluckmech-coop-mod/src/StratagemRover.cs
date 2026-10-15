@@ -9,15 +9,20 @@ namespace CluckmechCoop
     {
         private StratagemUnit root,drone;
         private 模块_基本属性 target;
-        private 模块_移动属性 movement;
-        private float nextSearch,heat,shots,repairWait = 6;
+        private 模块_基本属性 owner;
+        private 模块_移动属性 movement,ownerMovement;
+        private float nextSearch,nextHeatSync,heat,shots,repairWait = 6;
         private int phase;
         private 联机_单位属性同步 sync;
+        private Vector2 offset;
         internal float Heat => heat;
+        private Vector2 DockPoint => (Vector2)transform.position+Vector2.up*(.18f*StratagemRig.ModelScale);
         internal void Initialize(StratagemUnit source)
         {
             root = source;
-            sync = GetComponent<联机_单位属性同步>();
+            sync=GetComponent<联机_单位属性同步>();
+            float angle=(Mathf.Abs(GetInstanceID())%8)*Mathf.PI/4;
+            offset=new Vector2(Mathf.Cos(angle),Mathf.Sin(angle))*.9f;
             foreach (int word in root.Stats.强化词条列表) if (word == 143) repairWait--;
             repairWait = Mathf.Max(2,repairWait);
             StartCoroutine(Operate());
@@ -45,15 +50,17 @@ namespace CluckmechCoop
                 }
                 if (phase == 0)
                 {
-                    Vector2 orbit = (Vector2)transform.position+new Vector2(.8f,.6f);
-                    if (!StratagemWorld.Living(target) || Vector2.Distance(target.transform.position,drone.transform.position) > drone.Damage.Range)
+                    Vector2 orbit = FollowPoint();
+                    if (Time.time >= nextSearch)
                     {
-                        if (Time.time >= nextSearch)
-                        { target = StratagemWorld.Target(orbit,drone.Damage.Range,false); nextSearch = Time.time+.5f; }
+                        if (!StratagemWorld.Living(target) || Vector2.Distance(target.transform.position,drone.transform.position) > drone.Damage.Range)
+                            target = StratagemWorld.Target(drone.transform.position,drone.Damage.Range,false);
+                        nextSearch = Time.time+.5f;
                     }
-                    Vector2 desired = target == null ? orbit : orbit+((Vector2)target.transform.position-orbit).normalized*.4f;
-                    MoveDrone(desired,movement.当前移动速度);
-                    if (target != null && Vector2.Distance(target.transform.position,drone.transform.position) <= drone.Damage.Range)
+                    float distance=Vector2.Distance(drone.transform.position,orbit);
+                    float speed=Mathf.Max(movement.当前移动速度,ownerMovement==null?0:ownerMovement.当前移动速度);
+                    MoveDrone(orbit,speed*Mathf.Clamp(distance/2,1,3));
+                    if (StratagemWorld.Living(target) && Vector2.Distance(target.transform.position,drone.transform.position) <= drone.Damage.Range)
                     {
                         shots += drone.Damage.Rate*Time.deltaTime;
                         while (shots >= 1 && phase == 0 && StratagemWorld.Living(target))
@@ -77,7 +84,7 @@ namespace CluckmechCoop
                     float until = Time.time+root.Parameters.DockTime;
                     while (root.Alive && drone != null && drone.Alive && Time.time < until)
                     {
-                        drone.transform.position = transform.position;
+                        PlaceDrone(DockPoint);
                         if (root.Parameters.Repair) drone.SendMessage("受到治疗",drone.Stats.当前生命值上限*.15f*Time.deltaTime,SendMessageOptions.DontRequireReceiver);
                         yield return null;
                     }
@@ -88,7 +95,8 @@ namespace CluckmechCoop
                     foreach (var collider in drone.GetComponents<Collider2D>()) collider.enabled = true;
                     heat = shots = 0; SetPhase(0);
                 }
-                if (sync != null) sync.Network进度条 = heat/root.Parameters.HeatCap;
+                if(sync!=null&&Time.time>=nextHeatSync)
+                {sync.Network进度条=heat/root.Parameters.HeatCap;nextHeatSync=Time.time+.2f;}
                 yield return null;
             }
         }
@@ -96,6 +104,16 @@ namespace CluckmechCoop
         {
             var obj = 词条函数.召唤.召唤单位_巢穴_蜕变(StratagemRegistry.Prefab(20102),gameObject,transform.position,false,false,root.Stats.所属玩家);
             drone = obj.GetComponent<StratagemUnit>(); drone.Parent = root;
+        }
+        private Vector2 FollowPoint()
+        {
+            if(owner==null||owner.当前生命值<=0)
+            {
+                owner=StratagemWorld.Player(root.Role);
+                ownerMovement=owner==null?null:owner.GetComponent<模块_移动属性>();
+            }
+            var anchor=owner!=null?owner.transform:StratagemWorld.Base!=null?StratagemWorld.Base.transform:transform;
+            return (Vector2)anchor.position+offset;
         }
         private void SetPhase(int value)
         {
@@ -109,21 +127,27 @@ namespace CluckmechCoop
             if (drone == null) return;
             Vector2 from = drone.transform.position;
             Vector2 point = Vector2.MoveTowards(from,destination,speed*Time.deltaTime);
-            drone.transform.position = new Vector3(point.x,point.y,(point.y+10000)*.01f-.05f);
-            Vector2 direction = target == null ? destination-from : (Vector2)target.transform.position-from;
+            PlaceDrone(point);
+            Vector2 direction = StratagemWorld.Living(target) ? (Vector2)target.transform.position-from : destination-from;
             if (direction.sqrMagnitude > .001f) drone.Aim(direction);
         }
+        private void PlaceDrone(Vector2 point)
+        {drone.transform.position=new Vector3(point.x,point.y,StratagemAssets.Z(point.y)-.05f);}
         private IEnumerator Transit(float duration,bool returning)
         {
             float started = Time.time;
             Vector2 from = drone.transform.position;
+            Vector2 destination=DockPoint+(returning?Vector2.zero:Vector2.up*.7f);
+            float speed=movement.当前移动速度*.75f/duration;
+            duration=Mathf.Max(duration,Vector2.Distance(from,destination)/Mathf.Max(.1f,speed));
             while (root.Alive && drone != null && drone.Alive && Time.time-started < duration)
             {
-                Vector2 destination = (Vector2)transform.position+(returning ? Vector2.zero : new Vector2(.8f,.6f));
                 Vector2 point = Vector2.Lerp(from,destination,(Time.time-started)/duration);
-                drone.transform.position = new Vector3(point.x,point.y,(point.y+10000)*.01f-.05f);
+                PlaceDrone(point);
+                if(returning)drone.Aim(StratagemRig.DockDirection(destination-from,Vector2.Distance(point,destination)));
                 yield return null;
             }
+            if(drone!=null&&drone.Alive)PlaceDrone(destination);
         }
         private void OnDestroy() { if (drone != null) StratagemWorld.DestroyUnit(drone.gameObject); }
     }

@@ -47,8 +47,6 @@ namespace CluckmechCoop
                 main.loop=loop;main.stopAction=ParticleSystemStopAction.None;main.useUnscaledTime=false;
                 main.simulationSpace=ParticleSystemSimulationSpace.World;
                 main.maxParticles=type==StratagemParticleKind.Smoke?16:24;
-                main.startColor=type==StratagemParticleKind.Smoke?new Color(.65f,.6f,.5f,.22f):
-                    type==StratagemParticleKind.Electric?new Color(.5f,.85f,1,.45f):new Color(1,.8f,.35f,.7f);
                 tail=Mathf.Max(tail,Mathf.Min(2,main.startLifetime.constantMax));
                 if(loop)
                 {

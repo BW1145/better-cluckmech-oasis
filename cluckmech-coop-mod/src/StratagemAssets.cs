@@ -67,17 +67,17 @@ namespace CluckmechCoop
             var renderer=Renderer(parent,Named(name),width); renderer.transform.localPosition=position;
             return renderer;
         }
-        internal static SpriteRenderer Effect(string name,Vector2 position,float width,float duration,float delay=0,bool ground=false,float grow=0,float rise=0,float opacity=1)
+        internal static SpriteRenderer Effect(string name,Vector2 position,float width,float duration,float delay=0,bool ground=false,float grow=0,float rise=0,float opacity=1,bool hold=false)
         {
             var renderer=Renderer(null,Named(name),width);
             renderer.transform.position=new Vector3(position.x,position.y,Z(position.y)+(ground?.4f:-.025f));
             renderer.color=new Color(1,1,1,opacity);
-            renderer.gameObject.AddComponent<StratagemAnimation>().Set(renderer,duration,delay,grow,rise,ground);
+            renderer.gameObject.AddComponent<StratagemAnimation>().Set(renderer,duration,delay,grow,rise,ground,hold);
             return renderer;
         }
-        internal static void Flipbook(string prefix,int count,Vector2 point,float width,float duration,float delay=0,bool ground=false,float opacity=1)
+        internal static void Flipbook(string prefix,int count,Vector2 point,float width,float duration,float delay=0,bool ground=false,float opacity=1,bool hold=false)
         {
-            var image=Effect(prefix+"0",point,width,duration,delay,ground,opacity:opacity);
+            var image=Effect(prefix+"0",point,width,duration,delay,ground,opacity:opacity,hold:hold);
             image.gameObject.AddComponent<StratagemFlipbook>().Set(image,prefix,count,duration,delay);
         }
     }
@@ -104,12 +104,12 @@ namespace CluckmechCoop
         private Vector3 scale,origin;
         private Color color;
         private float started,duration,delay,grow,rise;
-        private bool ground;
+        private bool ground,hold;
         private string token;
-        internal void Set(SpriteRenderer renderer,float seconds,float wait,float growth,float lift,bool floor)
+        internal void Set(SpriteRenderer renderer,float seconds,float wait,float growth,float lift,bool floor,bool peak)
         {
             image=renderer; scale=transform.localScale; origin=transform.position; color=image.color;
-            started=Time.time; duration=seconds; delay=wait; grow=growth; rise=lift; ground=floor;
+            started=Time.time; duration=seconds; delay=wait; grow=growth; rise=lift; ground=floor;hold=peak;
             token=Plugin.Combat?.Token;
             image.enabled=wait==0;
         }
@@ -120,7 +120,7 @@ namespace CluckmechCoop
             if (elapsed < 0) { image.enabled=false; return; }
             image.enabled=true;
             float t=Mathf.Clamp01(elapsed/duration);
-            float alpha=ground ? Mathf.Clamp01((1-t)*4) : Mathf.Clamp01(t*12)*Mathf.Pow(1-t,.7f);
+            float alpha=hold ? Mathf.Clamp01((1-t)/.4f) : ground ? Mathf.Clamp01((1-t)*4) : Mathf.Clamp01(t*12)*Mathf.Pow(1-t,.7f);
             image.color=new Color(color.r,color.g,color.b,color.a*alpha);
             transform.localScale=scale*(1+grow*t);
             if(rise!=0)transform.position=origin+new Vector3(0,rise*t,rise*t*.01f);

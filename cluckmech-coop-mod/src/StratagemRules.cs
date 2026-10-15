@@ -131,7 +131,7 @@ namespace CluckmechCoop
             new StratagemAffix(25065,1,"紧急泄压","破盾时眩晕并击退4格内敌人，眩晕0.6秒。"),
             new StratagemAffix(25066,2,"堡垒模式","护罩受到的弹丸伤害减少25%。"),
             new StratagemAffix(25071,0,"大容量散热器","无人机热量容量提高至140。"),
-            new StratagemAffix(25072,0,"高效风冷","停靠充能时间缩短至3秒，返航和起飞各0.25秒。"),
+            new StratagemAffix(25072,0,"高效风冷","停靠充能缩短至3秒，返航速度翻倍；近距离返航与起飞最短0.25秒。"),
             new StratagemAffix(25073,0,"返航推进","返航和起飞各0.25秒，飞行速度提高至6。"),
             new StratagemAffix(25074,1,"红线输出","激光伤害提高20%，每次攻击热量增加20%。"),
             new StratagemAffix(25075,1,"自动维修","停靠时每秒恢复无人机15%最大生命。"),

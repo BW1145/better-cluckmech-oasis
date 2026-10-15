@@ -35,9 +35,7 @@ namespace CluckmechCoop
         private SoundGroupVariation beamSound;
         private float nextBeamSound,beamGain;
         private Vector2 lastDronePosition;
-        private StratagemGauge gauge;
-        private 联机_单位属性同步 progressSync;
-        private StratagemRover rover;
+        private int dronePhase;
         private bool triggered;
         internal bool Alive => this != null && !dead && Stats != null && Stats.当前生命值 > 0 && Plugin.InCombat;
         internal bool HasDependents => Mines.Count > 0 || ActiveFields > 0;
@@ -65,11 +63,6 @@ namespace CluckmechCoop
                 yield break;
             }
             if (Stats.ID == 20102) yield break;
-            if (Kind == StratagemKind.Rover)
-            {
-                gauge = new StratagemGauge(transform,.95f*StratagemRig.ModelScale,new Color(1,.4f,.1f));
-                progressSync = GetComponent<联机_单位属性同步>();
-            }
             if (Kind == StratagemKind.Shield) { gameObject.AddComponent<StratagemShield>().Initialize(this); yield break; }
             if (Plugin.Role == 2) yield break;
             switch (Kind)
@@ -80,17 +73,19 @@ namespace CluckmechCoop
                 case StratagemKind.Eagle: StartCoroutine(Eagle()); break;
                 case StratagemKind.Mortar: StartCoroutine(Mortar()); break;
                 case StratagemKind.Rover:
-                    Rovers.Add(this); rover = gameObject.AddComponent<StratagemRover>(); rover.Initialize(this); break;
+                    Rovers.Add(this); gameObject.AddComponent<StratagemRover>().Initialize(this); break;
             }
         }
         private void Update()
         {
-            if (gauge != null) gauge.Set(Plugin.Role == 2 ? progressSync?.进度条 ?? 0 : rover == null ? 0 : rover.Heat/Parameters.HeatCap);
             if (image != null && Stats != null && !dead)
             {
                 if (Stats.ID == 20102 && Plugin.Role == 2)
                 {
                     Vector2 direction = (Vector2)transform.position-lastDronePosition;
+                    if(dronePhase==2)direction=Vector2.up;
+                    else if(dronePhase==1&&Parent!=null&&direction.sqrMagnitude>.0001f)
+                        direction=StratagemRig.DockDirection(direction,Vector2.Distance(transform.position,(Vector2)Parent.transform.position+Vector2.up*(.18f*StratagemRig.ModelScale)));
                     if (direction.sqrMagnitude > .0001f) rig.Aim(direction);
                     lastDronePosition = transform.position;
                 }
@@ -148,7 +143,7 @@ namespace CluckmechCoop
         internal void Visible(bool value) => rig.Visible(value);
         internal void RigDeath() => rig?.Die();
         internal void FadeBeacon() => rig?.Fade(.15f);
-        internal void Dock(int phase) => rig.Dock(phase,Parent?.Parameters.ReturnTime??.5f);
+        internal void Dock(int phase) {dronePhase=phase;rig.Dock(phase,Parent?.Parameters.ReturnTime??.5f);}
         internal void DronePhase(int phase, uint parent)
         {
             if(phase!=0)StopDroneBeam();

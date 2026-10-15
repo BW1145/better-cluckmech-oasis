@@ -15,6 +15,7 @@ namespace CluckmechCoop
         private int overlaps;
         private string token;
         private bool field;
+        private bool electricField;
         private SpriteRenderer textureLayer;
         private string texturePrefix;
         private int textureFrames;
@@ -27,6 +28,7 @@ namespace CluckmechCoop
             var surface=obj.AddComponent<StratagemSurface>();
             surface.radius=radius;surface.started=Time.time;surface.duration=duration;surface.token=Plugin.Combat?.Token;
             surface.field=kind==StratagemSurfaceKind.StaticField||kind==StratagemSurfaceKind.Gas;
+            surface.electricField=kind==StratagemSurfaceKind.StaticField;
             surface.renderer=obj.AddComponent<MeshRenderer>();
             if(material==null) material=new Material(Shader.Find("Sprites/Default"));
             surface.renderer.sharedMaterial=material;
@@ -37,7 +39,7 @@ namespace CluckmechCoop
                 surface.texturePrefix=kind==StratagemSurfaceKind.StaticField?"fx.ems-field.":
                     kind==StratagemSurfaceKind.Gas?"fx.gas-field.":kind==StratagemSurfaceKind.Shield?"fx.shield-shell.":"fx.fire-small";
                 surface.textureFrames=kind==StratagemSurfaceKind.Shield?4:kind==StratagemSurfaceKind.Fire?1:8;
-                surface.textureOpacity=kind==StratagemSurfaceKind.Shield?.16f:kind==StratagemSurfaceKind.Gas?.28f:.3f;
+                surface.textureOpacity=surface.electricField?1:kind==StratagemSurfaceKind.Shield?.16f:kind==StratagemSurfaceKind.Gas?.28f:.3f;
                 surface.textureLayer=StratagemAssets.Renderer(obj.transform,StratagemAssets.Named(surface.texturePrefix+(surface.textureFrames>1?"0":"")),radius*2.15f);
                 surface.textureLayer.transform.localPosition=new Vector3(0,0,-.001f);
             }
@@ -60,7 +62,9 @@ namespace CluckmechCoop
             if(textureLayer!=null)
             {
                 if(textureFrames>1)textureLayer.sprite=StratagemAssets.Named(texturePrefix+(Mathf.FloorToInt((Time.time-started)*12)%textureFrames));
-                textureLayer.color=new Color(1,1,1,textureOpacity*strength/(1+.5f*overlaps));
+                // EMS opacity is separated per pixel during import: clear floor, bright arcs.
+                // Only the flat mesh fill is attenuated by overlap, preserving the arc colours.
+                textureLayer.color=new Color(1,1,1,textureOpacity*strength/(electricField?1:1+.5f*overlaps));
             }
         }
         private void Update()
@@ -128,7 +132,7 @@ namespace CluckmechCoop
             {
                 float a=n*Mathf.PI*2/64,b=(n+1)*Mathf.PI*2/64;
                 Vector2 pa=Point(a,radius),pb=Point(b,radius);
-                if(fill)Tri(Vector2.zero,pa,pb,dome?.1f:.12f);
+                if(fill)Tri(Vector2.zero,pa,pb,dome?.1f:kind==StratagemSurfaceKind.StaticField?.04f:.12f);
                 Line(pa,pb,.035f,.4f);
             }
             if(phase<0 && dome)

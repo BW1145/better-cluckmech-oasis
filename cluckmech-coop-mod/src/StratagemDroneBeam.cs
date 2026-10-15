@@ -35,11 +35,11 @@ namespace CluckmechCoop
             ray.transform.position=new Vector3((start.x+destination.x)*.5f,(start.y+destination.y)*.5f,StratagemAssets.Z(start.y)-.03f);
             ray.transform.rotation=Quaternion.Euler(0,0,Mathf.Atan2(delta.y,delta.x)*Mathf.Rad2Deg-90);
             ray.transform.localScale=new Vector3(.16f/ray.sprite.bounds.size.x,delta.magnitude/ray.sprite.bounds.size.y,1);
-            ray.color=new Color(1,1,.7f,.9f);
+            ray.color=Color.white;
             contact.sprite=StratagemAssets.Named("fx.laser-sparks."+frame);
             contact.transform.position=new Vector3(destination.x,destination.y,StratagemAssets.Z(destination.y)-.03f);
             contact.transform.localScale=Vector3.one*(.3f/contact.sprite.bounds.size.x);
-            contact.color=new Color(1,1,.7f,.6f);
+            contact.color=new Color(1,1,1,.9f);
         }
     }
 }

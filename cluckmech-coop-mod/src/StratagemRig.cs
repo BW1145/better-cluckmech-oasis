@@ -27,7 +27,7 @@ namespace CluckmechCoop
         {
             unit=source; born=Time.time;
             if (unit.Stats.ID==20101) { body=Part("mine",.5f,0,0,-.01f);body.enabled=false;return; }
-            if (unit.Stats.ID==20102) { body=Part("rover-drone.2",.85f,0,.05f,-.01f);dockBlend=dockTo=1;light=Part("fx.spark",.12f,0,0,-.04f);light.enabled=false;return; }
+            if (unit.Stats.ID==20102) { body=Part("rover-drone.2",.85f,0,.05f,-.01f);dockBlend=dockTo=1;return; }
             switch (unit.Kind)
             {
                 case StratagemKind.Mines:
@@ -44,7 +44,7 @@ namespace CluckmechCoop
                     body=Part("shield-base",1.8f,0,0,-.012f);
                     light=Part("fx.spark",.2f,0,1.3f,-.016f);break;
                 case StratagemKind.Rover:
-                    body=Part("rover-pack",.85f,0,0,-.01f);break;
+                    body=Part("rover-dock",1.15f,0,0,-.01f);break;
                 case StratagemKind.Barrage: body=Part("old.1.0.0",1.2f,0,0,-.01f);break;
                 case StratagemKind.Laser: body=Part("old.2.5.0",1.2f,0,0,-.01f);break;
                 default: body=Part("old.2.5.0",1.2f,0,0,-.01f);break;
@@ -54,6 +54,11 @@ namespace CluckmechCoop
                 if (!parts.Contains(sample)) { foreach(var part in parts) { part.sortingLayerID=sample.sortingLayerID;part.sortingOrder=sample.sortingOrder; } break; }
         }
         internal static int Facing(Vector2 direction) => (4-Mathf.RoundToInt(Mathf.Atan2(direction.y,direction.x)*Mathf.Rad2Deg/45)+8)%8;
+        internal static Vector2 DockDirection(Vector2 flight,float remaining)
+        {
+            float angle=Mathf.LerpAngle(Mathf.Atan2(flight.y,flight.x)*Mathf.Rad2Deg,90,1-Mathf.Clamp01(remaining/.7f))/Mathf.Rad2Deg;
+            return new Vector2(Mathf.Cos(angle),Mathf.Sin(angle));
+        }
         internal void Aim(Vector2 direction)
         {
             if (direction.sqrMagnitude<.0001f) return;
@@ -76,7 +81,8 @@ namespace CluckmechCoop
         internal void Shoot(float seconds=.3f) { shot=Time.time;shotLength=seconds; }
         internal void Dock(int phase,float seconds)
         {
-            dockFrom=dockBlend;dockTo=phase==1||phase==2?1:0;dockStarted=Time.time;
+            if(phase==2)Aim(Vector2.up);
+            dockFrom=dockBlend;dockTo=phase==2?1:0;dockStarted=Time.time;
             dockDuration=phase==1||phase==3?seconds:0;
         }
         internal void Visible(bool value) { foreach(var part in parts) part.enabled=value; if(light!=null)light.enabled=false; }
@@ -106,9 +112,8 @@ namespace CluckmechCoop
             if(unit.Stats.ID==20102)
             {
                 dockBlend=dockDuration>0?Mathf.Lerp(dockFrom,dockTo,Mathf.Clamp01((Time.time-dockStarted)/dockDuration)):dockTo;
-                body.transform.localScale=Vector3.one*(.85f*ModelScale/body.sprite.bounds.size.x)*(1-.42f*dockBlend);
-                body.transform.localPosition=new Vector3(.28f*dockBlend*ModelScale,(.05f+Mathf.Sin(Time.time*7)*.018f*(1-dockBlend))*ModelScale,-.01f);
-                if(light!=null){light.enabled=Time.time-shot<.1f;light.transform.localPosition=new Vector3(aim.x*.3f*ModelScale,aim.y*.3f*ModelScale,-.02f);light.color=new Color(1,.85f,.3f,.35f);}
+                body.transform.localScale=Vector3.one*(.85f*ModelScale/body.sprite.bounds.size.x);
+                body.transform.localPosition=new Vector3(0,(.05f+Mathf.Sin(Time.time*7)*.018f*(1-dockBlend))*ModelScale,-.01f);
             }
             else if(unit.Kind==StratagemKind.Mines)
             {

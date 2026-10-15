@@ -78,6 +78,7 @@ namespace UnityEngine
         public static int FloorToInt(float x)=>(int)Math.Floor(x);public static int Min(int a,int b)=>Math.Min(a,b);
         public static float Cos(float x)=>(float)Math.Cos(x);public static float Repeat(float x,float length)=>x-(float)Math.Floor(x/length)*length;
         public static float Lerp(float a,float b,float t)=>a+(b-a)*t;public static float SmoothStep(float a,float b,float t)=>Lerp(a,b,t*t*(3-2*t));
+        public static float LerpAngle(float a,float b,float t){float d=Repeat(b-a,360);if(d>180)d-=360;return a+d*Clamp01(t);}
     }
 }
 public sealed class 模块_基本属性 {public int ID;}
@@ -117,6 +118,53 @@ static class Program
         string root=Path.GetFullPath(args[0]);
         StratagemAssets.Boxes=JsonSerializer.Deserialize<Dictionary<string,Dictionary<string,float>>>(File.ReadAllText(Path.Combine(root,"src/StratagemAssets/stratagem-v2.json")));
         var frames=new List<object>();
+        if(args.Length>1&&args[1]=="--dock-alignment")
+        {
+            var go=new GameObject();var unit=new StratagemUnit{gameObject=go,Stats=new(){ID=20102},Kind=StratagemKind.Rover};
+            var rig=new StratagemRig{gameObject=go};rig.Build(unit);
+            for(int n=0;n<8;n++)
+            {
+                float angle=n*Mathf.PI/4;var flight=new Vector2(Mathf.Cos(angle),Mathf.Sin(angle));
+                var aligned=StratagemRig.DockDirection(flight,0);
+                Check(Math.Abs(aligned.x)<.0001f&&Math.Abs(aligned.y-1)<.0001f,"Every return approach ends aligned to the dock");
+                rig.Aim(flight);rig.Dock(2,.5f);
+                Check(rig.Body.sprite.Name=="rover-drone.2","Docked state uses the same direction for both peers");
+                for(int step=0;step<=4;step++)
+                {
+                    rig.Aim(StratagemRig.DockDirection(flight,.7f*(1-step/4f)));
+                    frames.Add(new{type="alignment",id=20102,phase=n,time=step*.1f,parts=go.Renderers.Select(x=>new{name=x.sprite.Name,x=x.transform.localPosition.x,y=x.transform.localPosition.y,z=x.transform.localPosition.z,sx=x.transform.localScale.x,sy=x.transform.localScale.y,alpha=x.color.a}).ToArray()});
+                }
+            }
+            File.WriteAllText(args[2],JsonSerializer.Serialize(frames));Console.WriteLine($"PASS: {checks} dock alignment checks");return;
+        }
+        if(args.Length>1 && args[1]=="--rover-visual")
+        {
+            foreach(int id in new[]{20007,20102})
+            {
+                Time.time=0;var go=new GameObject();var unit=new StratagemUnit{gameObject=go,Stats=new(){ID=id},Kind=StratagemKind.Rover};
+                var rig=new StratagemRig{gameObject=go};rig.Build(unit);
+                foreach(int phase in new[]{3,0,1,2,3,0})
+                {
+                    rig.Dock(phase,.5f);
+                    foreach(float step in new[]{0f,.25f,.5f})
+                    {
+                        Time.time+=step;update.Invoke(rig,null);
+                        Check(go.Renderers.Count(x=>x.enabled)==1,"Each dock and drone has one body without muzzle flash");
+                        Check(Math.Abs(rig.Body.sprite.bounds.size.x*rig.Body.transform.localScale.x-(id==20007?1.15f:.85f)*.75f)<.001f,"Docking preserves physical model scale");
+                        frames.Add(new{type="rover",id,phase,time=Time.time,parts=go.Renderers.Where(x=>x.enabled).Select(x=>new{name=x.sprite.Name,x=x.transform.localPosition.x,y=x.transform.localPosition.y,z=x.transform.localPosition.z,sx=x.transform.localScale.x,sy=x.transform.localScale.y,alpha=x.color.a}).ToArray()});
+                    }
+                }
+            }
+            var laser=new StratagemLaserVisual(.85f,new SpriteRenderer());
+            foreach(float t in new[]{.001f,.161f,1f,14.681f,14.961f})
+            {
+                laser.Tick(new Vector2(0,0),t,15-t);
+                Check(StratagemAssets.LaserParts[0].color.a==1&&Math.Abs(StratagemAssets.LaserParts[1].color.a-.95f)<.001f,"Laser retains source brightness throughout all drawn phases");
+                frames.Add(new{type="laser",id=20003,phase=0,time=t,parts=StratagemAssets.LaserParts.Select(x=>new{name=x.sprite.Name,x=x.transform.position.x,y=x.transform.position.y,z=x.transform.position.z,sx=x.transform.localScale.x,sy=x.transform.localScale.y,alpha=x.color.a}).ToArray()});
+            }
+            File.WriteAllText(args[2],JsonSerializer.Serialize(frames));
+            Console.WriteLine($"PASS: {checks} focused dock and laser checks");return;
+        }
         if(args.Length>1 && args[1]=="--laser-seam")
         {
             var laser=new StratagemLaserVisual(.85f,new SpriteRenderer());laser.Tick(new Vector2(0,0),1,14);
@@ -184,7 +232,7 @@ static class Program
         second.Build(new StratagemUnit{gameObject=second.gameObject,Stats=new(){ID=20102},Kind=StratagemKind.Rover});
         second.Dock(0,0);
         first.Dock(2,0);update.Invoke(first,null);update.Invoke(second,null);
-        Check(first.Body.transform.localScale.x<second.Body.transform.localScale.x,"Docking one base's drone does not change another drone's state");
+        Check(first.Body.transform.localScale.x==second.Body.transform.localScale.x,"Docking preserves both drones' physical size");
         Check(first.gameObject.Renderers.Count(x=>x.enabled&&x.sprite.Name.StartsWith("rover-drone"))==1&&second.gameObject.Renderers.Count(x=>x.enabled&&x.sprite.Name.StartsWith("rover-drone"))==1,"Two bases maintain two independent drone renderers");
         File.WriteAllText(Path.Combine(root,"evidence/0.5.1/rig-poses.json"),JsonSerializer.Serialize(frames));
         Console.WriteLine($"PASS: {checks} production rig checks; {frames.Count} animation poses exported");

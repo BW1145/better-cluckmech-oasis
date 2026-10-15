@@ -31,7 +31,7 @@ namespace CluckmechCoop
         {
             float width=radius*2;
             StratagemAssets.Effect("fx.flash",point,width*.5f,.13f,grow:.4f,opacity:.8f);
-            StratagemAssets.Flipbook(heavy?"fx.blast-heavy.":"fx.blast-small.",heavy?16:8,point,Mathf.Min(5,width*.85f),heavy?1:.65f,delay:.03f);
+            StratagemAssets.Flipbook(heavy?"fx.blast-heavy.":"fx.blast-small.",heavy?16:8,point,Mathf.Min(5,width*.85f),heavy?1:.65f,delay:.03f,hold:true);
             var ring=StratagemSurface.Create(StratagemSurfaceKind.Ripple,point,radius,heavy?.45f:.25f);
             ring.gameObject.AddComponent<StratagemExpansion>().Set(.35f,1.15f,heavy?.45f:.25f);
             StratagemAssets.Effect("fx.fragments",point,width*.6f,.45f,grow:.5f,rise:.3f);

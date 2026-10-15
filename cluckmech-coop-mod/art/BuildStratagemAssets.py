@@ -103,19 +103,23 @@ for n in range(8):
 add('mortar-spark',grid('emsPartsResult',4,5,17),islands=True)
 add('mortar-shell',grid('emsPartsResult',4,5,18))
 add('rover-pack',grid('roverParts',3,3,0))
-for n in range(8): add('rover-drone.'+str(n),grid('roverParts',3,3,n+1))
+add('rover-dock',Image.open(SOURCES/'roverDock.png').convert('RGBA'),(.5,.22))
+for n in range(8):
+    tile=grid('roverRearViews',2,1,0 if n==5 else 1) if n in (5,7) else grid('roverParts',3,3,n+1)
+    add('rover-drone.'+str(n),tile)
 
 layouts={
     20001:[('mine-base',1.8,0,0),('mine-drum',.96,0,.32),('mine-left',.55,-.3,.99),('mine-right',.55,.3,.99)],
     20005:[('mortar-base',1.8,0,0),('mortar-housing.2',1.4*frames['mortar-housing.2'][0].width/frames['mortar-housing.2'][0].height,0,.3),
            ('mortar-barrel.2',.95*frames['mortar-barrel.2'][0].width/frames['mortar-barrel.2'][0].height,0,.86)],
     20006:[('shield-tower',.76,0,.35),('shield-base',1.8,0,0)],
-    20007:[('rover-pack',.85,0,0)]}
+    20007:[('rover-dock',1.15,0,0)]}
 portrait_mortar=[('mortar-base',1.8,0,0),
     ('mortar-housing.3',1.4*frames['mortar-housing.3'][0].width/frames['mortar-housing.3'][0].height,0,.3),
     ('mortar-barrel.3',.95*frames['mortar-barrel.3'][0].width/frames['mortar-barrel.3'][0].height,0,.86)]
 icons=[assembled(layouts[20001])[0],legacy(1,0,0),legacy(2,5,0),legacy(3,1,0),
-       assembled(portrait_mortar)[0],assembled(layouts[20006])[0],legacy(6,0,4)]
+       assembled(portrait_mortar)[0],assembled(layouts[20006])[0],
+       assembled(layouts[20007]+[('rover-drone.2',.85,0,.23)])[0]]
 for n,tile in enumerate(icons):
     unit=20001+n
     add('icon.'+str(unit),tile,portrait=True,islands=unit in layouts)
@@ -154,6 +158,13 @@ for prefix,kind,row,count in [('ems-field',4,3,8),('gas-field',4,5,8),
                                ('laser-sparks',2,4,8)]:
     for column in range(count):
         tile=legacy(kind,row,column).resize((128,128),Image.Resampling.NEAREST)
+        if prefix=='ems-field':
+            # Keep source RGB intact; only the dark floor and bright arcs differ in alpha.
+            pixels=np.array(tile)
+            energy=np.clip((pixels[:,:,0]*.35+pixels[:,:,1]*.65-65)/150,0,1)
+            energy=energy*energy*(3-2*energy)
+            pixels[:,:,3]=(pixels[:,:,3]*(.08+.82*energy)).astype(np.uint8)
+            tile=Image.fromarray(pixels)
         frames['fx.'+prefix+'.'+str(column)]=(tile,(.5,.5),False,32)
 for n,column in enumerate([5,6,7,6]):
     frames['fx.shield-shell.'+str(n)]=(legacy(5,2,column).resize((128,128),Image.Resampling.NEAREST),(.5,.28),False,32)
