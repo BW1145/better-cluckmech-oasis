@@ -15,6 +15,8 @@ namespace CluckmechCoop
         private int overlaps;
         private string token;
         private bool field;
+        private Mesh[] electricMeshes;
+        private MeshRenderer[] electricRenderers;
         internal static StratagemSurface Create(StratagemSurfaceKind kind,Vector2 point,float radius,float duration,Transform parent=null)
         {
             var obj=new GameObject("StratagemSurface");
@@ -28,6 +30,19 @@ namespace CluckmechCoop
             surface.renderer.sharedMaterial=material;
             surface.mesh=Build(kind,radius);
             obj.AddComponent<MeshFilter>().sharedMesh=surface.mesh;
+            if(kind==StratagemSurfaceKind.StaticField)
+            {
+                surface.electricMeshes=new Mesh[3];surface.electricRenderers=new MeshRenderer[3];
+                for(int phase=0;phase<3;phase++)
+                {
+                    var arcs=new GameObject("EMSArcs");arcs.transform.SetParent(obj.transform,false);
+                    arcs.transform.localPosition=new Vector3(0,0,-.001f);
+                    surface.electricMeshes[phase]=Build(kind,radius,phase);
+                    arcs.AddComponent<MeshFilter>().sharedMesh=surface.electricMeshes[phase];
+                    var renderer=arcs.AddComponent<MeshRenderer>();renderer.sharedMaterial=material;
+                    surface.electricRenderers[phase]=renderer;
+                }
+            }
             if(surface.field)
             {
                 foreach(var other in fields) if(surface.Overlaps(other)){surface.overlaps++;other.overlaps++;}
@@ -36,11 +51,21 @@ namespace CluckmechCoop
             return surface;
         }
         private bool Overlaps(StratagemSurface other) => ((Vector2)transform.position-(Vector2)other.transform.position).sqrMagnitude<(radius+other.radius)*(radius+other.radius);
-        internal void Visible(bool visible){renderer.enabled=visible;}
+        internal void Visible(bool visible)
+        {renderer.enabled=visible;if(electricRenderers!=null)foreach(var arc in electricRenderers)arc.enabled=visible;}
         internal void Strength(float strength)
         {
             properties.SetColor("_Color",new Color(1,1,1,strength/(1+.5f*overlaps)));
             renderer.SetPropertyBlock(properties);
+            if(electricRenderers!=null)
+            {
+                int active=Mathf.FloorToInt((Time.time-started)*8)%3;
+                for(int phase=0;phase<electricRenderers.Length;phase++)
+                {
+                    properties.SetColor("_Color",new Color(1,1,1,strength*(phase==active?1:.08f)/(1+.5f*overlaps)));
+                    electricRenderers[phase].SetPropertyBlock(properties);
+                }
+            }
         }
         private void Update()
         {
@@ -54,15 +79,17 @@ namespace CluckmechCoop
         {
             if(field && fields.Remove(this)) foreach(var other in fields) if(Overlaps(other))other.overlaps--;
             if(mesh!=null)Destroy(mesh);
+            if(electricMeshes!=null)foreach(var arc in electricMeshes)Destroy(arc);
         }
         internal static void Clear()
         { foreach(var field in fields.ToArray()) if(field!=null)Destroy(field.gameObject);fields.Clear(); }
-        private static Mesh Build(StratagemSurfaceKind kind,float radius)
+        private static Mesh Build(StratagemSurfaceKind kind,float radius,int phase=-1)
         {
             var v=new List<Vector3>();var c=new List<Color>();var triangles=new List<int>();
             Color color=kind==StratagemSurfaceKind.Gas?new Color(.4f,.7f,.22f):kind==StratagemSurfaceKind.Fire?new Color(1,.45f,.1f):
                 kind==StratagemSurfaceKind.StaticField?new Color(.28f,.72f,.95f):new Color(1,.76f,.25f);
             if(kind==StratagemSurfaceKind.Warning)color=new Color(.95f,.2f,.14f);
+            if(phase>=0)color=new Color(.52f,.88f,1);
             bool dome=kind==StratagemSurfaceKind.Shield;
             bool fill=kind==StratagemSurfaceKind.StaticField||kind==StratagemSurfaceKind.Gas||kind==StratagemSurfaceKind.Fire||dome;
             Vector2 Point(float angle,float r)
@@ -83,14 +110,33 @@ namespace CluckmechCoop
                 Vector2 n=new Vector2(-delta.y,delta.x).normalized*width*.5f;
                 Tri(a-n,a+n,b+n,alpha);Tri(a-n,b+n,b-n,alpha);
             }
-            for(int n=0;n<64;n++)
+            if(phase>=0)
+            {
+                for(int n=0;n<7;n++)
+                {
+                    float a=(n*2.399963f+phase*.8f),r=radius*Mathf.Sqrt((n+.6f)/8)*.8f;
+                    Vector2 center=Point(a,r),axis=new Vector2(Mathf.Cos(a+1),Mathf.Sin(a+1));
+                    Vector2 normal=new Vector2(-axis.y,axis.x);
+                    float length=Mathf.Min(.48f,radius*.2f);
+                    Vector2 p=center-axis*length*.5f;
+                    for(int step=1;step<=4;step++)
+                    {
+                        Vector2 next=center+axis*length*(step/4f-.5f)+normal*(step==4?0:step%2==0?-.065f:.065f);
+                        Line(p,next,.035f,.7f);p=next;
+                    }
+                }
+                // Segmented inner pulses connect the arcs without covering the field.
+                for(int n=0;n<24;n++)
+                    if(n%3==phase)Line(Point(n*Mathf.PI/12,radius*.65f),Point((n+.6f)*Mathf.PI/12,radius*.65f),.03f,.38f);
+            }
+            else for(int n=0;n<64;n++)
             {
                 float a=n*Mathf.PI*2/64,b=(n+1)*Mathf.PI*2/64;
                 Vector2 pa=Point(a,radius),pb=Point(b,radius);
                 if(fill)Tri(Vector2.zero,pa,pb,dome?.1f:.12f);
                 Line(pa,pb,.035f,.4f);
             }
-            if(dome)
+            if(phase<0 && dome)
             {
                 float hex=.28f;
                 for(int row=-8;row<=12;row++)for(int column=-12;column<=12;column++)
@@ -105,7 +151,7 @@ namespace CluckmechCoop
                     }
                 }
             }
-            else if(fill)
+            else if(phase<0 && fill)
             {
                 for(int n=0;n<18;n++)
                 {

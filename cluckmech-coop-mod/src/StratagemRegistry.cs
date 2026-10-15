@@ -12,6 +12,7 @@ namespace CluckmechCoop
     {
         private static GameObject templates;
         private static readonly Dictionary<int, GameObject> prefabs = new Dictionary<int, GameObject>();
+        private static readonly Dictionary<int, 模块_基本属性> rankSamples = new Dictionary<int, 模块_基本属性>();
         private static readonly HashSet<Type> retained = new HashSet<Type> {
             typeof(模块_基本属性), typeof(模块_攻击属性), typeof(模块_攻击详细属性), typeof(模块_受伤),
             typeof(模块_死亡), typeof(模块_状态属性), typeof(模块_状态持续效果), typeof(模块_抗性属性),
@@ -26,6 +27,9 @@ namespace CluckmechCoop
         {
             if (templates == null)
             {
+                foreach (var entry in database.单位列表)
+                    if (entry.id < 20000 && entry.单位阵营 == dw单位库.单位单元.阵营枚举.友方 && entry.是否商店内出现 && !rankSamples.ContainsKey(entry.单位等级))
+                        rankSamples.Add(entry.单位等级, entry.单位预制体.GetComponent<模块_基本属性>());
                 templates = new GameObject("StratagemTemplates"); templates.SetActive(false);
                 UnityEngine.Object.DontDestroyOnLoad(templates);
                 foreach (var unit in StratagemCatalog.Units)
@@ -71,7 +75,7 @@ namespace CluckmechCoop
             stats.单位分类 = (模块_基本属性.单位分类枚举)unit.Category;
             stats.单位类型 = id == 20102 ? 模块_基本属性.单位类型枚举.飞行单位 : 模块_基本属性.单位类型枚举.建筑;
             stats.初始阵营 = stats.当前阵营 = 阵营数据库.阵营.友方;
-            stats.稀有度 = (模块_基本属性.稀有度枚举)(unit.Tier - 1);
+            stats.稀有度 = rankSamples[unit.Tier].稀有度;
             stats.花费 = unit.Power; stats.放置cd = unit.Cooldown; stats.初始放置cd = unit.InitialCooldown;
             stats.是否初始放置有cd = true;
             stats.生命值 = id == 20102 ? 500 : unit.Health; stats.当前生命值 = stats.当前生命值上限 = 0;
@@ -89,6 +93,7 @@ namespace CluckmechCoop
             }
             stats.启用建筑体积 = id < 20100 && unit.Kind != StratagemKind.Rover && unit.Health > 1;
             stats.建筑体积 = new Vector2(1,1);
+            prefab.GetComponent<BoxCollider2D>().size = stats.启用建筑体积 ? stats.建筑体积-new Vector2(.35f,.35f) : Vector2.zero;
             stats.图标 = stats.名片 = StratagemAssets.Icon(unit.Kind, id);
             stats.预放置图片 = id < 20100 ? StratagemAssets.Preview(id) : stats.图标;
             var attack = prefab.GetComponent<模块_攻击属性>();
@@ -125,6 +130,14 @@ namespace CluckmechCoop
         {
             foreach (var prefab in prefabs.Values)
                 if (prefab.GetComponent<NetworkIdentity>() != null) NetworkClient.RegisterPrefab(prefab);
+        }
+        internal static string Name(StratagemDefinition definition)
+        {
+            // Native localized names carry the rank's rich-text color, including language changes.
+            string sample = rankSamples[definition.Tier].名称();
+            int begin = sample.IndexOf("<color=", StringComparison.OrdinalIgnoreCase);
+            int end = begin < 0 ? -1 : sample.IndexOf('>',begin);
+            return end < 0 ? definition.Name : sample.Substring(begin,end-begin+1)+definition.Name+"</color>";
         }
         internal static void Install(cz词缀库 database)
         {
@@ -191,7 +204,7 @@ namespace CluckmechCoop
             if (__instance.ID == 20101) { __result = "MD-6地雷"; return false; }
             if (__instance.ID == 20102) { __result = "激光护卫犬无人机"; return false; }
             if (definition == null) return true;
-            __result = definition.Name; return false;
+            __result = StratagemRegistry.Name(definition); return false;
         }
     }
     [HarmonyPatch(typeof(cz词缀库), "获取词缀名称")]

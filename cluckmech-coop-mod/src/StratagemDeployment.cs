@@ -21,6 +21,17 @@ namespace CluckmechCoop
         private static readonly Dictionary<int,DeploymentState> roles = new Dictionary<int,DeploymentState>();
         private static int sequence,pending;
         private static string node;
+        private static readonly System.Reflection.FieldInfo displayField = AccessTools.Field(typeof(建造系统),"虚拟炮台显示");
+        private static readonly System.Reflection.MethodInfo updateMouse = AccessTools.Method(typeof(虚拟炮台显示),"鼠标位置");
+        private static readonly System.Reflection.MethodInfo snapPoint = AccessTools.Method(typeof(虚拟炮台显示),"吸附位置");
+        internal static bool ValidPoint(Vector2 point,Vector2 volume)
+        {
+            if (volume.x <= 0 || volume.y <= 0) return true;
+            var hit = Physics2D.BoxCast(point,volume-new Vector2(.1f,.1f),0,Vector2.zero,100,91136);
+            if (hit.collider == null) return true;
+            int layer = hit.collider.gameObject.layer;
+            return layer != 10 && layer != 13 && layer != 14 && layer != 16;
+        }
         internal static void Clear()
         {
             build = null; roles.Clear(); sequence = pending = 0; node = null;
@@ -34,6 +45,15 @@ namespace CluckmechCoop
             int slot = 建造系统.当前选中背包id;
             var cards = Plugin.Summary?.当前携带炮台;
             return cards == null || slot < 0 || slot >= cards.Count ? null : Snapshot(cards[slot]);
+        }
+        internal static bool CustomSelected
+        {
+            get
+            {
+                int slot = 建造系统.当前选中背包id;
+                var cards = Plugin.Summary?.当前携带炮台;
+                return ModuleSettings.Extra.Stratagems && cards != null && slot >= 0 && slot < cards.Count && StratagemCatalog.IsUnit(cards[slot].炮台id);
+            }
         }
         internal static void Initialize(建造系统 value)
         {
@@ -91,15 +111,23 @@ namespace CluckmechCoop
             var card = Selected();
             if (card == null || !StratagemCatalog.IsUnit(card.Id)) return true;
             if (!建造系统.是否建造模式 || !建造系统.是否放置基地车) return false;
-            if (CanPlace() && 建造系统.是否能建造 && Plugin.InCombat)
+            if (CanPlace() && Plugin.InCombat)
             {
-                var display = (虚拟炮台显示)AccessTools.Field(typeof(建造系统),"虚拟炮台显示").GetValue(build);
-                var request = new StratagemPlacement { Slot = 建造系统.当前选中背包id, Machine = card, Sequence = ++sequence, X = display.transform.position.x, Y = display.transform.position.y };
-                pending = request.Sequence;
-                if (Plugin.Role == 0) Place(0,request);
-                else Plugin.Network.Send(new SessionMessage { Type = "stratagem-place", Token = Plugin.Combat.Token, Placement = request });
+                var display = (虚拟炮台显示)displayField.GetValue(build);
+                if (输入管理器.当前操作设备 == 输入管理器.操作设备枚举.键鼠) updateMouse.Invoke(display,null);
+                snapPoint.Invoke(display,null);
+                display.transform.position = display.虚拟炮台位置;
+                Vector2 point = display.虚拟炮台位置;
+                建造系统.是否能建造 = ValidPoint(point,display.炮台碰撞体.size);
+                if (建造系统.是否能建造)
+                {
+                    var request = new StratagemPlacement { Slot = 建造系统.当前选中背包id, Machine = card, Sequence = ++sequence, X = point.x, Y = point.y };
+                    pending = request.Sequence;
+                    if (Plugin.Role == 0) Place(0,request);
+                    else Plugin.Network.Send(new SessionMessage { Type = "stratagem-place", Token = Plugin.Combat.Token, Placement = request });
+                }
             }
-            build?.状态切换(false); 建造系统.按键建造模式 = false;
+            if (建造系统.是否建造模式) 建造系统.按键建造模式 = true;
             return false;
         }
         internal static void Place(int role,StratagemPlacement request)
@@ -117,10 +145,9 @@ namespace CluckmechCoop
             var player = role == 1 ? Steam联机管理器.玩家_主机 : role == 2 ? Steam联机管理器.玩家_客户端 : null;
             float power = role == 2 ? player.当前动力 : 模块_玩家_动力.当前动力;
             var p = new StratagemParameters(request.Machine.Id,request.Machine.Upgrades);
-            var navigation = Plugin.Spawner?.GetComponent<导航管理器>();
             Vector2 point = new Vector2(request.X,request.Y);
             bool valid = state.Ready[request.Slot] <= Time.time && power >= p.Power &&
-                (navigation == null || navigation.地面导航地图 == null || navigation.地面导航地图.PointIsValid(point));
+                ValidPoint(point,StratagemRegistry.Prefab(request.Machine.Id).GetComponent<BoxCollider2D>().size);
             if (valid)
             {
                 power -= p.Power; state.Ready[request.Slot] = Time.time+p.Cooldown;
@@ -151,6 +178,7 @@ namespace CluckmechCoop
             if (role != Plugin.Role || revision != pending || build == null) return;
             pending = 0; 模块_玩家_动力.当前动力 = power;
             if (!accepted) return;
+            build.状态切换(false); 建造系统.按键建造模式 = false;
             var item = build.建造单位信息列表[slot]; item.剩余cd时间 = cooldown; item.cd时间 = cooldown; item.是否cd完毕 = false;
             if (roles.TryGetValue(role,out var state)) state.Ready[slot] = Time.time+cooldown;
         }
@@ -185,6 +213,19 @@ namespace CluckmechCoop
             attack.攻击范围 = p.Definition.Kind == StratagemKind.Barrage ? p.ScatterRadius :
                 p.Definition.Kind == StratagemKind.Shield || p.Definition.Kind == StratagemKind.Eagle ? p.BlastRadius : p.Definition.Range;
             previewCards.Add(slot,obj); return obj;
+        }
+    }
+    [HarmonyPatch(typeof(预放置炮台碰撞监测),"射线检测")]
+    internal static class StratagemPlacementCollision
+    {
+        private static bool Prefix(预放置炮台碰撞监测 __instance)
+        {
+            if (!StratagemDeployment.CustomSelected) return true;
+            __instance.体积 = __instance.虚拟炮台.炮台碰撞体.size;
+            __instance.是否开始检测 = true;
+            __instance.是否允许放置 = StratagemDeployment.ValidPoint(__instance.transform.position,__instance.体积);
+            建造系统.是否能建造 = __instance.是否允许放置;
+            return false;
         }
     }
     [HarmonyPatch(typeof(建造系统),"背包cd初始化",new Type[0])]

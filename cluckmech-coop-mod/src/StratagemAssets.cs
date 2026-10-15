@@ -10,6 +10,7 @@ namespace CluckmechCoop
     {
         public int X{get;set;} public int Y{get;set;} public int W{get;set;} public int H{get;set;}
         public float PX{get;set;} public float PY{get;set;} public float MX{get;set;} public float MY{get;set;}
+        public float PPU{get;set;} = 32;
     }
     internal static class StratagemAssets
     {
@@ -35,7 +36,7 @@ namespace CluckmechCoop
                     rectangles = JsonConvert.DeserializeObject<Dictionary<string,StratagemSpriteRect>>(reader.ReadToEnd());
             }
             var box = rectangles[name];
-            sprite = Sprite.Create(texture,new Rect(box.X,texture.height-box.Y-box.H,box.W,box.H),new Vector2(box.PX,box.PY),32,0,SpriteMeshType.FullRect);
+            sprite = Sprite.Create(texture,new Rect(box.X,texture.height-box.Y-box.H,box.W,box.H),new Vector2(box.PX,box.PY),box.PPU,0,SpriteMeshType.FullRect);
             sprites.Add(name,sprite); return sprite;
         }
         internal static Sprite Icon(StratagemKind kind,int id = 0) => Named("icon."+(id == 0 ? 20001+(int)kind : id));

@@ -24,7 +24,7 @@ for name,b in boxes.items():
     occupied.append(rect);tile=atlas.crop(rect);bounds=tile.getchannel('A').getbbox()
     check(bounds is not None,name+': visible silhouette')
     if name.startswith(('icon.','affix.')):
-        check(w==96 and h==96 and max(bounds[2]-bounds[0],bounds[3]-bounds[1])<=72,name+': 75% portrait framing')
+        check(w==50 and h==50 and b['PPU']==25 and max(bounds[2]-bounds[0],bounds[3]-bounds[1])<=38,name+': native portrait framing')
         if name.startswith('affix.'):
             value=tile.tobytes();check(value not in hashes,name+': distinct upgrade art');hashes.add(value)
         icons.append((name,tile))
@@ -43,6 +43,6 @@ if args.preview:
     for n,(name,tile) in enumerate(icons):
         x,y=n%8*128,n//8*140
         draw.rectangle((x+3,y+3,x+124,y+132),outline=(140,139,125),width=3)
-        preview.alpha_composite(tile,(x+16,y+8));draw.text((x+12,y+112),name,fill=(244,202,65))
+        preview.alpha_composite(tile.resize((100,100),Image.Resampling.NEAREST),(x+14,y+8));draw.text((x+12,y+112),name,fill=(244,202,65))
     args.preview.parent.mkdir(parents=True,exist_ok=True);preview.save(args.preview)
 print(f'PASS: {checks} atlas, portrait, direction and sound checks; {len(boxes)} runtime sprites')
