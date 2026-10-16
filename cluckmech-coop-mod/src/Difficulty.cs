@@ -65,8 +65,10 @@ namespace CluckmechCoop
         internal static void Generated(GameObject unit)
         {
             var spawner = Spawning != null ? Spawning : Plugin.Spawner;
-            if (Plugin.Role == 2 || spawner == null || !ModuleSettings.Active || unit == null) return;
+            if (Plugin.Role == 2 || spawner == null || !ModuleSettings.Expedition || unit == null) return;
             if (!CountsForEncounter(unit)) return;
+            if (IsFinalBoss(unit)) { Mark(unit,true,false); return; }
+            if (!ModuleSettings.Active) return;
             var state = State(spawner);
             bool finalBoss = IsFinalBoss(unit);
             if (!finalBoss)
@@ -491,8 +493,7 @@ namespace CluckmechCoop
         private static void Postfix(模块_基本属性 __instance)
         {
             if (Plugin.Role == 2) return;
-            var spawner = Difficulty.Spawning != null ? Difficulty.Spawning : Plugin.Spawner;
-            if (spawner != null ? !ModuleSettings.Active : !Plugin.Challenge) return;
+            if (!ModuleSettings.InRun || !ModuleSettings.Expedition) return;
             bool finalBoss = __instance.GetComponent<最终boss状态机>() != null;
             if (finalBoss) Difficulty.Mark(__instance.gameObject, true, false);
         }
@@ -503,7 +504,7 @@ namespace CluckmechCoop
     {
         private static void Postfix(模块_攻击属性 __instance)
         {
-            if (ModuleSettings.Active && Plugin.Role != 2 && Difficulty.Attacks.TryGetValue(__instance, out var strength))
+            if (ModuleSettings.Expedition && Plugin.Role != 2 && Difficulty.Attacks.TryGetValue(__instance, out var strength))
                 __instance.当前攻击力 *= strength.Attack;
         }
     }
@@ -532,7 +533,7 @@ namespace CluckmechCoop
         private static GameObject Spawn(GameObject prefab, Vector3 position, Quaternion rotation, 最终boss状态机 boss)
         {
             var instance = UnityEngine.Object.Instantiate(prefab, position, rotation);
-            if (ModuleSettings.Active && Plugin.Role != 2 && boss.TryGetComponent<Strength>(out var strength) && instance.TryGetComponent<模块_伤害精灵>(out var damage))
+            if (ModuleSettings.Expedition && Plugin.Role != 2 && boss.TryGetComponent<Strength>(out var strength) && instance.TryGetComponent<模块_伤害精灵>(out var damage))
                 damage.伤害数据.攻击伤害 *= strength.Attack;
             return instance;
         }

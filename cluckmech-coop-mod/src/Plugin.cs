@@ -14,7 +14,7 @@ namespace CluckmechCoop
     [BepInPlugin("billy.cluckmech.coop", "更好的鸡械绿洲", Version)]
     public sealed class Plugin : BaseUnityPlugin
     {
-        internal const string Version = "0.5.15";
+        internal const string Version = "0.5.16";
         internal static Plugin Instance;
         internal static TransferService Transfers;
         internal static NetworkService Network;
@@ -76,14 +76,14 @@ namespace CluckmechCoop
             if (RunSaveRepair.AtMainMenu) return;
             Spawner = spawner;
             ModuleSettings.Freeze(); ModuleSettings.BindRewards(); GrowthFeatures.Inspect(spawner);
-            if (ModuleSettings.Active) Difficulty.BindEvents(spawner);
+            if (ModuleSettings.Expedition) Difficulty.BindEvents(spawner);
             Panel.RefreshState();
         }
         internal static void CombatStarted(刷怪器 spawner)
         {
             if (RunSaveRepair.AtMainMenu) return;
             Spawner = spawner; InCombat = true; Combat.Begin(spawner);
-            StratagemWorld.Begin(); StratagemDeployment.Begin();
+            StratagemWorld.Begin();
             SwallowTargets.Begin();
             Panel.RefreshState();
         }
@@ -133,12 +133,12 @@ namespace CluckmechCoop
             Plugin.Panel.RefreshState();
         }
     }
-    [HarmonyPatch(typeof(战斗准备背包), "切换战斗场景")]
+    [HarmonyPatch(typeof(战斗准备背包), "是否携带检测")]
     internal static class ExpeditionStart
     {
         private static bool Prefix()
         {
-            if (Plugin.Role == 0) return true;
+            if (Plugin.Role == 0) { ModuleSettings.Freeze(); return true; }
             if (!Plugin.Network.SettingsReady) { PreparationPanel.ShowStatus(Plugin.Network.Status); return false; }
             ModuleSettings.Freeze(); return true;
         }

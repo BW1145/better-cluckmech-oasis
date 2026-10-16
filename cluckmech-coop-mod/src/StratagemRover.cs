@@ -12,12 +12,10 @@ namespace CluckmechCoop
         private 模块_基本属性 target;
         private 模块_基本属性 owner;
         private 模块_移动属性 movement,ownerMovement;
-        private 模块_受伤 healing;
-        private float nextSearch,nextHeatSync,heat,shots,repairWait = 6;
+        private float nextSearch,nextHeatSync,heat,shots;
         private int phase;
         private 联机_单位属性同步 sync;
         private Vector2 offset;
-        private bool spawned;
         private struct BeamHit {internal 模块_基本属性 Unit;internal float Distance;}
         private readonly List<BeamHit> beamHits=new List<BeamHit>();
         internal float Heat => heat;
@@ -28,35 +26,21 @@ namespace CluckmechCoop
             sync=GetComponent<联机_单位属性同步>();
             float angle=(Mathf.Abs(GetInstanceID())%8)*Mathf.PI/4;
             offset=new Vector2(Mathf.Cos(angle),Mathf.Sin(angle))*.9f;
-            foreach (int word in root.Stats.强化词条列表) if (word == 143) repairWait--;
-            repairWait = Mathf.Max(2,repairWait);
             StartCoroutine(Operate());
         }
         private IEnumerator Operate()
         {
-            while (root.Alive)
+            SpawnDrone();
+            while(root.Alive && drone!=null && drone.Damage==null)yield return null;
+            if(!root.Alive || drone==null)yield break;
+            movement=drone.GetComponent<模块_移动属性>();
+            movement.移动速度=root.Parameters.FlightSpeed;movement.运算移动速度();
+            heat=shots=0;target=null;nextSearch=0;
+            SetPhase(3);yield return Transit(root.Parameters.ReturnTime,false);
+            if(drone==null || !drone.Alive)yield break;
+            SetPhase(0);
+            while(root.Alive && drone!=null && drone.Alive)
             {
-                if (drone == null || !drone.Alive)
-                {
-                    if(spawned)
-                    {
-                        SetPhase(4);drone=null;
-                        yield return new WaitForSeconds(repairWait);
-                        if(!root.Alive)yield break;
-                    }
-                    spawned=true;
-                    SpawnDrone();
-                    while (root.Alive && drone != null && drone.Damage == null) yield return null;
-                    if (drone == null) { yield return new WaitForSeconds(repairWait); continue; }
-                    movement = drone.GetComponent<模块_移动属性>();
-                    healing=drone.GetComponent<模块_受伤>();
-                    movement.移动速度 = root.Parameters.FlightSpeed; movement.运算移动速度();
-                    heat = shots = 0;target=null;nextSearch=0;
-                    SetPhase(3);
-                    yield return Transit(root.Parameters.ReturnTime,false);
-                    if(drone==null||!drone.Alive)continue;
-                    SetPhase(0);
-                }
                 if (phase == 0)
                 {
                     Vector2 orbit = FollowPoint();
@@ -95,17 +79,12 @@ namespace CluckmechCoop
                     SetPhase(2);
                     foreach (var collider in drone.GetComponents<Collider2D>()) collider.enabled = false;
                     float until = Time.time+root.Parameters.DockTime;
-                    float repairElapsed=0;
                     while (root.Alive && drone != null && drone.Alive && Time.time < until)
                     {
                         PlaceDrone(DockPoint);
-                        repairElapsed+=Time.deltaTime;
-                        if(repairElapsed>=.25f)
-                        {healing.受到治疗(drone.Stats.当前生命值上限/root.Parameters.DockTime*repairElapsed);repairElapsed=0;}
                         yield return null;
                     }
                     if (!root.Alive || drone == null || !drone.Alive) continue;
-                    healing.受到治疗(drone.Stats.当前生命值上限);
                     SetPhase(3);
                     yield return Transit(root.Parameters.ReturnTime,false);
                     if (drone == null) continue;

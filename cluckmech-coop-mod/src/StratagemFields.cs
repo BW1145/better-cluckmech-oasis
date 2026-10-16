@@ -108,7 +108,7 @@ namespace CluckmechCoop
                     {
                         if (!zone.Entered.Contains(target)) continue;
                         var source = zone.Source;
-                        if (zone.Scorch) { source.Damage.Burn(target,2,1); continue; }
+                        if (zone.Scorch) { source.Damage.StandardBurn(target); continue; }
                         var p = source.Parameters;
                         if (p.Slow > slow) { slow = p.Slow; slowSource = source; }
                         if (p.Gas)

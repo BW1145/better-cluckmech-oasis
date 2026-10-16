@@ -26,30 +26,23 @@ namespace CluckmechCoop
         internal static void Prepare(战斗背包 bag)
         {
             Apply();
-            if(Slots==5 || bag.单元.Count>=Slots)return;
             bag.背包类.选择上限=Slots;
-            var original=bag.单元[4];
-            var extra=UnityEngine.Object.Instantiate(original,original.transform.parent);
-            extra.name="战斗背包格子5";extra.代表id号=5;extra.当前背包id号=-1;
-            foreach(var native in extra.GetComponentsInChildren<背包类单元>(true))native.背包id号=5;
-            var button=extra.GetComponent<Button>();button.onClick=new Button.ButtonClickedEvent();
-            button.onClick.AddListener(()=>
+            if(bag.单元.Count<Slots)
             {
-                int position=extra.当前背包id号;
-                if(position>=0 && position<bag.背包类.单元列表.Count)
-                    bag.背包类.单元列表[position].GetComponent<Toggle>().isOn=false;
-                bag.背包类.当前已选单元.Remove(position);bag.取消选择(5);
-            });
-            bag.单元.Add(extra);
-            for(int i=0;i<bag.单元.Count;i++)
-            {
-                var cell=bag.单元[i];var rect=cell.GetComponent<RectTransform>();
-                rect.anchorMin=new Vector2(.03f+i*.94f/Slots,.03f);
-                rect.anchorMax=new Vector2(.03f+(i+1)*.94f/Slots-.01f,.955f);
-                rect.offsetMin=rect.offsetMax=Vector2.zero;
-                if(cell.炮台图片!=null)cell.炮台图片.preserveAspect=true;
-                foreach(var native in cell.GetComponentsInChildren<携带背包单元脚本>(true))native.图标图片.preserveAspect=true;
+                var extra=UnityEngine.Object.Instantiate(bag.单元[4],bag.单元[4].transform.parent);
+                extra.name="战斗背包格子5";extra.代表id号=5;extra.当前背包id号=-1;
+                foreach(var native in extra.GetComponentsInChildren<背包类单元>(true))native.背包id号=5;
+                var button=extra.GetComponent<Button>();button.onClick=new Button.ButtonClickedEvent();
+                button.onClick.AddListener(()=>
+                {
+                    int position=extra.当前背包id号;
+                    if(position>=0 && position<bag.背包类.单元列表.Count)
+                        bag.背包类.单元列表[position].GetComponent<Toggle>().isOn=false;
+                    bag.背包类.当前已选单元.Remove(position);bag.取消选择(5);
+                });
+                bag.单元.Add(extra);
             }
+            (bag.GetComponent<CarryPreparationLayout>() ?? bag.gameObject.AddComponent<CarryPreparationLayout>()).Bind(bag);
         }
         internal static void Build(建造系统 build)
         {
@@ -117,6 +110,52 @@ namespace CluckmechCoop
         internal static void Release(){if(sixthKey!=null){UnityEngine.Object.Destroy(sixthKey.texture);UnityEngine.Object.Destroy(sixthKey);}sixthKey=null;}
     }
 
+    public sealed class CarryPreparationLayout : MonoBehaviour
+    {
+        private 战斗背包 bag;
+        private bool queued;
+        internal void Bind(战斗背包 value){bag=value;Schedule();}
+        private void OnEnable()=>Schedule();
+        private void OnRectTransformDimensionsChange()=>Schedule();
+        private void Schedule(){if(bag!=null && !queued && isActiveAndEnabled){queued=true;StartCoroutine(Arrange());}}
+        private System.Collections.IEnumerator Arrange()
+        {
+            yield return null;
+            int slots=CarryCapacity.Slots;
+            for(int i=0;i<bag.单元.Count;i++)
+            {
+                var cell=bag.单元[i];cell.gameObject.SetActive(i<slots);
+                var rect=cell.GetComponent<RectTransform>();
+                rect.anchorMin=new Vector2(.03f+i*.94f/slots,.03f);
+                rect.anchorMax=new Vector2(.03f+(i+1)*.94f/slots-.01f,.955f);
+                rect.offsetMin=rect.offsetMax=Vector2.zero;
+            }
+            var root=bag.GetComponentInParent<战斗准备背包>();
+            var carried=root==null?null:root.GetComponentInChildren<选择携带炮台脚本>(true);
+            var grid=carried==null?null:carried.GetComponentInChildren<GridLayoutGroup>(true);
+            if(grid!=null)
+            {
+                var area=(RectTransform)grid.transform;
+                var fitter=grid.GetComponent<ContentSizeFitter>();
+                if(fitter!=null){fitter.horizontalFit=ContentSizeFitter.FitMode.Unconstrained;fitter.verticalFit=ContentSizeFitter.FitMode.Unconstrained;}
+                area.anchorMin=Vector2.zero;area.anchorMax=Vector2.one;area.offsetMin=area.offsetMax=Vector2.zero;
+                Canvas.ForceUpdateCanvases();
+                var first=bag.单元[0].GetComponent<RectTransform>();
+                Vector2 low=area.InverseTransformPoint(first.TransformPoint(first.rect.min));
+                Vector2 high=area.InverseTransformPoint(first.TransformPoint(first.rect.max));
+                var second=bag.单元[1].GetComponent<RectTransform>();
+                Vector2 next=area.InverseTransformPoint(second.TransformPoint(second.rect.min));
+                grid.constraint=GridLayoutGroup.Constraint.FixedColumnCount;grid.constraintCount=slots;
+                grid.startCorner=GridLayoutGroup.Corner.UpperLeft;grid.startAxis=GridLayoutGroup.Axis.Horizontal;
+                grid.childAlignment=TextAnchor.UpperLeft;
+                grid.padding=new RectOffset(Mathf.RoundToInt(low.x-area.rect.xMin),0,Mathf.RoundToInt(area.rect.yMax-high.y),0);
+                grid.cellSize=high-low;grid.spacing=new Vector2(next.x-high.x,0);
+                foreach(var icon in carried.GetComponentsInChildren<携带背包单元脚本>(true))icon.图标图片.preserveAspect=true;
+                LayoutRebuilder.ForceRebuildLayoutImmediate(area);
+            }
+            queued=false;
+        }
+    }
     [HarmonyPatch(typeof(战斗背包),"Update")]
     internal static class ExtraPreparationSlot
     {

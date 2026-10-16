@@ -177,11 +177,12 @@ namespace CluckmechCoop
         }
         internal void Status(模块_基本属性 target, 攻击类型与状态数据库.状态枚举 type, float seconds, Vector4 values)
         { if (StratagemWorld.Living(target)) target.GetComponent<模块_状态属性>()?.增加状态(State(type,seconds,values)); }
-        internal void Burn(模块_基本属性 target, float damage, float seconds)
+        internal void StandardBurn(模块_基本属性 target) => Burn(target,10,2,new Vector3(.2f,.2f,.2f));
+        internal void Burn(模块_基本属性 target, float damage, float seconds,Vector3 penalties=default)
         {
             if (!StratagemWorld.Living(target)) return;
             if (burns.TryGetValue(target,out var current) && current != null && current.Valid) return;
-            var values = new Vector4(damage,0,0,0);
+            var values = new Vector4(damage,penalties.x,penalties.y,penalties.z);
             if (detailed != null)
             {
                 var settings = detailed.状态加成列表[(int)攻击类型与状态数据库.状态枚举.灼烧];

@@ -56,7 +56,7 @@ namespace CluckmechCoop
             CarryCapacity.Apply();
         }
         internal static void ClearScene() { rewards = null; rewardList = null; }
-        internal static bool Active => InRun && Expedition && Choice != null && Choice.Enabled;
+        internal static bool Active => InRun && Expedition && !FinalLevel && Choice != null && Choice.Enabled;
         internal static bool FinalLevel => Plugin.Spawner?.数据?.是否最终关卡 == true || Plugin.Summary?.地图存档?.当前场景名 == "绿洲";
         internal static string NodeKey
         {
@@ -167,7 +167,7 @@ namespace CluckmechCoop
             foreach (var entry in progress.Players)
             {
                 var player = entry.Value;
-                if (entry.Key < 0 || entry.Key > 2 || player == null || player.Coupons < 0 || !player.ValidGrowthRewards() || player.Regions == null || player.RepairNodes == null || player.Shops == null || player.StratagemCooldowns == null) return false;
+                if (entry.Key < 0 || entry.Key > 2 || player == null || player.Coupons < 0 || !player.ValidGrowthRewards() || !player.ValidArtisan || player.Regions == null || player.RepairNodes == null || player.Shops == null || player.StratagemCooldowns == null) return false;
                 foreach (var cooldown in player.StratagemCooldowns)
                     if (cooldown == null || string.IsNullOrWhiteSpace(cooldown.Node) || cooldown.Slot < 0 || cooldown.Slot >= 5+player.ExtraCarrySlots ||
                         !Rules.ValidMachine(cooldown.Machine) || !StratagemCatalog.IsUnit(cooldown.Machine.Id) || cooldown.Remaining < 0 ||

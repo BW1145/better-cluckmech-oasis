@@ -13,10 +13,10 @@ namespace CluckmechCoop
             switch (stats.ID)
             {
                 case 20001: return Direction("攻击力、攻速、布雷")+
-                    "·会受到敌人攻击\n"+
+                    "·本体为无限耐久陷阱\n"+
                     $"·首次布设{p.MineInitial}颗雷，每{p.RefillInterval:0.#}秒补{p.MineRefill}颗，上限{p.MineCap}颗\n"+
                     "·优先向敌人脚下空位布雷，只由地面敌人触发\n"+
-                    "·播撒器损毁后，已布地雷仍可引爆";
+                    "·地雷独立触发并造成范围爆炸";
                 case 20002: return Direction("攻击力、攻速、范围")+
                     "·不会受到敌人攻击\n"+
                     $"·呼叫{Duration(p.CallDelay)}后，向指定区域随机炮击{p.Salvos}批，每批3发\n"+
@@ -24,6 +24,7 @@ namespace CluckmechCoop
                 case 20003: return Direction("攻击力、攻速、持续照射")+
                     "·不会受到敌人攻击\n"+
                     $"·呼叫{Duration(p.CallDelay)}后持续照射{Duration(p.Duration)}，自动追踪高生命目标\n"+
+                    "·连续照射同一敌人3秒，攻击间隔逐渐缩短至0.02秒；换目标或中断后重置\n"+
                     "·照射附带<color=red>灼烧</color>，结束后消失";
                 case 20004: return Direction("攻击力、爆炸范围")+
                     "·不会受到敌人攻击\n"+
@@ -38,14 +39,13 @@ namespace CluckmechCoop
                     $"·展开半径{p.BlastRadius:0.#}格护罩，拦截从罩外射入的敌方弹丸\n"+
                     $"·容量为本体最大生命的{p.CapacityRatio*100:0}%，破盾{Duration(p.Reboot)}后重新展开\n"+
                     "·敌人可走进护罩，近战仍可攻击本体";
-                case 20007: return Direction("衍生物攻击力、攻速、生命值")+
+                case 20007: return Direction("衍生物攻击力、攻速、移动")+
                     "·固定基座召唤1架激光无人机，可放置多个基座\n"+
-                    "·无人机跟随所属角色，以连续激光攻击附近敌人，会受到敌人攻击\n"+
+                    "·无人机为无限耐久召唤物，跟随所属角色，以连续激光攻击附近敌人\n"+
                     $"·过热返回自己的基座，充能{Duration(p.DockTime)}后再次出击\n"+
-                    "·停靠充能时自动修复，完成充能恢复满血\n"+
                     (p.Piercing?"·激光贯穿至射程终点，首个敌人全额、后续各50%伤害\n":"")+
                     (p.HeatRecovery>0?$"·每击杀一个敌人降低{p.HeatRecovery:0}热量\n":"")+
-                    "·无人机被毁后自动再生；基座损毁后无人机消失";
+                    "·基座损毁后无人机消失";
                 default: return "";
             }
         }
@@ -61,7 +61,7 @@ namespace CluckmechCoop
                 var drone = stats.GetComponent<StratagemUnit>();
                 var gun = stats.GetComponent<模块_攻击属性>();
                 float multiplier = drone?.Parent?.Parameters.DamageMultiplier ?? drone?.Parameters?.DamageMultiplier ?? 1;
-                return $"生命 {stats.当前生命值:0}/{stats.当前生命值上限:0}\n单次伤害 {gun.当前攻击力*multiplier:0.#}\n射程 {gun.当前攻击范围:0.#}\n移速 {stats.GetComponent<模块_移动属性>().当前移动速度:0.#}";
+                return $"耐久 ∞\n单次伤害 {gun.当前攻击力*multiplier:0.#}\n射程 {gun.当前攻击范围:0.#}\n移速 {stats.GetComponent<模块_移动属性>().当前移动速度:0.#}";
             }
             var p = new StratagemParameters(stats.ID,stats.强化词条列表);
             var attack = stats.GetComponent<模块_攻击属性>();
@@ -85,7 +85,7 @@ namespace CluckmechCoop
                     var rover = stats.GetComponent<StratagemRover>();
                     var sync = stats.GetComponent<联机_单位属性同步>();
                     string heat = instance ? $"{(rover != null ? rover.Heat : sync == null ? 0 : sync.进度条*p.HeatCap):0}/{p.HeatCap:0}" : $"{p.HeatCap:0}";
-                    return common+$"每个基座1架无人机\n热量 {heat}　停靠充能 {p.DockTime:0.#}秒\n充能期间自动修复，完成恢复满血\n单次伤害 {damage*p.DamageMultiplier:0.#}　射程 {range:0.#}";
+                    return common+$"每个基座1架无人机\n热量 {heat}　停靠充能 {p.DockTime:0.#}秒\n无人机耐久 ∞\n单次伤害 {damage*p.DamageMultiplier:0.#}　射程 {range:0.#}";
             }
         }
     }
@@ -93,7 +93,7 @@ namespace CluckmechCoop
     internal static class StratagemOverview
     {
         private static bool Prefix(模块_基本属性 __instance,ref string __result)
-        { if (!StratagemCatalog.IsUnit(__instance.ID) && __instance.ID != 20101 && __instance.ID != 20102) return true; __result = __instance.ID == 20101 ? "·地面敌人触发后爆炸\n·播撒器损毁后仍可引爆" : __instance.ID == 20102 ? "·跟随所属角色，以连续激光攻击附近敌人\n·过热返回自己的基座充能并自动修复，完成恢复满血" : StratagemDescriptions.Summary(__instance); return false; }
+        { if (!StratagemCatalog.IsUnit(__instance.ID) && __instance.ID != 20101 && __instance.ID != 20102) return true; __result = __instance.ID == 20101 ? "·地面敌人触发后爆炸\n·播撒器损毁后仍可引爆" : __instance.ID == 20102 ? "·跟随所属角色，以连续激光攻击附近敌人\n·过热返回自己的基座充能后再次起飞" : StratagemDescriptions.Summary(__instance); return false; }
     }
     [HarmonyPatch(typeof(模块_基本属性),"说明")]
     internal static class StratagemDetails

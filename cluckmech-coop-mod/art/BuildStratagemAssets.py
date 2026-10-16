@@ -96,12 +96,24 @@ add('mine',grid('md6Parts',3,2,5))
 add('shield-base',grid('shieldParts',2,2,0),(.5,.22))
 add('shield-tower',grid('shieldParts',2,2,1),(.5,.05))
 add('shield-fragments',grid('shieldParts',2,2,3),islands=True)
-add('mortar-base',grid('emsPartsResult',4,5,0),(.5,.22))
+ems_parts=Image.open(SOURCES/'emsPartsResult.png').convert('RGBA')
+# Source parts have uneven gutters. Bounds and hinge points are in source pixels.
+def ems_crop(bounds):
+    x0,y0,x1,y1=bounds
+    return ems_parts.crop((x0-4,y0-4,x1+4,y1+4))
+add('mortar-base',ems_crop((25,115,309,249)),(.5,.22))
+barrels=[((92,569,206,786),(171,764)),((383,573,487,782),(449,763)),
+         ((667,574,748,786),(707,762)),((917,572,1029,790),(955,765)),
+         ((112,833,226,1038),(145,1019)),((384,834,492,1041),(450,1020)),
+         ((661,840,740,1045),(701,1021)),((907,838,1016,1041),(979,1020))]
 for n in range(8):
     add('mortar-housing.'+str(n),grid('emsHousings',4,2,n),(.5,.06))
-    add('mortar-barrel.'+str(n),grid('emsPartsResult',4,5,8+n),(.5,.1))
-add('mortar-spark',grid('emsPartsResult',4,5,17),islands=True)
-add('mortar-shell',grid('emsPartsResult',4,5,18))
+    bounds,hinge=barrels[n]
+    x0,y0,x1,y1=bounds
+    pivot=((hinge[0]-x0+2)/(x1-x0+4),1-(hinge[1]-y0+2)/(y1-y0+4))
+    add('mortar-barrel.'+str(n),ems_crop(bounds),pivot)
+add('mortar-spark',ems_parts.crop((350,1100,600,1350)),islands=True)
+add('mortar-shell',ems_crop((714,1184,763,1309)))
 add('rover-pack',grid('roverParts',3,3,0))
 add('rover-dock',Image.open(SOURCES/'roverDock.png').convert('RGBA'),(.5,.22))
 for n in range(8):
@@ -136,9 +148,9 @@ add('icon.20101',grid('md6Parts',3,2,5),portrait=True)
 add('icon.20102',grid('roverParts',3,3,1),portrait=True)
 
 active=[25011,25014,25015,25016,25021,25022,25023,25024,25026,
-        25031,25032,25033,25035,25036,25041,25043,25044,25045,25046,
+        25031,25032,25033,25035,None,25041,25043,25044,25045,25046,
         25051,25052,25053,25055,None,25062,25063,None,25065,
-        25071,25072,25074,25075,25076]
+        25071,25072,25074,None,25076]
 for index,affix in enumerate(active):
     if affix is not None: add('affix.'+str(affix),grid('upgradeIcons',6,6,index),portrait=True)
 for index,affix in enumerate([25077,25078]): add('affix.'+str(affix),grid('roverUpgradeIcons',2,1,index),portrait=True,islands=True)

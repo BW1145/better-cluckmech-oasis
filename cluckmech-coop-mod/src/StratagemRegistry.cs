@@ -73,7 +73,7 @@ namespace CluckmechCoop
             stats.强化词条列表 = new List<int>();
             stats.单位定位列表 = new List<模块_基本属性.单位定位枚举> { 模块_基本属性.单位定位枚举.单位 };
             stats.单位分类 = (模块_基本属性.单位分类枚举)unit.Category;
-            stats.单位类型 = id == 20102 ? 模块_基本属性.单位类型枚举.飞行单位 : 模块_基本属性.单位类型枚举.建筑;
+            stats.单位类型 = id == 20001 ? 模块_基本属性.单位类型枚举.陷阱 : id == 20102 ? 模块_基本属性.单位类型枚举.飞行单位 : 模块_基本属性.单位类型枚举.建筑;
             stats.初始阵营 = stats.当前阵营 = 阵营数据库.阵营.友方;
             stats.稀有度 = rankSamples[unit.Tier].稀有度;
             stats.花费 = unit.Power; stats.放置cd = unit.Cooldown; stats.初始放置cd = unit.InitialCooldown;
@@ -104,7 +104,7 @@ namespace CluckmechCoop
             attack.攻击力加成 = attack.攻击速度加成 = attack.百分比攻击力加成 = attack.百分比攻击速度加成 = 0;
             attack.当前造成状态 = new List<攻击类型与状态数据库.状态枚举>();
             var detailed = prefab.GetComponent<模块_攻击详细属性>();
-            detailed.暴击率 = .1f; detailed.暴击倍率 = 1;
+            detailed.暴击率 = id == 20004 ? .05f : .1f; detailed.暴击倍率 = id == 20004 ? 9 : 1;
             detailed.变化暴击率 = detailed.变化暴击倍率 = 0;
             detailed.状态加成列表 = new 模块_攻击详细属性.状态属性单元[18];
             for (int i = 0; i < detailed.状态加成列表.Length; i++) detailed.状态加成列表[i] = new 模块_攻击详细属性.状态属性单元();
@@ -118,9 +118,9 @@ namespace CluckmechCoop
                 stats.母体id = unit.Id;
                 if (id == 20101) stats.单位类型 = 模块_基本属性.单位类型枚举.陷阱;
             }
-            if (unit.Health == 1 || id == 20101)
+            if (unit.Health == 1 || id == 20101 || id == 20001 || id == 20102)
             {
-                stats.是否无敌 = true;
+                stats.是否无敌 = stats.当前是否无敌 = true;
                 foreach (var collider in prefab.GetComponents<Collider2D>()) collider.enabled = false;
             }
             prefab.AddComponent<StratagemUnit>();

@@ -40,7 +40,7 @@ namespace CluckmechCoop
                 case 1:root?.FadeBeacon();StratagemSurface.Create(StratagemSurfaceKind.Warning,point,message.Radius,.45f);break;
                 case 2:
                     StratagemBlastVisual.Play(point,message.Radius,false);
-                    if(root!=null&&root.Parameters.Scorch)StratagemSurface.Create(StratagemSurfaceKind.Fire,point,1.2f,3);
+                    if(root!=null&&root.Parameters.Scorch)StratagemSurface.Create(StratagemSurfaceKind.Fire,point,1.2f,message.Duration);
                     break;
                 case 3:root?.StartBeam(point,message.Duration,message.Radius);break;
                 case 4:root?.BeamTarget(message.Target,point);break;

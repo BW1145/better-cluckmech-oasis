@@ -15,6 +15,7 @@ namespace CluckmechCoop
         private Text reward, status;
         private RectTransform selection, challenge;
         private float shift;
+        private bool shifted;
         internal static void Attach(战斗背包 bag)
         {
             var root = bag.GetComponentInParent<战斗准备背包>();
@@ -29,17 +30,29 @@ namespace CluckmechCoop
         private void OnDestroy() => panels.Remove(this);
         private void Refresh()
         {
-            if (!ModuleSettings.Expedition)
+            bool show=ModuleSettings.Expedition && !ModuleSettings.FinalLevel;
+            if(show && row==null)Build();
+            if(row!=null)row.SetActive(show);
+            if(challenge!=null && shifted!=show)
             {
-                if (row != null) row.SetActive(false);
-                return;
+                float delta=show?shift:-shift;
+                challenge.anchoredPosition+=new Vector2(0,delta);
+                if(selection!=null)selection.anchoredPosition+=new Vector2(0,delta);
+                shifted=show;
             }
-            if (row == null) Build();
-            if (row == null) return;
-            row.SetActive(true);
+            EnsureStatus();
+            status.text=Plugin.Network.SettingsReady?"":Plugin.Network.Status;
+            if(!show)return;
             toggle.SetIsOnWithoutNotify(ModuleSettings.Choice?.Enabled == true);
             toggle.interactable = Plugin.Role != 2 && ModuleSettings.Choice?.Locked != true;
             reward.text = ModuleSettings.RewardText;
+        }
+        private void EnsureStatus()
+        {
+            if(status!=null)return;
+            status=NativeUi.Label(transform,"",0,0,650,34,22);
+            var rect=status.rectTransform;rect.anchorMin=rect.anchorMax=rect.pivot=new Vector2(.5f,1);
+            rect.anchoredPosition=new Vector2(0,-12);status.alignment=TextAnchor.MiddleCenter;
         }
         private void Build()
         {
@@ -57,14 +70,12 @@ namespace CluckmechCoop
             NativeUi.Image(rect, NativeUi.Frame, new Color(0.25f, 0.31f, 0.18f));
             row = rect.gameObject;
             shift = rect.rect.height + 8;
-            challenge.anchoredPosition += new Vector2(0, shift);
-            if (selection != null) selection.anchoredPosition += new Vector2(0, shift);
             toggle = NativeUi.Toggle(rect, "强化远征", 20, 12, rect.rect.width - 40, 60, false, value => { ModuleSettings.Select(value); Refresh(); });
             var toggleRect = toggle.GetComponent<RectTransform>();
             toggleRect.anchorMax = new Vector2(1, 1); toggleRect.pivot = new Vector2(0.5f, 1); toggleRect.sizeDelta = new Vector2(-40, 60); toggleRect.anchoredPosition = new Vector2(0, -12);
             reward = NativeUi.Label(rect, "", 0, 12, 0, 60, 26);
             reward.rectTransform.anchorMin = new Vector2(0.3f, 1); reward.rectTransform.anchorMax = new Vector2(0.9f, 1); reward.rectTransform.sizeDelta = new Vector2(0, 60);
-            status = NativeUi.Label(rect, "", 20, 74, Mathf.Max(500, rect.rect.width - 40), 26, 20);
+
             row.AddComponent<RuleTooltip>().Text = "原版敌人全部出完并消灭后，再出现一次；血量×1.5，攻击力×2。";
         }
     }

@@ -309,8 +309,8 @@ namespace CluckmechCoop
             yield return new WaitForSeconds(.09f);
             if (!Alive) yield break;
             Damage.Area(point,Parameters.BlastRadius,Damage.Attack*Parameters.DamageMultiplier,Damage.Critical());
-            StratagemEffects.Emit(this,2,point,Parameters.BlastRadius);
-            if (Parameters.Scorch) StratagemFields.Add(this,point,1.2f,3,true);
+            StratagemEffects.Emit(this,2,point,Parameters.BlastRadius,Parameters.Scorch?StratagemParameters.ScorchDuration:0);
+            if (Parameters.Scorch) StratagemFields.Add(this,point,1.2f,StratagemParameters.ScorchDuration,true);
         }
         private IEnumerator Laser()
         {
@@ -318,50 +318,40 @@ namespace CluckmechCoop
             yield return new WaitForSeconds(p.CallDelay);
             Vector2 center = transform.position;
             StratagemEffects.Emit(this,3,center,p.BlastRadius,p.Duration);
-            float until = Time.time+p.Duration, lastTime = Time.time, nextSearch = 0, nextContact = 0;
-            var clock = new StratagemAttackClock();
-            模块_基本属性 target = null;
-            var contact = new Dictionary<模块_基本属性,float>();
-            var lastSeen = new Dictionary<模块_基本属性,float>();
-            while (Alive)
+            float until=Time.time+p.Duration,lastTime=Time.time,nextSearch=0,contactTime=0;
+            var clock=new StratagemAttackClock();
+            模块_基本属性 target=null,contactTarget=null;
+            while(Alive)
             {
-                if (!StratagemWorld.Living(target) || Vector2.Distance(target.transform.position,center) > 8)
+                if(!StratagemWorld.Living(target) || Vector2.Distance(target.transform.position,center)>8)
                 {
-                    if (target != null || Time.time >= nextSearch)
+                    if(target!=null || Time.time>=nextSearch)
                     {
-                        target = StratagemWorld.Target(center,target == null ? 6 : 8,true);
-                        nextSearch = Time.time+.5f;
-                        beamTarget = target;
+                        target=StratagemWorld.Target(center,target==null?6:8,true);nextSearch=Time.time+.5f;
+                        beamTarget=target;
                         StratagemEffects.Emit(this,4,beamPosition,0,0,StratagemWorld.Id(target?.gameObject));
                     }
                 }
-                if (p.Melt && Time.time >= nextContact)
+                float now=Mathf.Min(Time.time,until),delta=now-lastTime;lastTime=now;
+                float nativeRate=Damage.Rate;
+                bool touching=nativeRate>0 && StratagemWorld.Living(target) && StratagemWorld.DistanceSquared(target,beamPosition)<=p.BlastRadius*p.BlastRadius;
+                if(!touching || contactTarget!=target) {contactTime=0;contactTarget=touching?target:null;}
+                float prior=contactTime;
+                if(touching)contactTime+=delta;
+                float rate=nativeRate<=0?0:Mathf.Min(50,Mathf.Lerp(p.Definition.Rate,50,Mathf.Clamp01((prior+contactTime)*.5f/3))*nativeRate/p.Definition.Rate);
+                int ticks=clock.Advance(delta,rate);
+                while(ticks-->0 && Alive)
                 {
-                    nextContact = Time.time+.1f;
-                    foreach (var enemy in StratagemWorld.Enemies)
+                    bool critical=Damage.Critical();
+                    for(int i=StratagemWorld.Enemies.Count-1;i>=0;i--)
                     {
-                        if (!StratagemWorld.Living(enemy) || StratagemWorld.DistanceSquared(enemy,beamPosition) > p.BlastRadius*p.BlastRadius) continue;
-                        if (!lastSeen.TryGetValue(enemy,out var last) || Time.time-last > .2f) contact[enemy] = Time.time;
-                        lastSeen[enemy] = Time.time;
+                        if(i>=StratagemWorld.Enemies.Count)continue;
+                        var enemy=StratagemWorld.Enemies[i];
+                        if(!StratagemWorld.Living(enemy) || StratagemWorld.DistanceSquared(enemy,beamPosition)>p.BlastRadius*p.BlastRadius)continue;
+                        Damage.Hit(enemy,Damage.Attack*p.DamageMultiplier,critical);Damage.Burn(enemy,4,2);
                     }
                 }
-                float now = Mathf.Min(Time.time,until);
-                int ticks = clock.Advance(now-lastTime,Damage.Rate); lastTime = now;
-                while (ticks > 0 && Alive)
-                {
-                    ticks--;
-                    bool critical = Damage.Critical();
-                    for (int i = StratagemWorld.Enemies.Count-1; i >= 0; i--)
-                    {
-                        if (i >= StratagemWorld.Enemies.Count) continue;
-                        var enemy = StratagemWorld.Enemies[i];
-                        if (!StratagemWorld.Living(enemy) || StratagemWorld.DistanceSquared(enemy,beamPosition) > p.BlastRadius*p.BlastRadius) continue;
-                        float multiplier = p.Melt && contact.TryGetValue(enemy,out var began) && Time.time-began >= 3 ? 1.3f : 1;
-                        Damage.Hit(enemy,Damage.Attack*p.DamageMultiplier*multiplier,critical);
-                        Damage.Burn(enemy,p.Melt ? 6 : 4,2);
-                    }
-                }
-                if (Time.time >= until) break;
+                if(Time.time>=until)break;
                 yield return null;
             }
             StratagemEffects.Emit(this,5,beamPosition);
@@ -378,16 +368,21 @@ namespace CluckmechCoop
             yield return new WaitForSeconds(.6f+Parameters.CallDelay);
             if (!Alive) yield break;
             var p = Parameters;
-            Damage.Area(point,p.BlastRadius,Damage.Attack*p.DamageMultiplier,Damage.Critical(), enemy => p.EagleDamage(Mathf.Sqrt(StratagemWorld.DistanceSquared(enemy,point)))/(3000*p.DamageMultiplier));
-            if (p.Shock)
-                foreach (var enemy in StratagemWorld.Enemies)
+            bool critical=Damage.Critical();
+            for(int i=StratagemWorld.Enemies.Count-1;i>=0;i--)
+            {
+                if(i>=StratagemWorld.Enemies.Count)continue;
+                var enemy=StratagemWorld.Enemies[i];
+                if(!StratagemWorld.Living(enemy))continue;
+                float distance=Mathf.Sqrt(StratagemWorld.DistanceSquared(enemy,point));
+                if(distance>p.BlastRadius)continue;
+                Damage.Hit(enemy,Damage.Attack*p.EagleDamage(distance)/p.Definition.Damage,critical);
+                if(p.Shock && StratagemWorld.Living(enemy))
                 {
-                    if (!StratagemWorld.Living(enemy)) continue;
-                    float distance = Mathf.Sqrt(StratagemWorld.DistanceSquared(enemy,point));
-                    if (distance <= p.BlastRadius || distance > p.BlastRadius+1.5f) continue;
-                    Damage.Status(enemy,攻击类型与状态数据库.状态枚举.眩晕,.8f,Vector4.zero);
+                    Damage.Status(enemy,攻击类型与状态数据库.状态枚举.眩晕,5,Vector4.zero);
                     enemy.GetComponent<模块_移动>()?.被击退(new Vector4(point.x,point.y,2,.2f));
                 }
+            }
             StratagemEffects.Emit(this,8,point,p.BlastRadius);
             ReleaseSource();
         }
