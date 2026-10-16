@@ -26,8 +26,8 @@ namespace CluckmechCoop
         internal void Build(StratagemUnit source)
         {
             unit=source; born=Time.time;
-            if (unit.Stats.ID==20101) { body=Part("mine",.5f,0,0,-.01f);body.enabled=false;return; }
-            if (unit.Stats.ID==20102) { body=Part("rover-drone.2",.85f,0,.05f,-.01f);dockBlend=dockTo=1;return; }
+            if (unit.Stats.ID==20101) { body=Part("mine",.5f,0,0,-.01f);body.enabled=false;CopySorting();return; }
+            if (unit.Stats.ID==20102) { body=Part("rover-drone.2",.85f,0,.05f,-.01f);dockBlend=dockTo=1;CopySorting();return; }
             switch (unit.Kind)
             {
                 case StratagemKind.Mines:
@@ -49,6 +49,10 @@ namespace CluckmechCoop
                 case StratagemKind.Laser: body=Part("old.2.5.0",1.2f,0,0,-.01f);break;
                 default: body=Part("old.2.5.0",1.2f,0,0,-.01f);break;
             }
+            CopySorting();
+        }
+        private void CopySorting()
+        {
             var native=unit.GetComponentsInChildren<SpriteRenderer>(true);
             foreach(var sample in native)
                 if (!parts.Contains(sample)) { foreach(var part in parts) { part.sortingLayerID=sample.sortingLayerID;part.sortingOrder=sample.sortingOrder; } break; }
@@ -102,7 +106,7 @@ namespace CluckmechCoop
                 {
                     float t=Mathf.Clamp01((Time.time-mineStarted)/mineFlight);
                     Vector2 point=Vector2.Lerp(mineFrom,Vector2.zero,t)+Vector2.up*(4*t*(1-t)*.65f);
-                    body.transform.localPosition=new Vector3(point.x,point.y,-.01f);
+                    body.transform.localPosition=new Vector3(point.x,point.y,point.y*.01f-.01f);
                 }
                 return;
             }

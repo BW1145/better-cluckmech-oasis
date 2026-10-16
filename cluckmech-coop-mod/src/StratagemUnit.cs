@@ -123,7 +123,7 @@ namespace CluckmechCoop
             StratagemAudio.BeamEnded(beamSound);beamSound=null;
             if(laserVisual!=null)
             {
-                laserVisual.Dispose();laserVisual=null;
+                laserVisual.Dispose(beamUntil-Time.time>.32f);laserVisual=null;
                 if(Plugin.InCombat)StratagemAssets.Effect("fx.crater.1",beamPosition,beamRadius*2,6,ground:true,opacity:.35f);
             }
             beamTarget = null;
@@ -300,7 +300,10 @@ namespace CluckmechCoop
         }
         private IEnumerator ShellImpact(Vector2 point)
         {
-            yield return new WaitForSeconds(.45f);
+            yield return new WaitForSeconds(.36f);
+            if (!Alive) yield break;
+            StratagemEffects.Emit(this,17,point,Parameters.BlastRadius,.09f);
+            yield return new WaitForSeconds(.09f);
             if (!Alive) yield break;
             Damage.Area(point,Parameters.BlastRadius,Damage.Attack*Parameters.DamageMultiplier,Damage.Critical());
             StratagemEffects.Emit(this,2,point,Parameters.BlastRadius);

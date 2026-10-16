@@ -2,22 +2,23 @@ using UnityEngine;
 
 namespace CluckmechCoop
 {
-    internal enum StratagemParticleKind { Sparks, Smoke, Electric }
+    internal enum StratagemParticleKind { Sparks, Smoke, Electric,Fire }
     internal static class StratagemNativeParticles
     {
-        private static GameObject sparks,smoke,electric;
+        private static GameObject sparks,smoke,electric,fire;
         private static int sortingLayer,sortingOrder;
         internal static void Begin()
         {
             var effects=GameObject.Find(函数库.常数类.命名_世界).GetComponent<效果物体引用器>().特效;
-            sparks=effects.普通攻击效果;smoke=effects.烟雾效果;electric=effects.感电效果;
+            sparks=effects.普通攻击效果;smoke=effects.烟雾效果;electric=effects.感电效果;fire=effects.灼烧效果;
             var model=StratagemRegistry.Prefab(20001).GetComponentInChildren<SpriteRenderer>(true);
             sortingLayer=model.sortingLayerID;sortingOrder=model.sortingOrder;
+            StratagemAssets.SetSorting(model);
         }
-        internal static void Clear(){sparks=smoke=electric=null;}
+        internal static void Clear(){sparks=smoke=electric=fire=null;}
         internal static StratagemNativeParticle Play(StratagemParticleKind kind,Vector2 point,float scale,float seconds,bool loop=false,Transform parent=null)
         {
-            var prefab=kind==StratagemParticleKind.Sparks?sparks:kind==StratagemParticleKind.Smoke?smoke:electric;
+            var prefab=kind==StratagemParticleKind.Sparks?sparks:kind==StratagemParticleKind.Smoke?smoke:kind==StratagemParticleKind.Fire?fire:electric;
             var obj=Object.Instantiate(prefab,new Vector3(point.x,point.y,StratagemAssets.Z(point.y)+(kind==StratagemParticleKind.Sparks?-.03f:.4f)),Quaternion.identity);
             if(parent!=null)obj.transform.SetParent(parent,true);
             obj.transform.localScale=Vector3.one*scale;

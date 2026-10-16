@@ -17,6 +17,9 @@ namespace CluckmechCoop
         private static Texture2D texture;
         private static Dictionary<string,StratagemSpriteRect> rectangles;
         private static readonly Dictionary<string,Sprite> sprites = new Dictionary<string,Sprite>();
+        private static int sortingLayer,sortingOrder;
+        internal static void SetSorting(SpriteRenderer sample)
+        {sortingLayer=sample.sortingLayerID;sortingOrder=sample.sortingOrder;}
         internal static float Z(float y) => (y+10000)*.01f;
         internal static Sprite Named(string name)
         {
@@ -59,6 +62,7 @@ namespace CluckmechCoop
             var obj = new GameObject("StratagemSprite");
             if (parent != null) obj.transform.SetParent(parent,false);
             var renderer = obj.AddComponent<SpriteRenderer>(); renderer.sprite=sprite;
+            renderer.sortingLayerID=sortingLayer;renderer.sortingOrder=sortingOrder;
             obj.transform.localScale=Vector3.one*(width/sprite.bounds.size.x);
             return renderer;
         }
@@ -76,54 +80,12 @@ namespace CluckmechCoop
             return renderer;
         }
         internal static void Flipbook(string prefix,int count,Vector2 point,float width,float duration,float delay=0,bool ground=false,float opacity=1,bool hold=false)
+            =>Animated(prefix,count,point,width,duration,delay,ground,opacity,hold);
+        internal static SpriteRenderer Animated(string prefix,int count,Vector2 point,float width,float duration,float delay=0,bool ground=false,float opacity=1,bool hold=false)
         {
             var image=Effect(prefix+"0",point,width,duration,delay,ground,opacity:opacity,hold:hold);
             image.gameObject.AddComponent<StratagemFlipbook>().Set(image,prefix,count,duration,delay);
-        }
-    }
-    public sealed class StratagemFlipbook : MonoBehaviour
-    {
-        private SpriteRenderer image;
-        private Sprite[] frames;
-        private float started,duration;
-        internal void Set(SpriteRenderer renderer,string prefix,int count,float seconds,float delay)
-        {
-            image=renderer;frames=new Sprite[count];
-            for(int i=0;i<count;i++)frames[i]=StratagemAssets.Named(prefix+i);
-            started=Time.time+delay;duration=seconds;
-        }
-        private void Update()
-        {
-            float elapsed=Time.time-started;
-            if(elapsed>=0)image.sprite=frames[Mathf.Min(frames.Length-1,Mathf.FloorToInt(elapsed/duration*frames.Length))];
-        }
-    }
-    public sealed class StratagemAnimation : MonoBehaviour
-    {
-        private SpriteRenderer image;
-        private Vector3 scale,origin;
-        private Color color;
-        private float started,duration,delay,grow,rise;
-        private bool ground,hold;
-        private string token;
-        internal void Set(SpriteRenderer renderer,float seconds,float wait,float growth,float lift,bool floor,bool peak)
-        {
-            image=renderer; scale=transform.localScale; origin=transform.position; color=image.color;
-            started=Time.time; duration=seconds; delay=wait; grow=growth; rise=lift; ground=floor;hold=peak;
-            token=Plugin.Combat?.Token;
-            image.enabled=wait==0;
-        }
-        private void Update()
-        {
-            float elapsed=Time.time-started-delay;
-            if (!Plugin.InCombat || token!=Plugin.Combat?.Token || elapsed >= duration) { Destroy(gameObject); return; }
-            if (elapsed < 0) { image.enabled=false; return; }
-            image.enabled=true;
-            float t=Mathf.Clamp01(elapsed/duration);
-            float alpha=hold ? Mathf.Clamp01((1-t)/.4f) : ground ? Mathf.Clamp01((1-t)*4) : Mathf.Clamp01(t*12)*Mathf.Pow(1-t,.7f);
-            image.color=new Color(color.r,color.g,color.b,color.a*alpha);
-            transform.localScale=scale*(1+grow*t);
-            if(rise!=0)transform.position=origin+new Vector3(0,rise*t,rise*t*.01f);
+            return image;
         }
     }
 }

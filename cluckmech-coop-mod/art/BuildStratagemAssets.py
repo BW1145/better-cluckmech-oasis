@@ -155,7 +155,7 @@ for kind,selections in selected.items():
 
 # Whole cells retain the same pivot and size for every animation frame.
 # Keep disconnected arcs, glow and particles inside their own original cell.
-for prefix,kind,row,count in [('ems-field',4,3,8),('gas-field',4,5,8),
+for prefix,kind,row,count in [('gas-field',4,5,8),
                                ('laser-beam',2,1,8),('laser-contact',2,2,8),
                                ('laser-sparks',2,4,8)]:
     for column in range(count):
@@ -163,21 +163,52 @@ for prefix,kind,row,count in [('ems-field',4,3,8),('gas-field',4,5,8),
         if prefix=='laser-beam':
             # The beam renderer stretches this entire sprite between its two endpoints.
             tile=tile.crop(tile.getbbox())
-        if prefix=='ems-field':
-            # Keep source RGB intact; only the dark floor and bright arcs differ in alpha.
-            pixels=np.array(tile)
-            energy=np.clip((pixels[:,:,0]*.35+pixels[:,:,1]*.65-65)/150,0,1)
-            energy=energy*energy*(3-2*energy)
-            pixels[:,:,3]=(pixels[:,:,3]*(.08+.82*energy)).astype(np.uint8)
-            tile=Image.fromarray(pixels)
         frames['fx.'+prefix+'.'+str(column)]=(tile,(.5,.5),False,32)
-for n,column in enumerate([5,6,7,6]):
-    frames['fx.shield-shell.'+str(n)]=(legacy(5,2,column).resize((128,128),Image.Resampling.NEAREST),(.5,.28),False,32)
+for sheet,prefix,phases in [('emsFieldPhases','ems',['start','loop','end']),
+                            ('shieldEnergyPhases','shield',['start','loop','end','hit'])]:
+    for row,phase in enumerate(phases):
+        for column in range(8):
+            if prefix=='shield':
+                source=Image.open(SOURCES/(sheet+'.png')).convert('RGBA')
+                # The generated rows have measured centres and uneven gutters.
+                centre=[153,366,592,800][row]
+                top,bottom=[(42,252),(255,480),(481,714),(719,887)][row]
+                side=round(source.width/8)
+                tile=Image.new('RGBA',(side,side))
+                strip=source.crop((round(column*source.width/8),top,round((column+1)*source.width/8),bottom))
+                tile.alpha_composite(strip,(0,round(top-centre+side/2)))
+                tile=tile.resize((128,128),Image.Resampling.NEAREST)
+            else:
+                tile=grid(sheet,8,len(phases),row*8+column).resize((128,128),Image.Resampling.NEAREST)
+            pixels=np.array(tile)
+            rgb=pixels[:,:,:3].astype(float)
+            if prefix=='ems':
+                # Alpha extraction removes the generated blue backing, not the filament RGB.
+                energy=np.clip((rgb[:,:,1]-185)/65,0,1)
+                pixels[:,:,3]=(pixels[:,:,3]*energy).astype(np.uint8)
+            else:
+                yy,xx=np.mgrid[:128,:128]
+                radial=np.sqrt(((xx-63.5)/64)**2+((yy-63.5)/64)**2)
+                highlight=np.clip((rgb[:,:,1]-180)/75,0,1)
+                if phase=='hit':
+                    alpha=.16+.8*highlight
+                else:
+                    # One translucent membrane: refraction strongest at its outer edge.
+                    edge=np.clip((radial-.64)/.2,0,1)
+                    alpha=(.025+.10*highlight)*(1-edge)+(.22+.45*highlight)*edge
+                pixels[:,:,3]=(pixels[:,:,3]*alpha).astype(np.uint8)
+            frames[f'fx.{prefix}.{phase}.{column}']=(Image.fromarray(pixels),(.5,.5),False,32)
+for n in range(8):
+    frames['fx.warning.'+str(n)]=(legacy(1,1,n).resize((128,128),Image.Resampling.NEAREST),(.5,.5),False,32)
+    frames['fx.eagle-flight.'+str(n)]=(legacy(3,0,n).resize((128,128),Image.Resampling.NEAREST),(.5,.5),False,32)
+    frames['fx.eagle-shock.'+str(n)]=(legacy(3,4,n).resize((128,128),Image.Resampling.NEAREST),(.5,.5),False,32)
+for n in range(4):
+    frames['fx.eagle-embed.'+str(n)]=(legacy(3,1,n+4).resize((128,128),Image.Resampling.NEAREST),(.5,.15),False,32)
 for prefix,kind,sequence in [('blast-small',1,[(2,c) for c in range(8)]),
                               ('blast-heavy',3,[(r,c) for r in (2,3) for c in range(8)]),
                               ('blast-dust',1,[(3,c) for c in range(8)])]:
     for n,(row,column) in enumerate(sequence):
-        frames['fx.'+prefix+'.'+str(n)]=(legacy(kind,row,column).resize((128,128),Image.Resampling.NEAREST),(.5,.15),False,32)
+        frames['fx.'+prefix+'.'+str(n)]=(legacy(kind,row,column).resize((128,128),Image.Resampling.NEAREST),(.5,.5 if prefix=='blast-heavy' else .15),False,32)
 
 laser_sheet=Image.open(SOURCES/'orbitalLaserPhases.png').convert('RGBA')
 for row,phase in enumerate(['start','loop','end']):
@@ -214,7 +245,11 @@ for index,(name,(tile,pivot,portrait,ppu)) in enumerate(frames.items()):
     metadata[name]={'X':x,'Y':y,'W':w,'H':h,'PX':pivot[0],'PY':pivot[1],'PPU':ppu}
     if name.startswith('mortar-barrel.'):
         alpha=np.asarray(tile)[:,:,3]
-        ys,xs=np.nonzero(alpha[:5]>=144)
+        ys,xs=np.nonzero(alpha>=144)
+        angle=np.deg2rad(180-int(name.rsplit('.',1)[1])*45)
+        projection=(xs-pivot[0]*w)*np.cos(angle)+(h-ys-pivot[1]*h)*np.sin(angle)
+        tip=projection>=projection.max()-2
+        xs,ys=xs[tip],ys[tip]
         metadata[name]['MX']=(float(xs.mean())-pivot[0]*w)/32
         metadata[name]['MY']=(h-float(ys.mean())-pivot[1]*h)/32
 atlas.save(DEST/'stratagem-v2.png',optimize=True)

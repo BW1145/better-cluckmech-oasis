@@ -13,6 +13,7 @@ namespace UnityEngine
     {
         public GameObject gameObject;public Transform transform=>gameObject.transform;
         public T GetComponent<T>()=>gameObject.GetComponent<T>();
+        public static void Destroy(object value)=>Object.Destroy(value);
     }
     public static class Object{public static void Destroy(object value){if(value is GameObject go)go.Renderers.Clear();}}
     public sealed class Shader{public static Shader Find(string name)=>new();}
@@ -33,22 +34,24 @@ namespace UnityEngine
         public T GetComponent<T>()=>Components.TryGetValue(typeof(T),out var value)?(T)value:default;
         public GameObject(){transform=new Transform(this);}
         public GameObject(string name):this(){}
-        public T AddComponent<T>() where T:new(){var value=new T();if(value is LineRenderer line){line.gameObject=this;LineRenderer.All.Add(line);}return value;}
+        public T AddComponent<T>() where T:new(){var value=new T();if(value is MonoBehaviour behaviour)behaviour.gameObject=this;if(value is LineRenderer line){line.gameObject=this;LineRenderer.All.Add(line);}Components[typeof(T)]=value;return value;}
     }
     public sealed class Transform
     {
         public GameObject owner;public Transform parent;public Vector3 position,localPosition,localScale=Vector3.one;public Quaternion localRotation,rotation;
         public Transform(GameObject owner){this.owner=owner;}
+        public void SetParent(Transform value,bool world){parent=value;}
         public Vector3 TransformPoint(Vector3 p)=>localPosition+new Vector3(p.x*localScale.x,p.y*localScale.y,0);
     }
     public sealed class SpriteRenderer
     {
         public GameObject gameObject=>transform.owner;
+        public T GetComponent<T>()=>gameObject.GetComponent<T>();
         public Sprite sprite;public bool enabled=true;public int sortingLayerID,sortingOrder;public Color color=Color.white;public Transform transform;
     }
     public sealed class Sprite {public string Name;public Bounds bounds;}
     public struct Bounds {public Vector3 size;}
-    public struct Quaternion {public float z;public static Quaternion Euler(float x,float y,float z)=>new(){z=z};}
+    public struct Quaternion {public float z;public static Quaternion identity=>new();public static Quaternion Euler(float x,float y,float z)=>new(){z=z};}
     public struct Color
     {
         public float r,g,b,a;public Color(float r,float g,float b,float a=1){this.r=r;this.g=g;this.b=b;this.a=a;}public static Color white=>new(1,1,1);
@@ -79,7 +82,7 @@ namespace UnityEngine
         public const float PI=(float)Math.PI,Rad2Deg=180/PI;
         public static float Atan2(float y,float x)=>(float)Math.Atan2(y,x);public static int RoundToInt(float x)=>(int)Math.Round(x);
         public static float Clamp01(float x)=>Math.Clamp(x,0,1);public static float Sin(float x)=>(float)Math.Sin(x);
-        public static int FloorToInt(float x)=>(int)Math.Floor(x);public static int Min(int a,int b)=>Math.Min(a,b);
+        public static int FloorToInt(float x)=>(int)Math.Floor(x);public static int Min(int a,int b)=>Math.Min(a,b);public static float Min(float a,float b)=>Math.Min(a,b);public static float Pow(float a,float b)=>(float)Math.Pow(a,b);
         public static float Cos(float x)=>(float)Math.Cos(x);public static float Repeat(float x,float length)=>x-(float)Math.Floor(x/length)*length;
         public static float Lerp(float a,float b,float t)=>a+(b-a)*t;public static float SmoothStep(float a,float b,float t)=>Lerp(a,b,t*t*(3-2*t));
         public static float LerpAngle(float a,float b,float t){float d=Repeat(b-a,360);if(d>180)d-=360;return a+d*Clamp01(t);}
@@ -88,6 +91,10 @@ namespace UnityEngine
 public sealed class 模块_基本属性 {public int ID;public float 当前生命值=100;public GameObject gameObject=new();public Transform transform=>gameObject.transform;}
 namespace CluckmechCoop
 {
+    internal static class Plugin {internal static bool InCombat=true;internal static CombatState Combat=new();}
+    internal sealed class CombatState {internal string Token="visual";}
+    internal enum StratagemParticleKind {Fire,Sparks,Electric}
+    internal static class StratagemNativeParticles {internal static void Play(StratagemParticleKind k,Vector2 p,float scale,float seconds,bool loop=false,Transform parent=null){}}
     internal static class StratagemWorld
     {
         internal static 模块_基本属性 Target(Vector2 p,float r,bool boss)=>null;
@@ -97,7 +104,7 @@ namespace CluckmechCoop
     public sealed class StratagemUnit:MonoBehaviour
     {
         internal 模块_基本属性 Stats=new();internal StratagemKind Kind;
-        internal bool Alive=>true;internal Vector2 Muzzle=>transform.position;
+        internal bool Alive=>Stats.当前生命值>0;internal Vector2 Muzzle=>transform.position;
         public T[] GetComponentsInChildren<T>(bool inactive)=>gameObject.Renderers.OfType<T>().ToArray();
     }
     internal static class StratagemAssets
@@ -105,7 +112,7 @@ namespace CluckmechCoop
         internal static readonly List<SpriteRenderer> LaserParts=new();
         internal static float Z(float y)=>(y+10000)*.01f;
         internal static SpriteRenderer Renderer(Transform parent,Sprite sprite,float width=2)
-        {var obj=new GameObject();var image=new SpriteRenderer{sprite=sprite,transform=obj.transform};obj.Renderers.Add(image);LaserParts.Add(image);return image;}
+        {var obj=new GameObject();obj.transform.parent=parent;obj.transform.localScale=Vector3.one*(width/sprite.bounds.size.x);var image=new SpriteRenderer{sprite=sprite,transform=obj.transform};obj.Renderers.Add(image);obj.Components[typeof(SpriteRenderer)]=image;LaserParts.Add(image);return image;}
         internal static Dictionary<string,Dictionary<string,float>> Boxes;
         internal static Sprite Named(string name){var b=Boxes[name];return new Sprite{Name=name,bounds=new Bounds{size=new Vector3(b["W"]/32,b["H"]/32,0)}};}
         internal static Vector3 Muzzle(string name){var b=Boxes[name];return new Vector3(b["MX"],b["MY"],0);}
@@ -113,9 +120,13 @@ namespace CluckmechCoop
         {
             var obj=new GameObject();obj.transform.parent=parent;obj.transform.localPosition=position;
             var sprite=Named(name);obj.transform.localScale=Vector3.one*(width/sprite.bounds.size.x);
-            var renderer=new SpriteRenderer{sprite=sprite,transform=obj.transform};parent.owner.Renderers.Add(renderer);return renderer;
+            var renderer=new SpriteRenderer{sprite=sprite,transform=obj.transform};parent.owner.Renderers.Add(renderer);obj.Renderers.Add(renderer);return renderer;
         }
-        internal static void Effect(string name,Vector2 point,float width,float duration,bool ground=false,float rise=0,float grow=0){Named(name);}
+        internal static SpriteRenderer Effect(string name,Vector2 point,float width,float duration,float delay=0,bool ground=false,float rise=0,float grow=0,float opacity=1,bool hold=false)
+        {var image=Renderer(null,Named(name),width);image.transform.position=new Vector3(point.x,point.y,Z(point.y)+(ground?.4f:-.025f));image.color=new Color(1,1,1,opacity);image.gameObject.AddComponent<StratagemAnimation>().Set(image,duration,delay,grow,rise,ground,hold);return image;}
+        internal static SpriteRenderer Animated(string prefix,int count,Vector2 point,float width,float duration,float delay=0,bool ground=false,float opacity=1,bool hold=false)
+        {var image=Effect(prefix+"0",point,width,duration,delay,ground,opacity:opacity,hold:hold);image.gameObject.AddComponent<StratagemFlipbook>().Set(image,prefix,count,duration,delay);return image;}
+        internal static void Flipbook(string prefix,int count,Vector2 point,float width,float duration,float delay=0,bool ground=false,float opacity=1,bool hold=false)=>Animated(prefix,count,point,width,duration,delay,ground,opacity,hold);
     }
 }
 static class Program
@@ -128,6 +139,72 @@ static class Program
         string root=Path.GetFullPath(args[0]);
         StratagemAssets.Boxes=JsonSerializer.Deserialize<Dictionary<string,Dictionary<string,float>>>(File.ReadAllText(Path.Combine(root,"src/StratagemAssets/stratagem-v2.json")));
         var frames=new List<object>();
+        if(args.Length>1&&args[1]=="--vfx-revision")
+        {
+            bool checkTail=!args.Contains("--render-only"),checkOpening=!args.Contains("--tail")&&!args.Contains("--render-only");
+            void Invoke(object value,string method="Update")=>value.GetType().GetMethod(method,BindingFlags.NonPublic|BindingFlags.Instance).Invoke(value,null);
+            void AdvanceSprites(){foreach(var image in StratagemAssets.LaserParts.ToArray())foreach(var part in image.gameObject.Components.Values.OfType<MonoBehaviour>().ToArray())if(part is StratagemAnimation||part is StratagemFlipbook||part is StratagemBombDrop||part is StratagemTransit)Invoke(part);}
+            void Capture(string kind,float t,IEnumerable<SpriteRenderer> images)
+            {
+                frames.Add(new{kind,time=t,parts=images.Where(x=>x.enabled&&x.gameObject.Renderers.Contains(x)).Select(x=>new{name=x.sprite.Name,
+                    x=x.transform.parent==null?x.transform.position.x:x.transform.parent.position.x+x.transform.localPosition.x,
+                    y=x.transform.parent==null?x.transform.position.y:x.transform.parent.position.y+x.transform.localPosition.y,
+                    z=x.transform.parent==null?x.transform.position.z:x.transform.parent.position.z+x.transform.localPosition.z,
+                    sx=x.transform.localScale.x,sy=x.transform.localScale.y,angle=x.transform.rotation.z+x.transform.localRotation.z,alpha=x.color.a}).ToArray()});
+            }
+            foreach(int id in new[]{20001,20002,20003,20004,20005,20006,20007,20101,20102})
+            {
+                Time.time=0;var go=new GameObject();var sample=new SpriteRenderer{transform=go.transform,sortingLayerID=4,sortingOrder=12,enabled=false};go.Renderers.Add(sample);
+                var unit=new StratagemUnit{gameObject=go,Stats=new(){ID=id},Kind=(StratagemKind)(id==20101?0:id==20102?6:id-20001)};
+                var rig=new StratagemRig{gameObject=go};rig.Build(unit);
+                if(checkOpening)Check(go.Renderers.All(x=>x.sortingLayerID==4&&x.sortingOrder==12),"Every rig and dependent inherits the native sorting layer");
+                if(id==20101)rig.LaunchMine(new Vector2(-1,1),.3f);
+                foreach(float t in new[]{0f,.15f,.3f,.8f}){Time.time=t;Invoke(rig);Capture("rig-"+id,t,go.Renderers);}
+                if(id==20005)for(int face=0;face<8;face++)
+                {
+                    float angle=(180-face*45)*Mathf.PI/180;rig.Aim(new Vector2(Mathf.Cos(angle),Mathf.Sin(angle)));Time.time=1+face*.4f;rig.Shoot();
+                    foreach(float step in new[]{0f,.06f,.3f}){Time.time=1+face*.4f+step;Invoke(rig);Capture("mortar-"+face,Time.time,go.Renderers);}
+                    if(checkOpening)Check(rig.Body.transform.localPosition.x==0&&rig.Body.transform.localPosition.y==0,"Mortar feet remain fixed while firing");
+                }
+            }
+            StratagemAssets.LaserParts.Clear();Time.time=0;
+            var field=StratagemSurface.Create(StratagemSurfaceKind.StaticField,new Vector2(0,0),2,4);
+            if(checkOpening)Check(StratagemAssets.LaserParts.Count==1,"Electric field has a single drawn body");
+            foreach(float t in new[]{0f,.08f,.16f,.24f,.32f,.5f,.67f,.83f,1f,3.69f,3.77f,3.85f,3.93f}){Time.time=t;Invoke(field);Capture("ems",t,StratagemAssets.LaserParts);}
+            Time.time=1;var overlap=StratagemSurface.Create(StratagemSurfaceKind.StaticField,new Vector2(1,0),2,4);Time.time=2;Invoke(field);Invoke(overlap);Capture("ems-overlap",2,StratagemAssets.LaserParts);
+            foreach(var kind in new[]{StratagemSurfaceKind.Gas,StratagemSurfaceKind.Fire})
+            {StratagemAssets.LaserParts.Clear();Time.time=0;var area=StratagemSurface.Create(kind,new Vector2(0,0),2,4);foreach(float t in new[]{.1f,.3f,.5f,1f,3.9f}){Time.time=t;Invoke(area);Capture(kind.ToString(),t,StratagemAssets.LaserParts);}}
+            StratagemAssets.LaserParts.Clear();Time.time=0;
+            var shieldOwner=new StratagemUnit{gameObject=new GameObject(),Stats=new(){ID=20006}};
+            var shield=StratagemShieldVisual.Create(shieldOwner);shield.SetOpen(true,4.5f);
+            foreach(float t in new[]{0f,.16f,.32f,.48f,.64f,.8f,1f,1.16f,1.32f}){Time.time=t;Invoke(shield);Capture("shield",t,StratagemAssets.LaserParts);}
+            int hitIndex=0;
+            foreach(var point in new[]{new Vector2(4.5f,0),new Vector2(0,4.5f),new Vector2(-4.5f,0)})
+            {
+                float hitTime=2+hitIndex++*.8f;Time.time=hitTime;shield.Hit(point);var patch=StratagemAssets.LaserParts.Last();
+                if(checkOpening)Check((patch.transform.position.x-point.x)*(patch.transform.position.x-point.x)+(patch.transform.position.y-point.y)*(patch.transform.position.y-point.y)<.01f,"Shield hit stays at the actual crossing point");
+                for(int n=0;n<8;n++){Time.time=hitTime+n*.06f;AdvanceSprites();Invoke(shield);Capture("shield-hit-"+point.x+"-"+point.y,Time.time,StratagemAssets.LaserParts);}
+            }
+            Time.time=5;shield.SetOpen(false,4.5f);
+            for(int n=0;n<10;n++){Time.time=5+n*.08f;Invoke(shield);AdvanceSprites();Capture("shield-break",Time.time,StratagemAssets.LaserParts);}
+            if(checkTail)Check(!StratagemAssets.LaserParts[0].enabled,"Broken shield completes its drawn collapse");
+            Time.time=6;shield.SetOpen(true,5.5f);Invoke(shield);Capture("shield-reboot",6,StratagemAssets.LaserParts);
+            foreach(bool heavy in new[]{false,true})
+            {
+                StratagemAssets.LaserParts.Clear();Time.time=0;StratagemBlastVisual.Play(new Vector2(0,0),heavy?4:1.5f,heavy);
+                for(int n=0;n<12;n++){Time.time=n*.1f;AdvanceSprites();Capture(heavy?"eagle-blast":"barrage-blast",Time.time,StratagemAssets.LaserParts);}
+            }
+            StratagemAssets.LaserParts.Clear();Time.time=0;
+            var bomb=StratagemAssets.Effect("old.3.1.0",new Vector2(0,5),.65f,1.6f,hold:true);bomb.GetComponent<StratagemAnimation>().Steady=true;var drop=bomb.gameObject.AddComponent<StratagemBombDrop>();drop.Set(new Vector2(0,0),1.6f);
+            foreach(float t in new[]{0f,.3f,.59f,.6f,.65f,.7f,.75f,.85f,1.3f}){Time.time=t;AdvanceSprites();Capture("eagle-drop",t,new[]{bomb});}
+            StratagemAssets.LaserParts.Clear();Time.time=0;
+            var laser=new StratagemLaserVisual(.85f,new SpriteRenderer());
+            foreach(float t in new[]{0f,.08f,.16f,.24f,.32f,1f,1.1f,1.2f,2.69f,2.77f,2.85f,2.93f}){laser.Tick(new Vector2(0,0),t,3-t);Capture("orbital",t,StratagemAssets.LaserParts);}
+            var ground=StratagemAssets.LaserParts[1];var column=StratagemAssets.LaserParts[0];
+            if(checkTail)Check(Math.Abs(column.transform.position.y-(ground.transform.position.y+ground.sprite.bounds.size.y*ground.transform.localScale.y/3))<.0001f,"Orbital column and contact texture meet");
+            Time.time=5;laser.Dispose(true);Time.time=5.16f;AdvanceSprites();Capture("orbital-stop",5.16f,StratagemAssets.LaserParts);
+            File.WriteAllText(args[2],JsonSerializer.Serialize(frames));Console.WriteLine($"PASS: {checks} focused visual checks; {frames.Count} production poses");return;
+        }
         if(args.Length>1&&args[1]=="--rover-beam")
         {
             var go=new GameObject();var unit=new StratagemUnit{gameObject=go,Stats=new(){ID=20102},Kind=StratagemKind.Rover};

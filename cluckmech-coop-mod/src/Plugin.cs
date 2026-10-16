@@ -14,7 +14,7 @@ namespace CluckmechCoop
     [BepInPlugin("billy.cluckmech.coop", "更好的鸡械绿洲", Version)]
     public sealed class Plugin : BaseUnityPlugin
     {
-        internal const string Version = "0.5.10";
+        internal const string Version = "0.5.11";
         internal static Plugin Instance;
         internal static TransferService Transfers;
         internal static NetworkService Network;

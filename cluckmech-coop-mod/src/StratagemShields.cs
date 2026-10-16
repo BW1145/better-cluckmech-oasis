@@ -110,33 +110,36 @@ namespace CluckmechCoop
     public sealed class StratagemShield : MonoBehaviour
     {
         private StratagemUnit root;
-        private StratagemSurface dome;
+        private StratagemShieldVisual dome;
         private float capacity,maximum,lastHit,restart,opening,nextThreat;
-        private float visualOpen;
-        private bool wasOpen;
         private 联机_单位属性同步 sync;
+        private bool waitingForBrokenCapacity;
         private StratagemGauge gauge;
         internal float Radius => root.Parameters.BlastRadius;
         internal float Capacity => capacity;
         internal bool Open => root != null && root.Alive && Time.time >= opening && restart == 0 && capacity > 0;
         internal void Initialize(StratagemUnit source)
         {
-            root = source; opening = Time.time+.8f;visualOpen=Time.time;
+            root = source; opening = Time.time+.8f;
             maximum = root.Stats.当前生命值上限*root.Parameters.CapacityRatio; capacity = maximum;
             sync = GetComponent<联机_单位属性同步>();
-            dome=StratagemSurface.Create(StratagemSurfaceKind.Shield,transform.position,Radius,0,transform);
-            dome.transform.localPosition=new Vector3(0,0,.4f);dome.Visible(false);
+            dome=StratagemShieldVisual.Create(root);
+            dome.SetOpen(true,Radius);
             gauge = new StratagemGauge(transform,1.45f*StratagemRig.ModelScale,new Color(1,.75f,.15f));
             StratagemShields.Add(this);
         }
         private void Update()
         {
-            if (root == null || !root.Alive) { if (dome != null) dome.Visible(false); return; }
+            if (root == null || !root.Alive) { if (dome != null) dome.SetOpen(false,Radius); return; }
             var p = root.Parameters;
             maximum = root.Stats.当前生命值上限*p.CapacityRatio;
             if (Plugin.Role == 2)
             {
-                if (sync != null) capacity = sync.进度条*maximum;
+                if (sync != null)
+                {
+                    if(sync.进度条<=0)waitingForBrokenCapacity=false;
+                    capacity=waitingForBrokenCapacity?0:sync.进度条*maximum;
+                }
             }
             else
             {
@@ -156,12 +159,7 @@ namespace CluckmechCoop
                 }
             }
             bool starting=Time.time<opening;
-            if(Open&&!wasOpen&&!starting)visualOpen=Time.time;
-            wasOpen=Open;
-            dome.Visible(Open||starting);
-            float start=Mathf.Clamp01((Time.time-visualOpen)/(starting?.8f:.25f));
-            dome.Strength(start);
-            dome.transform.localScale=Vector3.one*Mathf.Lerp(.35f,1,start);
+            dome.SetOpen(Open||starting,Radius);
             gauge.Set(maximum > 0 ? capacity/maximum : 0);
             root.ShieldState(Open,maximum>0?capacity/maximum:0);
         }
@@ -184,6 +182,12 @@ namespace CluckmechCoop
                         }
             }
             return residual;
+        }
+        internal void HitVisual(Vector2 point)=>dome.Hit(point);
+        internal void BreakVisual()
+        {
+            if(Plugin.Role==2){waitingForBrokenCapacity=sync!=null&&sync.进度条>0;capacity=0;}
+            dome.SetOpen(false,Radius);
         }
         private void OnDestroy() => StratagemShields.Remove(this);
     }

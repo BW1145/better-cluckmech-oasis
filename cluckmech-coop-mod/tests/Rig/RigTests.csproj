@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems><NuGetAudit>false</NuGetAudit><NoWarn>CS0649</NoWarn></PropertyGroup>
-  <ItemGroup><Compile Include="../../src/StratagemRig.cs"/><Compile Include="../../src/StratagemLaserVisual.cs"/><Compile Include="../../src/StratagemDroneBeam.cs"/><Compile Include="../../src/StratagemBeamGeometry.cs"/><Compile Include="Program.cs"/></ItemGroup>
+  <ItemGroup><Compile Include="../../src/StratagemRig.cs"/><Compile Include="../../src/StratagemLaserVisual.cs"/><Compile Include="../../src/StratagemDroneBeam.cs"/><Compile Include="../../src/StratagemBeamGeometry.cs"/><Compile Include="../../src/StratagemSurface.cs"/><Compile Include="../../src/StratagemShieldVisual.cs"/><Compile Include="../../src/StratagemAnimation.cs"/><Compile Include="../../src/StratagemVisualMotion.cs"/><Compile Include="Program.cs"/></ItemGroup>
+  <ItemGroup><Compile Include="../../src/StratagemBlastVisual.cs"/></ItemGroup>
 </Project>
