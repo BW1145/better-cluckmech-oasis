@@ -86,9 +86,9 @@ namespace CluckmechCoop
     {
         internal static readonly StratagemDefinition[] Units = {
             new StratagemDefinition(20001, "MD-6地雷播撒器", 4, 2, 4, 3, 650, 0, 100, .1f, 3.2f, 30, 2, new[] {42,109,157,23,25,66,82,72}),
-            new StratagemDefinition(20002, "380mm轨道火力网", 5, 4, 6, 9, 1, 0, 1200, 1, 4.5f, 60, 12, new[] {42,109,157,23,25,66,82,72}),
-            new StratagemDefinition(20003, "轨道激光", 5, 4, 6, 8, 1, 0, 250, 4, 6, 60, 12, new[] {109,157,23,66,82,181,182,183,72}),
-            new StratagemDefinition(20004, "飞鹰500kg", 5, 4, 6, 8, 1, 0, 3000, 1, 4, 45, 8, new[] {42,109,157,23,25,66,72}),
+            new StratagemDefinition(20002, "380mm轨道火力网", 5, 4, 6, 6, 1, 0, 1200, 1, 4.5f, 60, 12, new[] {42,109,157,23,25,66,82,72}),
+            new StratagemDefinition(20003, "轨道激光", 5, 4, 6, 8, 1, 0, 300, 4, 6, 60, 12, new[] {109,157,23,66,82,181,182,183,72}),
+            new StratagemDefinition(20004, "飞鹰500kg", 5, 4, 6, 4, 1, 0, 3000, 1, 4, 45, 8, new[] {42,109,157,23,25,66,72}),
             new StratagemDefinition(20005, "EMS迫击炮", 0, 2, 4, 3, 450, 0, 0, .25f, 9, 25, 2, new[] {82,81,167,28,71,72}),
             new StratagemDefinition(20006, "FX-12护盾发生器", 1, 3, 5, 3, 5000, 15, 0, 0, 4.5f, 30, 3, new[] {27,28,29,39,71,112,110,72}),
             new StratagemDefinition(20007, "AX/LAS-5激光护卫犬", 2, 3, 5, 3, 450, 0, 40, 4, 4.5f, 30, 3, new[] {143,105,146,255,462,23,72})
@@ -114,7 +114,7 @@ namespace CluckmechCoop
             new StratagemAffix(25036,2,"高温熔穿","连续照射同一敌人3秒后，光束伤害提高30%，灼烧提高至6点。"),
             new StratagemAffix(25041,0,"扩大杀伤","内爆炸半径增加至3，外半径增加至4.8。"),
             new StratagemAffix(25042,0,"高频引信","炸弹入土后等待缩短至0.5秒。"),
-            new StratagemAffix(25043,0,"优化挂载","放置动力减少至6。"),
+            new StratagemAffix(25043,0,"优化挂载","放置动力减少至3，放置冷却缩短10%。"),
             new StratagemAffix(25044,1,"重型弹头","伤害提高25%，放置冷却增加15%。"),
             new StratagemAffix(25045,1,"快速返航","放置冷却缩短20%。"),
             new StratagemAffix(25046,2,"震荡冲击","爆炸外围增加1.5格冲击环，眩晕0.8秒并击退敌人。"),
@@ -241,7 +241,7 @@ namespace CluckmechCoop
                 case 25036: Melt = true; break;
                 case 25041: InnerRadius = 3; BlastRadius = 4.8f; break;
                 case 25042: CallDelay = .5f; break;
-                case 25043: Power = 6; break;
+                case 25043: Power = 3; Cooldown *= .9f; break;
                 case 25044: DamageMultiplier *= 1.25f; Cooldown *= 1.15f; break;
                 case 25045: Cooldown *= .8f; break;
                 case 25046: Shock = true; break;

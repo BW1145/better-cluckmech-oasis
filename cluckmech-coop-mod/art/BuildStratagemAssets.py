@@ -165,40 +165,17 @@ for prefix,kind,row,count in [('gas-field',4,5,8),
             # The beam renderer stretches this entire sprite between its two endpoints.
             tile=tile.crop(tile.getbbox())
         frames['fx.'+prefix+'.'+str(column)]=(tile,(.5,.5),False,32)
-for sheet,prefix,phases in [('emsFieldPhases','ems',['start','loop','end']),
-                            ('shieldEnergyPhases','shield',['start','loop','end','hit'])]:
-    for row,phase in enumerate(phases):
-        for column in range(8):
-            if prefix=='shield':
-                source=Image.open(SOURCES/(sheet+'.png')).convert('RGBA')
-                # The generated rows have measured centres and uneven gutters.
-                centre=[153,366,592,800][row]
-                top,bottom=[(42,252),(255,480),(481,714),(719,887)][row]
-                side=round(source.width/8)
-                tile=Image.new('RGBA',(side,side))
-                strip=source.crop((round(column*source.width/8),top,round((column+1)*source.width/8),bottom))
-                tile.alpha_composite(strip,(0,round(top-centre+side/2)))
-                tile=tile.resize((128,128),Image.Resampling.NEAREST)
-            else:
-                tile=grid(sheet,8,len(phases),row*8+column).resize((128,128),Image.Resampling.NEAREST)
-            pixels=np.array(tile)
-            rgb=pixels[:,:,:3].astype(float)
-            if prefix=='ems':
-                # Alpha extraction removes the generated blue backing, not the filament RGB.
-                energy=np.clip((rgb[:,:,1]-185)/65,0,1)
-                pixels[:,:,3]=(pixels[:,:,3]*energy).astype(np.uint8)
-            else:
-                yy,xx=np.mgrid[:128,:128]
-                radial=np.sqrt(((xx-63.5)/64)**2+((yy-63.5)/64)**2)
-                highlight=np.clip((rgb[:,:,1]-180)/75,0,1)
-                if phase=='hit':
-                    alpha=.16+.8*highlight
-                else:
-                    # One translucent membrane: refraction strongest at its outer edge.
-                    edge=np.clip((radial-.64)/.2,0,1)
-                    alpha=(.06+.16*highlight)*(1-edge)+(.65+.35*highlight)*edge
-                pixels[:,:,3]=(pixels[:,:,3]*alpha).astype(np.uint8)
-            frames[f'fx.{prefix}.{phase}.{column}']=(Image.fromarray(pixels),(.5,.5),False,32)
+for row,phase in enumerate(['start','loop','end']):
+    for column in range(8):
+        tile=grid('emsFieldPhases',8,3,row*8+column).resize((128,128),Image.Resampling.NEAREST)
+        pixels=np.array(tile)
+        rgb=pixels[:,:,:3].astype(float)
+        # Alpha extraction removes the generated blue backing, not the filament RGB.
+        energy=np.clip((rgb[:,:,1]-185)/65,0,1)
+        pixels[:,:,3]=(pixels[:,:,3]*energy).astype(np.uint8)
+        frames[f'fx.ems.{phase}.{column}']=(Image.fromarray(pixels),(.5,.5),False,32)
+from BuildShieldEnergy import compile_shield
+compile_shield(frames)
 for n in range(8):
     frames['fx.warning.'+str(n)]=(legacy(1,1,n).resize((128,128),Image.Resampling.NEAREST),(.5,.5),False,32)
     frames['fx.eagle-flight.'+str(n)]=(legacy(3,0,n).resize((128,128),Image.Resampling.NEAREST),(.5,.5),False,32)

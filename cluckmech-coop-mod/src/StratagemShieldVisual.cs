@@ -24,7 +24,7 @@ namespace CluckmechCoop
         internal void Hit(Vector2 point)
         {
             Vector2 normal=(point-(Vector2)transform.position).normalized;
-            var patch=StratagemAssets.Animated("fx.shield.hit.",8,point-normal*.08f,1.65f,.48f,hold:true);
+            var patch=StratagemAssets.Animated("fx.shield.hit.",8,point,1.65f,.48f,hold:true);
             patch.transform.rotation=Quaternion.Euler(0,0,Mathf.Atan2(normal.y,normal.x)*Mathf.Rad2Deg);
         }
         private void Update()
@@ -40,7 +40,7 @@ namespace CluckmechCoop
             string phase=open?(age<.64f?"start":"loop"):"end";
             int frame=phase=="loop"?3:Mathf.Min(7,Mathf.FloorToInt(age/.08f));
             shell.sprite=StratagemAssets.Named("fx.shield."+phase+"."+frame);
-            // The stable contact rim spans 76% of the registered frame; glow may spill beyond it.
+            // The stable contact rim spans 76% of the registered frame; all phases share this registered footprint.
             shell.transform.localScale=Vector3.one*(radius*2/.76f/shell.sprite.bounds.size.x);
             shell.color=Color.white;
         }

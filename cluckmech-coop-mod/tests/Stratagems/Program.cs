@@ -98,9 +98,9 @@ internal static class Program
         Near(eagle.EagleDamage(4), 800, "Outer radius edge");
         Near(eagle.EagleDamage(4.01f), 0, "Outside blast");
         eagle = Params(20004, 25041, 25043, 25044, 25045);
-        Check(eagle.Power == 6, "Efficient Eagle payload costs six power");
+        Check(eagle.Power == 3, "Efficient Eagle payload costs three power");
         Near(eagle.EagleDamage(4.8f), 1000, "Heavy expanded blast outer edge");
-        Near(eagle.Cooldown, 41.4f, "Heavy payload and fast return cooldown");
+        Near(eagle.Cooldown, 37.26f, "Heavy payload and fast return cooldown");
         var mortar = Params(20005, 25051, 25052, 25053, 25055);
         Check(mortar.Gas && mortar.Stun == 0 && mortar.Slow == .5f, "Gas replaces stun while retaining slow");
         var rover = Params(20007, 25071, 25072, 25073, 25074);
