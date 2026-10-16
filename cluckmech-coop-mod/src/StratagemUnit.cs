@@ -457,6 +457,12 @@ namespace CluckmechCoop
         public void 死亡触发()
         {
             dead = true;
+            var display = GetComponent<模块_生命显示>();
+            if (display != null)
+            {
+                display.enabled = false;
+                foreach (var graphic in display.GetComponentsInChildren<UnityEngine.UI.Graphic>(true)) graphic.enabled = false;
+            }
             rig.Die();
             if (Plugin.Role != 2)
                 if (Kind == StratagemKind.Mortar) StratagemEffects.Emit(this,0,transform.position,1);
