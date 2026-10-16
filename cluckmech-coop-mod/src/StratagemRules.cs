@@ -90,7 +90,7 @@ namespace CluckmechCoop
             new StratagemDefinition(20003, "轨道激光", 5, 4, 6, 8, 1, 0, 250, 4, 6, 60, 12, new[] {109,157,23,66,82,181,182,183,72}),
             new StratagemDefinition(20004, "飞鹰500kg", 5, 4, 6, 8, 1, 0, 3000, 1, 4, 45, 8, new[] {42,109,157,23,25,66,72}),
             new StratagemDefinition(20005, "EMS迫击炮", 0, 2, 4, 3, 450, 0, 0, .25f, 9, 25, 2, new[] {82,81,167,28,71,72}),
-            new StratagemDefinition(20006, "FX-12护盾发生器", 1, 3, 5, 3, 5000, 15, 0, 0, 4.5f, 30, 3, new[] {27,28,29,39,71,112,72}),
+            new StratagemDefinition(20006, "FX-12护盾发生器", 1, 3, 5, 3, 5000, 15, 0, 0, 4.5f, 30, 3, new[] {27,28,29,39,71,112,110,72}),
             new StratagemDefinition(20007, "AX/LAS-5激光护卫犬", 2, 3, 5, 3, 450, 0, 40, 4, 4.5f, 30, 3, new[] {143,105,146,255,462,23,72})
         };
         internal static readonly StratagemAffix[] Affixes = {
@@ -124,11 +124,9 @@ namespace CluckmechCoop
             new StratagemAffix(25054,1,"稳定脉冲","首次眩晕提高至1秒。",25055),
             new StratagemAffix(25055,1,"瓦斯弹头","保留减速，施加持续2秒、每0.5秒5点中毒，替代首次眩晕。",25053),
             new StratagemAffix(25056,2,"紧急拦阻","每第三次发射，额外向另一名靠近基地的敌人发射一弹。"),
-            new StratagemAffix(25061,0,"扩域线圈","护罩半径增加至5.5。"),
             new StratagemAffix(25062,0,"备用电容","护罩容量提高至本体最大生命的55%。"),
-            new StratagemAffix(25063,0,"快速复位","破盾后重启时间缩短至7秒。"),
-            new StratagemAffix(25064,1,"稳态充电","未破盾再生等待2.5秒，每秒恢复150容量。"),
-            new StratagemAffix(25065,1,"紧急泄压","破盾时眩晕并击退4格内敌人，眩晕0.6秒。"),
+            new StratagemAffix(25063,0,"快速复位","破盾后重启时间缩短至5秒。"),
+            new StratagemAffix(25065,1,"紧急泄压","破盾时眩晕护罩范围内所有可被眩晕的敌人5秒，并击退。"),
             new StratagemAffix(25066,2,"堡垒模式","护罩受到的弹丸伤害减少25%。"),
             new StratagemAffix(25071,0,"大容量散热器","无人机热量容量提高至150。"),
             new StratagemAffix(25072,0,"高效风冷","停靠充能缩短至3秒，返航速度翻倍；近距离返航与起飞最短0.25秒。"),
@@ -253,10 +251,8 @@ namespace CluckmechCoop
                 case 25054: Stun = 1; break;
                 case 25055: Gas = true; Stun = 0; break;
                 case 25056: DoubleMortar = true; break;
-                case 25061: BlastRadius = 5.5f; break;
                 case 25062: CapacityRatio = .55f; break;
-                case 25063: Reboot = 7; break;
-                case 25064: RegenDelay = 2.5f; Regen = 150; break;
+                case 25063: Reboot = 5; break;
                 case 25065: Discharge = true; break;
                 case 25066: ShieldDamageFactor = .75f; break;
                 case 25071: HeatCap = 150; break;

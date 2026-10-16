@@ -175,9 +175,9 @@ namespace CluckmechCoop
                 StratagemEffects.Emit(root,12,transform.position,Radius);
                 if (root.Parameters.Discharge)
                     foreach (var enemy in StratagemWorld.Enemies)
-                        if (StratagemWorld.Living(enemy) && Vector2.Distance(enemy.transform.position,transform.position) <= 4)
+                        if (StratagemWorld.Living(enemy) && StratagemWorld.DistanceSquared(enemy,transform.position) <= Radius*Radius)
                         {
-                            root.Damage.Status(enemy,攻击类型与状态数据库.状态枚举.眩晕,.6f,Vector4.zero);
+                            root.Damage.Status(enemy,攻击类型与状态数据库.状态枚举.眩晕,5,Vector4.zero);
                             enemy.GetComponent<模块_移动>()?.被击退(new Vector4(transform.position.x,transform.position.y,2,.2f));
                         }
             }

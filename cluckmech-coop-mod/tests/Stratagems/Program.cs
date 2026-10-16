@@ -40,8 +40,8 @@ internal static class Program
         Check(StratagemCatalog.OwnsDeck(new[] {two,one,null,null,null},new[] {one,two}), "Reordered same-name cards keep exact upgrades and cap");
         Check(!StratagemCatalog.OwnsDeck(new[] {one,one,null,null,null},new[] {one,two}), "Deck cannot duplicate one inventory copy");
         Check(!StratagemCatalog.OwnsDeck(new[] {one.Copy()},new[] {two}), "Same identifier with different upgrades is rejected");
-        Check(StratagemCatalog.Units.Length==7&&StratagemCatalog.ActiveAffixes.Count()==33&&StratagemCatalog.Affixes.Length==44,"Seven machines, 33 candidates and 44 readable identifiers");
-        int[] counts={4,5,5,5,4,5,5};
+        Check(StratagemCatalog.Units.Length==7&&StratagemCatalog.ActiveAffixes.Count()==31&&StratagemCatalog.Affixes.Length==42,"Seven machines, 31 candidates and 42 readable identifiers");
+        int[] counts={4,5,5,5,4,3,5};
         foreach (var unit in StratagemCatalog.Units)
         {
             Check(ids.Add(unit.Id), "Unique unit identifiers");
