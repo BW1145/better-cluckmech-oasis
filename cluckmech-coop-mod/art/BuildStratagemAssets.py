@@ -195,7 +195,7 @@ for sheet,prefix,phases in [('emsFieldPhases','ems',['start','loop','end']),
                 else:
                     # One translucent membrane: refraction strongest at its outer edge.
                     edge=np.clip((radial-.64)/.2,0,1)
-                    alpha=(.025+.10*highlight)*(1-edge)+(.22+.45*highlight)*edge
+                    alpha=(.06+.16*highlight)*(1-edge)+(.65+.35*highlight)*edge
                 pixels[:,:,3]=(pixels[:,:,3]*alpha).astype(np.uint8)
             frames[f'fx.{prefix}.{phase}.{column}']=(Image.fromarray(pixels),(.5,.5),False,32)
 for n in range(8):

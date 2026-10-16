@@ -243,7 +243,7 @@ namespace CluckmechCoop
             rig.MineState(false);
             var sensor = new GameObject("MineSensor"); sensor.transform.SetParent(transform,false);
             var collider = sensor.AddComponent<CircleCollider2D>(); collider.radius = .45f; collider.isTrigger = true;
-            sensor.AddComponent<StratagemMineSensor>().Mine = this;
+            sensor.AddComponent<StratagemMineSensor>().Initialize(this,collider);
         }
         internal void MineSetup(uint parent,float damage,float armTime)
         {
@@ -271,12 +271,15 @@ namespace CluckmechCoop
             rig.MineState(true);
             yield return new WaitForSeconds(p.TriggerTime);
             if (Parent == null) yield break;
-            Parent.Damage.Area(transform.position,p.BlastRadius,MineDamage,Parent.Damage.Critical());
-            if (p.BurningMines)
-                foreach (var enemy in StratagemWorld.Enemies)
-                    if (StratagemWorld.Living(enemy) && Vector2.Distance(enemy.transform.position,transform.position) <= p.BlastRadius) Parent.Damage.Burn(enemy,4,3);
             StratagemEffects.Emit(Parent,0,transform.position,p.BlastRadius);
-            StratagemWorld.DestroyUnit(gameObject);
+            try
+            {
+                Parent.Damage.Area(transform.position,p.BlastRadius,MineDamage,Parent.Damage.Critical());
+                if (p.BurningMines)
+                    foreach (var enemy in StratagemWorld.Enemies)
+                        if (StratagemWorld.Living(enemy) && StratagemWorld.DistanceSquared(enemy,transform.position) <= p.BlastRadius*p.BlastRadius) Parent.Damage.Burn(enemy,4,3);
+            }
+            finally { StratagemWorld.DestroyUnit(gameObject); }
         }
         private IEnumerator Barrage()
         {
@@ -337,7 +340,7 @@ namespace CluckmechCoop
                     nextContact = Time.time+.1f;
                     foreach (var enemy in StratagemWorld.Enemies)
                     {
-                        if (!StratagemWorld.Living(enemy) || ((Vector2)enemy.transform.position-beamPosition).sqrMagnitude > p.BlastRadius*p.BlastRadius) continue;
+                        if (!StratagemWorld.Living(enemy) || StratagemWorld.DistanceSquared(enemy,beamPosition) > p.BlastRadius*p.BlastRadius) continue;
                         if (!lastSeen.TryGetValue(enemy,out var last) || Time.time-last > .2f) contact[enemy] = Time.time;
                         lastSeen[enemy] = Time.time;
                     }
@@ -352,7 +355,7 @@ namespace CluckmechCoop
                     {
                         if (i >= StratagemWorld.Enemies.Count) continue;
                         var enemy = StratagemWorld.Enemies[i];
-                        if (!StratagemWorld.Living(enemy) || Vector2.Distance(enemy.transform.position,beamPosition) > p.BlastRadius) continue;
+                        if (!StratagemWorld.Living(enemy) || StratagemWorld.DistanceSquared(enemy,beamPosition) > p.BlastRadius*p.BlastRadius) continue;
                         float multiplier = p.Melt && contact.TryGetValue(enemy,out var began) && Time.time-began >= 3 ? 1.3f : 1;
                         Damage.Hit(enemy,Damage.Attack*p.DamageMultiplier*multiplier,critical);
                         Damage.Burn(enemy,p.Melt ? 6 : 4,2);
@@ -375,12 +378,12 @@ namespace CluckmechCoop
             yield return new WaitForSeconds(.6f+Parameters.CallDelay);
             if (!Alive) yield break;
             var p = Parameters;
-            Damage.Area(point,p.BlastRadius,Damage.Attack*p.DamageMultiplier,Damage.Critical(), enemy => p.EagleDamage(Vector2.Distance(enemy.transform.position,point))/(3000*p.DamageMultiplier));
+            Damage.Area(point,p.BlastRadius,Damage.Attack*p.DamageMultiplier,Damage.Critical(), enemy => p.EagleDamage(Mathf.Sqrt(StratagemWorld.DistanceSquared(enemy,point)))/(3000*p.DamageMultiplier));
             if (p.Shock)
                 foreach (var enemy in StratagemWorld.Enemies)
                 {
                     if (!StratagemWorld.Living(enemy)) continue;
-                    float distance = Vector2.Distance(enemy.transform.position,point);
+                    float distance = Mathf.Sqrt(StratagemWorld.DistanceSquared(enemy,point));
                     if (distance <= p.BlastRadius || distance > p.BlastRadius+1.5f) continue;
                     Damage.Status(enemy,攻击类型与状态数据库.状态枚举.眩晕,.8f,Vector4.zero);
                     enemy.GetComponent<模块_移动>()?.被击退(new Vector4(point.x,point.y,2,.2f));
@@ -473,6 +476,19 @@ namespace CluckmechCoop
     public sealed class StratagemMineSensor : MonoBehaviour
     {
         internal StratagemUnit Mine;
+        private Collider2D sensor;
+        private ContactFilter2D filter;
+        private float nextScan;
+        private readonly List<Collider2D> contacts = new List<Collider2D>(16);
+        internal void Initialize(StratagemUnit mine,Collider2D shape)
+        { Mine=mine;sensor=shape;filter.NoFilter();filter.useTriggers=true; }
+        private void FixedUpdate()
+        {
+            if (Mine == null || Time.time < nextScan) return;
+            nextScan=Time.time+.1f;
+            contacts.Clear();sensor.OverlapCollider(filter,contacts);
+            foreach (var contact in contacts) if (contact != null) Mine.TriggerMine(contact.GetComponentInParent<模块_基本属性>());
+        }
         private void OnTriggerEnter2D(Collider2D collider) => Mine?.TriggerMine(collider.GetComponentInParent<模块_基本属性>());
         private void OnTriggerStay2D(Collider2D collider) => Mine?.TriggerMine(collider.GetComponentInParent<模块_基本属性>());
     }

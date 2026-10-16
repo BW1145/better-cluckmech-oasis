@@ -38,7 +38,7 @@ namespace CluckmechCoop
             shell.enabled=open||age<.64f;
             if(!shell.enabled){if(!alive)Destroy(gameObject);return;}
             string phase=open?(age<.64f?"start":"loop"):"end";
-            int frame=phase=="loop"?Mathf.FloorToInt(age*12)%8:Mathf.Min(7,Mathf.FloorToInt(age/.08f));
+            int frame=phase=="loop"?3:Mathf.Min(7,Mathf.FloorToInt(age/.08f));
             shell.sprite=StratagemAssets.Named("fx.shield."+phase+"."+frame);
             // The stable contact rim spans 76% of the registered frame; glow may spill beyond it.
             shell.transform.localScale=Vector3.one*(radius*2/.76f/shell.sprite.bounds.size.x);

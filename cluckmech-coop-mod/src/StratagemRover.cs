@@ -132,10 +132,7 @@ namespace CluckmechCoop
                 foreach(var enemy in StratagemWorld.Enemies)
                 {
                     if(!StratagemWorld.Living(enemy))continue;
-                    var collider=enemy.GetComponent<Collider2D>();
-                    var bounds=collider==null?new Bounds(enemy.transform.position,Vector3.zero):collider.bounds;
-                    if(StratagemBeamGeometry.Intersects(start.x,start.y,direction.x,direction.y,drone.Damage.Range,
-                        bounds.center.x,bounds.center.y,bounds.extents.x,bounds.extents.y,out float distance))
+                    if(StratagemWorld.BeamContact(enemy,start,direction,drone.Damage.Range,out float distance))
                         beamHits.Add(new BeamHit{Unit=enemy,Distance=distance});
                 }
                 beamHits.Sort((a,b)=>a.Distance.CompareTo(b.Distance));

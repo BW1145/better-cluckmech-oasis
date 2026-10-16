@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
+using Mirror;
 using UnityEngine;
 using UnityEngine.Events;
 using 函数库;
@@ -79,11 +80,11 @@ namespace CluckmechCoop
         private Action<T> Receiver<T>(MonoBehaviour component, Dictionary<MonoBehaviour, Action<T>> cache)
         {
             if (cache.TryGetValue(component, out var action)) return action;
-            var method = AccessTools.Method(component.GetType(), "受到伤害", new[] { typeof(T) });
+            var method = component.GetType().GetMethod("受到伤害",BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic,null,new[] { typeof(T) },null);
             if (method != null) action = (Action<T>)Delegate.CreateDelegate(typeof(Action<T>), component, method);
             else
             {
-                method = AccessTools.Method(component.GetType(), "受到伤害", Type.EmptyTypes);
+                method = component.GetType().GetMethod("受到伤害",BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic,null,Type.EmptyTypes,null);
                 if (method != null)
                 {
                     var notify = (Action)Delegate.CreateDelegate(typeof(Action), component, method);
@@ -189,14 +190,35 @@ namespace CluckmechCoop
         private static IEnumerable<MethodBase> TargetMethods()
         {
             yield return AccessTools.Method(typeof(结算界面脚本), "Awake");
-            yield return AccessTools.Method(typeof(结算界面脚本), "Start");
-            yield return AccessTools.Method(typeof(奖励结算脚本), "Awake");
-            yield return AccessTools.Method(typeof(奖励流程脚本), "Start");
+            yield return AccessTools.Method(typeof(奖励结算脚本), "初始化");
         }
-        private static bool Prefix(MonoBehaviour __instance)
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            foreach (var instruction in instructions)
+                if (instruction.operand is MethodInfo method && method.Name == "GetComponent" && method.IsGenericMethod && method.GetGenericArguments()[0] == typeof(奖励列表脚本))
+                    yield return new CodeInstruction(OpCodes.Call,AccessTools.Method(typeof(RewardSceneContext),nameof(RewardList))).MoveLabelsFrom(instruction);
+                else yield return instruction;
+        }
+        private static 奖励列表脚本 RewardList(GameObject target)
+            => NativeRepairs.Enabled && target == null ? null : target.GetComponent<奖励列表脚本>();
+    }
+    [HarmonyPatch(typeof(奖励结算脚本),"随机炮台结果运算")]
+    internal static class OptionalRewardDraw
+    {
+        private static bool Prefix(奖励列表脚本 ___奖励列表) => !NativeRepairs.Enabled || !ReferenceEquals(___奖励列表,null);
+    }
+    [HarmonyPatch(typeof(结算界面脚本),"总结流程更新")]
+    internal static class OptionalRewardSummary
+    {
+        private static bool Prefix(奖励列表脚本 ___奖励列表) => !NativeRepairs.Enabled || !ReferenceEquals(___奖励列表,null);
+    }
+    [HarmonyPatch(typeof(奖励流程脚本),"Start")]
+    internal static class OptionalRewardFlow
+    {
+        private static bool Prefix(奖励流程脚本 __instance,ref 奖励结算脚本 ___奖励结算)
         {
             if (!NativeRepairs.Enabled || GameObject.Find("奖励列表") != null) return true;
-            __instance.enabled = false;
+            ___奖励结算=__instance.GetComponent<奖励结算脚本>();
             return false;
         }
     }
@@ -268,7 +290,9 @@ namespace CluckmechCoop
         }
         private static bool Prefix(MonoBehaviour __instance)
         {
-            if (!NativeRepairs.Enabled || !RunSaveRepair.AtMainMenu) return true;
+            if (!NativeRepairs.Enabled) return true;
+            bool missing = __instance is 建造系统 ? GameObject.Find("预放置炮台显示") == null : __instance.GetComponent<模块_阶段判断器>() == null;
+            if (!RunSaveRepair.AtMainMenu && !missing) return true;
             if (__instance is 建造系统)
             {
                 建造系统.是否建造模式 = 建造系统.是否放置基地车 = 建造系统.是否能建造 = 建造系统.按键建造模式 = 建造系统.联机_是否虚拟放置基地车 = false;
@@ -276,5 +300,69 @@ namespace CluckmechCoop
             __instance.enabled = false;
             return false;
         }
+    }
+
+    [HarmonyPatch]
+    internal static class RepairHitFeedback
+    {
+        private static IEnumerable<MethodBase> TargetMethods()
+        {
+            yield return AccessTools.Method(typeof(模块_玩家_受击反馈),"Start");
+            yield return AccessTools.Method(typeof(模块_玩家_受击反馈),"受到伤害");
+            yield return AccessTools.Method(typeof(模块_玩家_受击反馈),"受伤结束");
+        }
+        private static bool Prefix(模块_玩家_受击反馈 __instance)
+        {
+            if (!NativeRepairs.Enabled) return true;
+            if (__instance.玩家身体 != null && __instance.玩家身体.GetComponent<SpriteRenderer>() != null) return true;
+            var model=__instance.GetComponent<SpriteRenderer>();
+            if(model==null)
+            {
+                var child=__instance.transform.Find("本体")??__instance.transform.Find("炮筒");
+                if(child!=null)model=child.GetComponent<SpriteRenderer>();
+            }
+            if(model==null)return false;
+            __instance.玩家身体=model.gameObject;return true;
+        }
+    }
+    [HarmonyPatch(typeof(模块_攻击),"初始化")]
+    internal static class RepairAttackOrigin
+    {
+        private static void Postfix(模块_攻击 __instance)
+        {if(NativeRepairs.Enabled&&__instance.炮口位置==null)__instance.炮口位置=__instance.transform;}
+    }
+    [HarmonyPatch(typeof(词条_6_死亡掉落),"死亡触发")]
+    internal static class RepairEmptyDrop
+    {
+        private static bool Prefix(词条_6_死亡掉落 __instance)
+        {
+            if(!NativeRepairs.Enabled)return true;
+            if(!(UnityEngine.Random.Range(0f,1f)<=__instance.掉落概率)||__instance.随机掉落物==null||__instance.随机掉落物.Length==0)return false;
+            var drop=__instance.随机掉落物[UnityEngine.Random.Range(0,__instance.随机掉落物.Length)];
+            // Empty entries retain their native probability of awarding nothing.
+            if(drop==null)return false;
+            bool network=drop.GetComponent<NetworkIdentity>()!=null;
+            if(network&&Plugin.Role==2)return false;
+            var copy=UnityEngine.Object.Instantiate(drop,__instance.transform.position,__instance.transform.rotation);
+            if(network&&Plugin.Role==1)NetworkServer.Spawn(copy);
+            return false;
+        }
+    }
+    [HarmonyPatch(typeof(词条_100034_定时销毁),"Start")]
+    internal static class RepairEffectLifetime
+    {
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var register=AccessTools.Method(typeof(模块_词条_词缀管理器),"收到词条");
+            foreach(var instruction in instructions)
+                if(instruction.Calls(register))yield return new CodeInstruction(OpCodes.Call,AccessTools.Method(typeof(RepairEffectLifetime),nameof(Register))).MoveLabelsFrom(instruction);
+                else if(instruction.operand is MethodInfo method&&method.Name=="GetComponent"&&method.IsGenericMethod&&method.GetGenericArguments()[0]==typeof(效果物体引用器))
+                    yield return new CodeInstruction(OpCodes.Call,AccessTools.Method(typeof(RepairEffectLifetime),nameof(Effects))).MoveLabelsFrom(instruction);
+                else yield return instruction;
+        }
+        private static void Register(模块_词条_词缀管理器 manager,世界类.词条数据包 packet)
+        {if(!NativeRepairs.Enabled||manager!=null)manager.收到词条(packet);}
+        private static 效果物体引用器 Effects(GameObject target)
+            =>NativeRepairs.Enabled&&target==null?null:target.GetComponent<效果物体引用器>();
     }
 }

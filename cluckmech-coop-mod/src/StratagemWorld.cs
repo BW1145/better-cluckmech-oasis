@@ -10,12 +10,14 @@ namespace CluckmechCoop
     {
         internal static readonly List<模块_基本属性> Enemies = new List<模块_基本属性>();
         private static readonly HashSet<模块_基本属性> enemySet = new HashSet<模块_基本属性>();
+        private static readonly Dictionary<模块_基本属性,Collider2D[]> hitboxes = new Dictionary<模块_基本属性,Collider2D[]>();
+        private static readonly System.Reflection.FieldInfo hurtStats = AccessTools.Field(typeof(模块_受伤),"基本属性");
         internal static readonly List<模块_基本属性> Players = new List<模块_基本属性>();
         internal static GameObject Base;
         internal static PolyNav.PolyNavMap GroundMap;
         internal static void Begin()
         {
-            Enemies.Clear(); enemySet.Clear(); Players.Clear();
+            Enemies.Clear(); enemySet.Clear(); hitboxes.Clear(); Players.Clear();
             if (!ModuleSettings.Extra.Stratagems) return;
             GroundMap = 函数库.常用函数.搜索物体并返回物体内组件<导航管理器>(函数库.常数类.命名_导航管理器)?.地面导航地图;
             foreach (var stats in 世界事件系统.场上所有单位) Add(stats);
@@ -29,23 +31,58 @@ namespace CluckmechCoop
             StratagemAudio.Clear();
             StratagemNativeParticles.Clear();
             StratagemSurface.Clear();
-            Enemies.Clear(); enemySet.Clear(); Players.Clear(); Base = null; GroundMap = null;
+            Enemies.Clear(); enemySet.Clear(); hitboxes.Clear(); Players.Clear(); Base = null; GroundMap = null;
             StratagemUnit.Clear(); StratagemFields.Clear(); StratagemShields.Clear(); StratagemDeployment.Clear();
         }
         internal static void Add(模块_基本属性 stats)
         {
             if (!ModuleSettings.Extra.Stratagems || !Plugin.InCombat || stats == null) return;
             if (stats.单位定位列表.Contains(模块_基本属性.单位定位枚举.基地)) Base = stats.gameObject;
-            if (Difficulty.CountsForEncounter(stats.gameObject) && enemySet.Add(stats)) Enemies.Add(stats);
+            var hurt = stats.GetComponent<模块_受伤>();
+            if (Difficulty.CountsForEncounter(stats.gameObject) && hurt != null && hurtStats.GetValue(hurt) != null && enemySet.Add(stats))
+            {
+                Enemies.Add(stats);
+                var shapes = new List<Collider2D>();
+                foreach (var shape in stats.GetComponentsInChildren<Collider2D>(true))
+                    if (shape.GetComponentInParent<模块_基本属性>() == stats) shapes.Add(shape);
+                hitboxes[stats] = shapes.ToArray();
+            }
             if (stats.单位定位列表.Contains(模块_基本属性.单位定位枚举.玩家) && !Players.Contains(stats)) Players.Add(stats);
         }
         internal static void Remove(模块_基本属性 stats)
         {
             if (enemySet.Remove(stats)) Enemies.Remove(stats);
+            hitboxes.Remove(stats);
             Players.Remove(stats); StratagemFields.Remove(stats);
         }
         internal static bool Living(模块_基本属性 stats) => stats != null && stats.当前生命值 > 0 && !stats.当前是否无敌 &&
             stats.当前阵营 == 阵营数据库.阵营.敌方 && enemySet.Contains(stats);
+        internal static float DistanceSquared(模块_基本属性 target,Vector2 point)
+        {
+            if (!hitboxes.TryGetValue(target,out var shapes)) return float.PositiveInfinity;
+            bool hurtShape = false;
+            foreach (var shape in shapes) if (shape != null && shape.enabled && shape.gameObject.activeInHierarchy && shape.isTrigger) { hurtShape = true; break; }
+            float distance = float.PositiveInfinity;
+            foreach (var shape in shapes)
+                if (shape != null && shape.enabled && shape.gameObject.activeInHierarchy && (!hurtShape || shape.isTrigger))
+                    distance = Mathf.Min(distance,(shape.ClosestPoint(point)-point).sqrMagnitude);
+            return distance;
+        }
+        internal static bool BeamContact(模块_基本属性 target,Vector2 start,Vector2 direction,float length,out float distance)
+        {
+            distance = float.PositiveInfinity;
+            if (!hitboxes.TryGetValue(target,out var shapes)) return false;
+            bool hurtShape = false;
+            foreach (var shape in shapes) if (shape != null && shape.enabled && shape.gameObject.activeInHierarchy && shape.isTrigger) { hurtShape = true; break; }
+            foreach (var shape in shapes)
+            {
+                if (shape == null || !shape.enabled || !shape.gameObject.activeInHierarchy || hurtShape && !shape.isTrigger) continue;
+                var bounds = shape.bounds;
+                if (StratagemBeamGeometry.Intersects(start.x,start.y,direction.x,direction.y,length,bounds.center.x,bounds.center.y,bounds.extents.x,bounds.extents.y,out var entry))
+                    distance = Mathf.Min(distance,entry);
+            }
+            return !float.IsPositiveInfinity(distance);
+        }
         internal static 模块_基本属性 Player(int role)
         {
             foreach (var player in Players)
@@ -129,7 +166,7 @@ namespace CluckmechCoop
             {
                 if (i >= StratagemWorld.Enemies.Count) continue;
                 var enemy = StratagemWorld.Enemies[i];
-                if (StratagemWorld.Living(enemy) && ((Vector2)enemy.transform.position-point).sqrMagnitude <= radius*radius)
+                if (StratagemWorld.Living(enemy) && StratagemWorld.DistanceSquared(enemy,point) <= radius*radius)
                     Hit(enemy, damage * (multiplier == null ? 1 : multiplier(enemy)), critical);
             }
         }
@@ -158,6 +195,8 @@ namespace CluckmechCoop
     }
     [HarmonyPatch(typeof(模块_基本属性), "Awake")]
     internal static class CacheStratagemEnemy { private static void Postfix(模块_基本属性 __instance) => StratagemWorld.Add(__instance); }
+    [HarmonyPatch(typeof(模块_受伤), "Start")]
+    internal static class CacheReadyStratagemEnemy { private static void Postfix(模块_受伤 __instance) => StratagemWorld.Add(__instance.GetComponent<模块_基本属性>()); }
     [HarmonyPatch(typeof(模块_基本属性), "OnDisable")]
     internal static class RemoveStratagemEnemy { private static void Prefix(模块_基本属性 __instance) => StratagemWorld.Remove(__instance); }
 }
