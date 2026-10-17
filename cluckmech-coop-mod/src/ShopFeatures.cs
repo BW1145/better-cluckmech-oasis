@@ -89,11 +89,11 @@ namespace CluckmechCoop
         {
             if (!ModuleSettings.Extra.Growth) return;
             NativeUi.Capture(Shop.transform);
-            coupon = NativeUi.TransferAction(Shop.transform, "工匠刷新券  30金币", 0, 0, 320, 66, BuyCoupon);
+            coupon = NativeUi.TransferAction(Shop.transform, "2次工匠刷新  30金币", 0, 0, 320, 66, BuyCoupon);
             var rect = coupon.GetComponent<RectTransform>(); rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1, 0); rect.anchoredPosition = new Vector2(-32, 110);
             coupons = NativeUi.Label(Shop.transform, "", 0, 0, 320, 34, 23);
             var label = coupons.rectTransform; label.anchorMin = label.anchorMax = label.pivot = new Vector2(1, 0); label.anchoredPosition = new Vector2(-32, 185);
-            coupon.gameObject.AddComponent<RuleTooltip>().Text = "增加1次工匠刷新，剩余次数本局保留。";
+            coupon.gameObject.AddComponent<RuleTooltip>().Text = "增加2次工匠刷新，剩余次数本局保留。";
             WalletChanged();
         }
         private void BuyCoupon()
@@ -102,14 +102,14 @@ namespace CluckmechCoop
             Plugin.Summary.获得金钱(-30); ModuleSettings.SaveProgress(); Plugin.Summary.保存单局存档();
             if (Plugin.Role != 0) Plugin.LocalPlayer?.上传玩家总结数据();
             WalletChanged();
-            Plugin.Log("[Growth] Bought 1 artisan reroll for 30 gold");
+            Plugin.Log("[Growth] Bought 2 artisan rerolls for 30 gold");
         }
         internal static void WalletChanged()
         {
             if (current == null || current.coupon == null) return;
             current.coupon.interactable = !current.State.TicketBought && Plugin.Summary.当前金钱数 >= 30;
             current.coupons.text = "剩余刷新券：" + ModuleSettings.LocalProgress.Coupons;
-            current.coupon.GetComponentInChildren<Text>().text = current.State.TicketBought ? "已购买" : "工匠刷新券  30金币";
+            current.coupon.GetComponentInChildren<Text>().text = current.State.TicketBought ? "已购买" : "2次工匠刷新  30金币";
         }
         private void OnDestroy() { if (current == this) current = null; }
     }

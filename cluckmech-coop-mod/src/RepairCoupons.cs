@@ -35,7 +35,7 @@ namespace CluckmechCoop
                     if(!reward)continue;
                     button.onClick.AddListener(Claim);
                 }
-                button.gameObject.AddComponent<RuleTooltip>().Text = "额外获得1次工匠刷新。";
+                button.gameObject.AddComponent<RuleTooltip>().Text = "额外获得4次工匠刷新。";
             }
         }
         private void Claim()

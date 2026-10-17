@@ -3,7 +3,7 @@
     <TargetFramework>net472</TargetFramework>
     <LangVersion>latest</LangVersion>
     <AssemblyName>CluckmechCoop</AssemblyName>
-    <Version>0.5.16</Version>
+    <Version>0.5.17</Version>
     <RequireGameDir>true</RequireGameDir>
     <Managed>$(GameDir)\Cluckmech Oasis_Data\Managed</Managed>
     <Loader>$(MSBuildThisFileDirectory)..\dependencies\BepInEx\BepInEx\core</Loader>

@@ -30,7 +30,7 @@ namespace CluckmechCoop
             ModuleSettings.SaveProgress();Plugin.Summary.保存单局存档();
             ArtisanEconomyUi.RefreshAll();
         }
-        internal static int Refund(int paid,int tier)=>(int)((long)paid*(tier==1?30:tier==2?20:0)/100);
+        internal static int Refund(int paid,int tier)=>(int)((long)paid*(tier==1?50:tier==2?20:0)/100);
         internal static void Cancel()
         {
             if(!Enabled || ModuleSettings.LocalProgress.ArtisanPaid==0)return;
@@ -105,7 +105,7 @@ namespace CluckmechCoop
         private void Refresh()
         {
             var progress=ModuleSettings.LocalProgress;
-            string line="C级返款30%　B级返款20%";
+            string line="C级返款50%　B级返款20%";
             int slot=Plugin.Summary.当前选中的背包id;
             if(progress.ArtisanPaid>0 && slot>=0 && slot<Plugin.Summary.当前拥有炮台.Count)
             {

@@ -12,6 +12,7 @@ namespace CluckmechCoop
         public string Type, Version = Plugin.Version;
         public int Role, Revision;
         public int Stage;
+        public int EnergyBonusUsed;
         public float Delay;
         public bool Expedition, Transfer;
         public ExpeditionChoice Choice;
@@ -114,7 +115,7 @@ namespace CluckmechCoop
                 case "progress": return ValidProgress(message.PlayerProgress);
                 case "hello": case "ack": return message.Revision >= 0;
                 case "playback": return !string.IsNullOrWhiteSpace(message.Token) && message.Stage >= 0;
-                case "energy": return !string.IsNullOrWhiteSpace(message.Token) && message.Delay <= 10;
+                case "energy": return !string.IsNullOrWhiteSpace(message.Token) && message.Delay <= 10 && message.EnergyBonusUsed >= 0 && message.EnergyBonusUsed <= 2;
                 case "growth-event": return !string.IsNullOrWhiteSpace(message.Token) && message.Stage>=88 && message.Stage<=92 && message.Revision>=0 && message.Revision<=1 && (message.Role==0 || message.Role==20);
                 case "complete": case "speed": case "growth": case "speed-request": case "energy-request": case "rabbit-aim":
                     return !string.IsNullOrWhiteSpace(message.Token);

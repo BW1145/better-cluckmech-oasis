@@ -311,14 +311,6 @@ namespace CluckmechCoop
             if (ModuleSettings.Extra.Characters) CharacterFeatures.Nuclear(__instance);
         }
     }
-    [HarmonyPatch(typeof(词条_100115_阿法狗), "Start")]
-    internal static class DogReady
-    {
-        private static void Postfix(词条_100115_阿法狗 __instance)
-        {
-            if (ModuleSettings.Extra.Characters) __instance.技能cd += 10;
-        }
-    }
     [HarmonyPatch(typeof(词条_100115_阿法狗), "召唤单位")]
     internal static class DogSpawned
     {

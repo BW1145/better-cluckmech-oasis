@@ -30,6 +30,7 @@ namespace CluckmechCoop
         internal void BindBase(模块_基本属性 stats)
         {
             baseStats = stats; baseAttack = stats.GetComponent<模块_攻击属性>();
+            CombatStatusHud.AttachEnergy(stats);
             if (pendingEnergy > 0) { ApplyEnergy(pendingEnergy); pendingEnergy = 0; }
         }
         private static bool Typing()
@@ -93,7 +94,7 @@ namespace CluckmechCoop
         {
             if (!ModuleSettings.Extra.Energy || !Plugin.InCombat || EnergyActive || baseStats == null || baseStats.当前生命值 <= 0 || !ModuleSettings.Progress.UseEnergy()) return false;
             ModuleSettings.SaveProgress(); ApplyEnergy(10);
-            Plugin.Network.Broadcast(new SessionMessage { Type = "energy", Token = Token, Delay = 10 });
+            Plugin.Network.Broadcast(new SessionMessage { Type = "energy", Token = Token, Delay = 10, EnergyBonusUsed = ModuleSettings.Progress.EnergyBonusUsed });
             Plugin.Log("[Energy] Activated; remaining "+ModuleSettings.Progress.EnergyRemaining+"; duration 10, attack +500, resistance 100%");
             return true;
         }
@@ -103,7 +104,7 @@ namespace CluckmechCoop
             if (seconds > 0) ModuleSettings.Progress.EnergyUsed = true;
             baseStats?.运算抗性(); baseAttack?.运算攻击力();
             UpdateEnergyEffect();
-            if (seconds == 0 && Plugin.Role == 1) Plugin.Network.Broadcast(new SessionMessage { Type = "energy", Token = Token, Delay = 0 });
+            if (seconds == 0 && Plugin.Role == 1) Plugin.Network.Broadcast(new SessionMessage { Type = "energy", Token = Token, Delay = 0, EnergyBonusUsed = ModuleSettings.Progress.EnergyBonusUsed });
         }
         private void UpdateEnergyEffect()
         {
@@ -159,7 +160,11 @@ namespace CluckmechCoop
             if (message.Type == "growth") { GrowthFeatures.Offer(message.Token); return true; }
             if (Plugin.Combat == null || message.Token == null || message.Token != Plugin.Combat.Token || !Plugin.InCombat) return true;
             if (message.Type == "speed" && ModuleSettings.Extra.Speed) Plugin.Combat.SetSpeed(message.Held);
-            else if (message.Type == "energy" && ModuleSettings.Extra.Energy) Plugin.Combat.ApplyEnergy(message.Delay);
+            else if (message.Type == "energy" && ModuleSettings.Extra.Energy && message.EnergyBonusUsed <= ModuleSettings.Progress.EnergyBonus)
+            {
+                ModuleSettings.Progress.EnergyBonusUsed = message.EnergyBonusUsed;
+                Plugin.Combat.ApplyEnergy(message.Delay);
+            }
             return true;
         }
     }
