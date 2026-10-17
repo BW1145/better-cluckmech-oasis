@@ -102,7 +102,8 @@ namespace CluckmechCoop
         {
             energyUntil = seconds > 0 ? Time.time + seconds : 0;
             if (seconds > 0) ModuleSettings.Progress.EnergyUsed = true;
-            baseStats?.运算抗性(); baseAttack?.运算攻击力();
+            if (baseStats != null) baseStats.运算抗性();
+            if (baseAttack != null) baseAttack.运算攻击力();
             UpdateEnergyEffect();
             if (seconds == 0 && Plugin.Role == 1) Plugin.Network.Broadcast(new SessionMessage { Type = "energy", Token = Token, Delay = 0, EnergyBonusUsed = ModuleSettings.Progress.EnergyBonusUsed });
         }
@@ -137,8 +138,9 @@ namespace CluckmechCoop
         }
         internal void ClearScene()
         {
-            Disconnected(); ApplyEnergy(0); Token = null;
-            baseStats = null; baseAttack = null; pendingEnergy = 0; normalSpeed = lastApplied = 1;
+            Disconnected(); Token = null;
+            baseStats = null; baseAttack = null; energyUntil = pendingEnergy = 0; normalSpeed = lastApplied = 1;
+            UpdateEnergyEffect();
         }
     }
 
