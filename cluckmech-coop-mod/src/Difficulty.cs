@@ -64,6 +64,7 @@ namespace CluckmechCoop
         }
         internal static void Generated(GameObject unit)
         {
+            if(WealthEncounter.Spawning)return;
             var spawner = Spawning != null ? Spawning : Plugin.Spawner;
             if (Plugin.Role == 2 || spawner == null || !ModuleSettings.Expedition || unit == null) return;
             if (!CountsForEncounter(unit)) return;
@@ -100,6 +101,7 @@ namespace CluckmechCoop
         }
         internal static void Record(刷怪器 spawner, 攻击波次数据模板.出怪单元 group)
         {
+            if(WealthEncounter.Spawning)return;
             if (Plugin.Role == 2 || !ModuleSettings.Active) return;
             if (State(spawner).Plan.OriginalClosed) return;
             var wave = spawner.数据.波次数据[spawner.当前波次];
@@ -109,6 +111,7 @@ namespace CluckmechCoop
         }
         internal static bool Finish(刷怪器 spawner, FinishKind kind, int jump = 0)
         {
+            if(!WealthEncounter.Finish(spawner,kind,jump))return false;
             if (!ModuleSettings.Active || spawner.数据 == null) return true;
             var state = State(spawner);
             if (Plugin.Role == 2)
@@ -183,7 +186,7 @@ namespace CluckmechCoop
             while (HasLiving(state)) yield return pause;
             if (!state.Plan.TryStart(false)) yield break;
             state.Replay = true;
-            Plugin.Log($"[Encounter] Original cleared; repeating {state.Plan.Stages.Count} recorded stages; HP x1.5, ATK x2");
+            Plugin.Log($"[Encounter] Original cleared; repeating {state.Plan.Stages.Count} recorded stages; HP x2, ATK x2");
             float nextDelay = 0;
             foreach (var stage in state.Plan.Stages)
             {
@@ -252,7 +255,7 @@ namespace CluckmechCoop
         internal static void BossVictory(GameObject world, string message)
         {
             var spawner = Plugin.Spawner;
-            if (spawner == null || !ModuleSettings.Active) { world.SendMessage(message); return; }
+            if (spawner == null || !ModuleSettings.Active) { if(!WealthEncounter.DeferBoss(world,()=>world.SendMessage(message)))world.SendMessage(message); return; }
             var state = State(spawner);
             state.BossWorld.Capture(world);
             ReleaseBossCompletion(state);
@@ -332,7 +335,12 @@ namespace CluckmechCoop
     {
         private static bool Prefix(词条_100028_Boss胜利判断 __instance, 效果物体引用器 ___引用器)
         {
-            if (!ModuleSettings.Active || Plugin.Spawner == null) return true;
+            if (!ModuleSettings.Active || Plugin.Spawner == null)
+            {
+                if(!WealthEncounter.Pending)return true;
+                var snapshot=new BossReward(__instance,___引用器.预制体.Boss死亡反馈);
+                return !WealthEncounter.DeferBoss(__instance,()=>Plugin.Instance.StartCoroutine(snapshot.Apply()));
+            }
             Difficulty.CaptureBossReward(__instance, ___引用器.预制体.Boss死亡反馈);
             return false;
         }

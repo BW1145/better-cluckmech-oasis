@@ -12,7 +12,7 @@ namespace CluckmechCoop
         private 战斗准备背包 preparation;
         private GameObject row;
         private Toggle toggle;
-        private Text reward, status;
+        private Text reward, status, wealth;
         private RectTransform selection, challenge;
         private float shift;
         private bool shifted;
@@ -25,6 +25,7 @@ namespace CluckmechCoop
             panel.preparation = root; panels.Add(panel); panel.Refresh();
         }
         internal static void RefreshAll() { foreach (var panel in panels) if (panel != null) panel.Refresh(); }
+        internal static void RefreshWealth(){foreach(var panel in panels)if(panel!=null)panel.WealthWarning();}
         internal static void ShowStatus(string text) { foreach (var panel in panels) if (panel.status != null) panel.status.text = text; }
         private void OnEnable() { if (preparation != null) { ModuleSettings.Prepare(); Refresh(); } }
         private void OnDestroy() => panels.Remove(this);
@@ -41,6 +42,7 @@ namespace CluckmechCoop
                 shifted=show;
             }
             EnsureStatus();
+            WealthWarning();
             status.text=Plugin.Network.SettingsReady?"":Plugin.Network.Status;
             if(!show)return;
             toggle.SetIsOnWithoutNotify(ModuleSettings.Choice?.Enabled == true);
@@ -53,6 +55,17 @@ namespace CluckmechCoop
             status=NativeUi.Label(transform,"",0,0,650,34,22);
             var rect=status.rectTransform;rect.anchorMin=rect.anchorMax=rect.pivot=new Vector2(.5f,1);
             rect.anchoredPosition=new Vector2(0,-12);status.alignment=TextAnchor.MiddleCenter;
+        }
+        private void WealthWarning()
+        {
+            if(wealth==null)
+            {
+                wealth=NativeUi.Label(transform,"",0,0,1040,38,24);
+                var rect=wealth.rectTransform;rect.anchorMin=rect.anchorMax=rect.pivot=new Vector2(.5f,1);rect.anchoredPosition=new Vector2(0,-52);
+                wealth.alignment=TextAnchor.MiddleCenter;wealth.color=new Color(1,.7f,.15f);
+            }
+            int rich=WealthEncounter.RichPlayers;
+            wealth.text=rich>0?"财不露白：持有超过2000金币，本场额外出现"+(12*rich)+"只强敌":"";
         }
         private void Build()
         {
@@ -76,7 +89,7 @@ namespace CluckmechCoop
             reward = NativeUi.Label(rect, "", 0, 12, 0, 60, 26);
             reward.rectTransform.anchorMin = new Vector2(0.3f, 1); reward.rectTransform.anchorMax = new Vector2(0.9f, 1); reward.rectTransform.sizeDelta = new Vector2(0, 60);
 
-            row.AddComponent<RuleTooltip>().Text = "原版敌人全部出完并消灭后，再出现一次；血量×1.5，攻击力×2。";
+            row.AddComponent<RuleTooltip>().Text = "原版敌人全部出完并消灭后，再出现一次；血量×2，攻击力×2。";
         }
     }
     [HarmonyPatch(typeof(UI_设置界面), "Start")]

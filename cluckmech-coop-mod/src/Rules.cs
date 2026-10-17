@@ -68,7 +68,7 @@ namespace CluckmechCoop
             else { result.Guest -= amount; result.Host += amount; }
             return result;
         }
-        public static float HealthMultiplier(bool finalBoss, bool replay) => finalBoss ? 10 : replay ? 1.5f : 1;
+        public static float HealthMultiplier(bool finalBoss, bool replay) => finalBoss ? 10 : replay ? 2 : 1;
         public static float AttackMultiplier(bool finalBoss, bool replay) => finalBoss || replay ? 2 : 1;
         public static bool SameMachine(Machine a, Machine b)
         {

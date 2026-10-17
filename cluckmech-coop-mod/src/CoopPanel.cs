@@ -39,6 +39,7 @@ namespace CluckmechCoop
         private void OnDestroy() { if (canvasRoot != null) Destroy(canvasRoot); }
         internal void RefreshWallet()
         {
+            MapBoonsUi.RefreshCurrent();WealthEncounter.RefreshWarnings();
             if (open && balance != null) balance.text = (Plugin.Summary?.当前金钱数 ?? 0).ToString();
         }
         internal void RefreshState()

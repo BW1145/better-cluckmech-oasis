@@ -14,7 +14,7 @@ namespace CluckmechCoop
     [BepInPlugin("billy.cluckmech.coop", "更好的鸡械绿洲", Version)]
     public sealed class Plugin : BaseUnityPlugin
     {
-        internal const string Version = "0.5.17";
+        internal const string Version = "0.5.18";
         internal static Plugin Instance;
         internal static TransferService Transfers;
         internal static NetworkService Network;
@@ -47,7 +47,7 @@ namespace CluckmechCoop
         private void Loaded(Scene scene, LoadSceneMode mode)
         {
             if (scene.buildIndex == 常数类.场景id_选择英雄) RunSaveRepair.Blocked = false;
-            Combat.ClearScene(); GrowthPanel.Close(); Difficulty.Reset(); ModuleSettings.ClearScene();
+            Combat.ClearScene(); GrowthPanel.Close(); MapBoonsUi.Clear(); FeatureModal.Clear(); Difficulty.Reset(); ModuleSettings.ClearScene(); CharacterBoons.Started=false;
             StratagemWorld.Clear();
             SwallowTargets.Clear();
             Spawner = null; units = null; InCombat = false;
@@ -69,7 +69,7 @@ namespace CluckmechCoop
                 if (canvas != null) NativeUi.Capture(canvas.transform);
             }
             Network.BeginHandshake();
-            CarryCapacity.Apply();Panel.RefreshState(); GrowthPanel.ShowPending();
+            CarryCapacity.Apply();Panel.RefreshState(); GrowthPanel.ShowPending(); MapBoonsUi.Attach();
         }
         internal static void BindSpawner(刷怪器 spawner)
         {
@@ -82,7 +82,7 @@ namespace CluckmechCoop
         internal static void CombatStarted(刷怪器 spawner)
         {
             if (RunSaveRepair.AtMainMenu) return;
-            Spawner = spawner; InCombat = true; Combat.Begin(spawner);
+            Spawner = spawner; InCombat = true; Combat.Begin(spawner); CharacterBoons.Begin(); WealthEncounter.Begin(spawner);
             StratagemWorld.Begin();
             SwallowTargets.Begin();
             Panel.RefreshState();
@@ -152,6 +152,6 @@ namespace CluckmechCoop
         {
             foreach (string name in new[] { "获得炮台", "删除炮台", "获得强化词条", "背包排序" }) yield return AccessTools.Method(typeof(总结脚本), name);
         }
-        private static void Postfix() { Plugin.Panel.RefreshInventory(); GrowthPanel.InventoryChanged(); }
+        private static void Postfix() { Plugin.Panel.RefreshInventory(); GrowthPanel.InventoryChanged(); MapBoonsUi.RefreshCurrent(); }
     }
 }

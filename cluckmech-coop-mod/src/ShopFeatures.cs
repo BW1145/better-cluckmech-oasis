@@ -99,7 +99,7 @@ namespace CluckmechCoop
         private void BuyCoupon()
         {
             if (!ModuleSettings.LocalProgress.BuyCoupons(ModuleSettings.NodeKey, Plugin.Summary.当前金钱数)) return;
-            Plugin.Summary.获得金钱(-30); ModuleSettings.SaveProgress(); Plugin.Summary.保存单局存档();
+            Plugin.Summary.获得金钱(-30); ShopRewards.Spent(30); ModuleSettings.SaveProgress(); Plugin.Summary.保存单局存档();
             if (Plugin.Role != 0) Plugin.LocalPlayer?.上传玩家总结数据();
             WalletChanged();
             Plugin.Log("[Growth] Bought 2 artisan rerolls for 30 gold");
@@ -116,15 +116,18 @@ namespace CluckmechCoop
     [HarmonyPatch(typeof(商店脚本), "Start")]
     internal static class ShopReady
     {
-        private static void Postfix(商店脚本 __instance) { if (ShopFeatures.Enabled) ShopFeatures.For(__instance).BuildCoupon(); }
+        private static void Postfix(商店脚本 __instance) { if (ShopFeatures.Enabled) ShopFeatures.For(__instance).BuildCoupon(); ShopRewards.Attach(__instance); }
     }
     [HarmonyPatch(typeof(商店脚本), "商店刷新")]
     internal static class PaidShopRefresh
     {
-        private static void Prefix(商店脚本 __instance)
+        private static void Prefix(商店脚本 __instance,out int[] __state)
         {
+            __state=ModuleSettings.Extra.Shop?new[]{Plugin.Summary.当前金钱数,__instance.刷新费用}:null;
             if (ShopFeatures.Enabled && __instance.刷新费用 > 0 && Plugin.Summary.当前金钱数 >= __instance.刷新费用) ShopFeatures.For(__instance).State.Refreshed();
         }
+        private static void Postfix(int[] __state)
+        {if(__state!=null && __state[1]>0 && Plugin.Summary.当前金钱数==__state[0]-__state[1]){ShopRewards.Spent(__state[1],true);ShopRewards.Save();}}
     }
     [HarmonyPatch(typeof(商店脚本), "商店商品运算")]
     internal static class NewShopStock
@@ -194,7 +197,7 @@ namespace CluckmechCoop
             // Native purchase appends the selected machine and then deducts its exact price.
             if (summary.当前金钱数 != __state.Gold - __state.Price || summary.当前拥有炮台.Count != __state.Count + 1 ||
                 summary.当前拥有炮台[__state.Count].炮台id != __state.Id) return;
-            ShopFeatures.For(__instance).State.Sold[__state.Index] = true;
+            ShopFeatures.For(__instance).State.Sold[__state.Index] = true; ShopRewards.Spent(__state.Price);
             ModuleSettings.SaveProgress(); summary.保存单局存档();
         }
     }

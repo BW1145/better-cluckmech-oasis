@@ -114,7 +114,7 @@ namespace CluckmechCoop
             }
             pending.text=line;pending.gameObject.SetActive(progress.ArtisanPaid>0);
             details.transform.parent.gameObject.SetActive(progress.ArtisanPaid==0);
-            details.text=line+"\n强化净花费 "+progress.ArtisanSpend+"／600　"+LastReceipt;
+            details.text=line+"\n强化净花费 "+progress.ArtisanSpend+"／"+PlayerProgress.ArtisanThreshold+"　"+LastReceipt;
             benefit.GetComponentInChildren<Text>().text="自选强化　剩余"+progress.ArtisanCredits+"次";
             benefit.interactable=progress.ArtisanCredits>0 && progress.ArtisanPaid==0;
         }

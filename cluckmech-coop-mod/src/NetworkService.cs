@@ -88,7 +88,7 @@ namespace CluckmechCoop
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
         private static bool ValidProgress(PlayerProgress progress)
         {
-            if (progress == null || progress.Coupons < 0 || !progress.ValidGrowthRewards() || !progress.ValidArtisan || progress.Regions == null || progress.RepairNodes == null || progress.Shops == null || progress.StratagemCooldowns == null) return false;
+            if (progress == null || progress.Coupons < 0 || !progress.ValidGrowthRewards() || !progress.ValidArtisan || !progress.ValidShop || progress.Regions == null || progress.RepairNodes == null || progress.Shops == null || progress.StratagemCooldowns == null) return false;
             foreach (string node in progress.RepairNodes) if (string.IsNullOrWhiteSpace(node)) return false;
             foreach (var cooldown in progress.StratagemCooldowns)
                 if (cooldown == null || string.IsNullOrWhiteSpace(cooldown.Node) || cooldown.Slot < 0 || cooldown.Slot >= 5+progress.ExtraCarrySlots ||
@@ -108,7 +108,7 @@ namespace CluckmechCoop
                 case "settings":
                     if (message.Revision < 0 || message.Delay > 10 || (message.Choice != null && (string.IsNullOrWhiteSpace(message.Choice.Token) || message.Choice.RewardId < -1 || message.Choice.RewardId > 2))) return false;
                     if (message.Progress == null) return true;
-                    if (message.Progress.Players == null || !message.Progress.ValidEnergy) return false;
+                    if (message.Progress.Players == null || !message.Progress.ValidEnergy || !message.Progress.ValidBoons) return false;
                     foreach (var player in message.Progress.Players)
                         if (player.Key < 0 || player.Key > 2 || !ValidProgress(player.Value)) return false;
                     return true;
@@ -172,6 +172,7 @@ namespace CluckmechCoop
                 if (Plugin.Combat != null) { Plugin.Combat.Token = message.Token; Plugin.Combat.Synchronize(message.Held, message.Delay); }
                 revision = acknowledged = message.Revision; peer = true; Status = "";
                 Send(new SessionMessage { Type = "ack", Revision = revision });
+                CharacterBoons.Synchronize();MapBoonsUi.RefreshCurrent();
                 PreparationPanel.RefreshAll();
                 Plugin.Panel.RefreshState();
             }

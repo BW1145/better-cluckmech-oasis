@@ -44,7 +44,7 @@ namespace CluckmechCoop
             Expedition = ExpeditionPreference;
             Transfer = TransferPreference;
             Music = Preference(ModuleId.Music);
-            Extra = new GameplayModules { Speed = Preference(ModuleId.Speed), Characters = Preference(ModuleId.Characters), Energy = Preference(ModuleId.Energy), Growth = Preference(ModuleId.Growth), Shop = Preference(ModuleId.Shop), Stratagems = Preference(ModuleId.Stratagems) };
+            Extra = new GameplayModules { Speed = Preference(ModuleId.Speed), Characters = Preference(ModuleId.Characters), Energy = Preference(ModuleId.Energy), Growth = Preference(ModuleId.Growth), Shop = Preference(ModuleId.Shop), Stratagems = Preference(ModuleId.Stratagems), Boons = Preference(ModuleId.Boons), Wealth = Preference(ModuleId.Wealth) };
             if (Plugin.Role == 2) { Expedition = Transfer = false; Extra = new GameplayModules(); }
             else Plugin.Network.PublishSettings();
         }
@@ -163,11 +163,11 @@ namespace CluckmechCoop
         }
         private static bool ValidProgress(JObject data, RunProgress progress)
         {
-            if (!HasFields(data, JTokenType.Boolean, "EnergyUsed") || !progress.ValidEnergy || !(data["Players"] is JObject players) || progress.Players == null) return false;
+            if (!HasFields(data, JTokenType.Boolean, "EnergyUsed") || !progress.ValidEnergy || !progress.ValidBoons || !(data["Players"] is JObject players) || progress.Players == null) return false;
             foreach (var entry in progress.Players)
             {
                 var player = entry.Value;
-                if (entry.Key < 0 || entry.Key > 2 || player == null || player.Coupons < 0 || !player.ValidGrowthRewards() || !player.ValidArtisan || player.Regions == null || player.RepairNodes == null || player.Shops == null || player.StratagemCooldowns == null) return false;
+                if (entry.Key < 0 || entry.Key > 2 || player == null || player.Coupons < 0 || !player.ValidGrowthRewards() || !player.ValidArtisan || !player.ValidShop || player.Regions == null || player.RepairNodes == null || player.Shops == null || player.StratagemCooldowns == null) return false;
                 foreach (var cooldown in player.StratagemCooldowns)
                     if (cooldown == null || string.IsNullOrWhiteSpace(cooldown.Node) || cooldown.Slot < 0 || cooldown.Slot >= 5+player.ExtraCarrySlots ||
                         !Rules.ValidMachine(cooldown.Machine) || !StratagemCatalog.IsUnit(cooldown.Machine.Id) || cooldown.Remaining < 0 ||
