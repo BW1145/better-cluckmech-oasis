@@ -39,6 +39,7 @@ namespace CluckmechCoop
         internal void PlayerCreated(联机玩家控件 player) => BeginHandshake();
         internal void BeginHandshake()
         {
+            if (OtherworldRegistry.Enabled) OtherworldNetwork.Register();
             if (Plugin.Role == 0 || handshake != null) return;
             handshake = Plugin.Instance.StartCoroutine(Handshake());
         }
@@ -54,6 +55,7 @@ namespace CluckmechCoop
         }
         internal void Disconnect()
         {
+            OtherworldNetwork.Disconnect();
             if (handshake != null) Plugin.Instance.StopCoroutine(handshake);
             handshake = null; peer = false; revision = 0; acknowledged = -1; Status = "等待队友同步模组设置";
             Plugin.Combat?.Disconnected();

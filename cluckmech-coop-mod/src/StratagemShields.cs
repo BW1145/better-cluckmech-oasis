@@ -117,6 +117,12 @@ namespace CluckmechCoop
         private StratagemGauge gauge;
         internal float Radius => root.Parameters.BlastRadius;
         internal float Capacity => capacity;
+        internal float[] SaveRuntime()=>new[]{capacity,Mathf.Max(0,Time.time-lastHit),Mathf.Max(0,restart-Time.time),Mathf.Max(0,opening-Time.time)};
+        internal void RestoreRuntime(float[] saved)
+        {
+            capacity=Mathf.Min(maximum,saved[0]);lastHit=Time.time-saved[1];restart=saved[2]>0?Time.time+saved[2]:0;opening=Time.time+saved[3];
+            dome.SetOpen(restart==0,Radius);
+        }
         internal bool Open => root != null && root.Alive && Time.time >= opening && restart == 0 && capacity > 0;
         internal void Initialize(StratagemUnit source)
         {
@@ -150,7 +156,7 @@ namespace CluckmechCoop
                 if (Time.time >= nextThreat)
                 {
                     nextThreat = Time.time+.5f;
-                    foreach (var enemy in StratagemWorld.Enemies)
+                    foreach (var enemy in StratagemWorld.EnemiesFor(transform.position))
                     {
                         if (!StratagemWorld.Living(enemy)) continue;
                         float distance = Vector2.Distance(enemy.transform.position,transform.position);
@@ -174,7 +180,7 @@ namespace CluckmechCoop
                 restart = Time.time+root.Parameters.Reboot;
                 StratagemEffects.Emit(root,12,transform.position,Radius);
                 if (root.Parameters.Discharge)
-                    foreach (var enemy in StratagemWorld.Enemies)
+                    foreach (var enemy in StratagemWorld.EnemiesFor(transform.position))
                         if (StratagemWorld.Living(enemy) && StratagemWorld.DistanceSquared(enemy,transform.position) <= Radius*Radius)
                         {
                             root.Damage.Status(enemy,攻击类型与状态数据库.状态枚举.眩晕,5,Vector4.zero);

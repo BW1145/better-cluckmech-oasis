@@ -14,6 +14,7 @@ namespace CluckmechCoop
         private static WealthEncounter current;
         internal static bool Spawning;
         internal static bool Pending=>current!=null && !current.finished;
+        internal static void ReleaseCaptive(GameObject unit){if(current!=null)current.living.Remove(unit);}
         private readonly HashSet<GameObject> living=new HashSet<GameObject>();
         private bool spawned,finished;
         private Action continuation;

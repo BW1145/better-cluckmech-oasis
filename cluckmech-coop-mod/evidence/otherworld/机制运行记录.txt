@@ -1,0 +1,10 @@
+CAPTURE pass=0 actorSpace=1 enemySpace=1 permanent=False
+RETURN speed=4.5 invulnerable=False
+RELEASE pass=0 enemySpace=0 sameObject=True
+CAPTURE pass=1 actorSpace=1 enemySpace=1 permanent=True
+RETURN speed=4.5 invulnerable=False
+RELEASE pass=1 enemySpace=1 sameObject=True
+DAMAGE AVOID stored=150 hpSame=True
+DAMAGE ORIGIN space=0 sourceNow=1 hpLoss=100 fragile=True scope=
+HEAL AWAY collected=False alive=True
+HEAL PRESENT amount=200 collected=True

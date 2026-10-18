@@ -14,6 +14,7 @@ namespace CluckmechCoop
         private static readonly System.Reflection.FieldInfo hurtStats = AccessTools.Field(typeof(模块_受伤),"基本属性");
         internal static readonly List<模块_基本属性> Players = new List<模块_基本属性>();
         internal static GameObject Base;
+        internal static List<模块_基本属性> EnemiesFor(Vector2 point)=>KamuiWorld.Rooms.Count==0?Enemies:KamuiWorld.CandidatesAt(point);
         internal static PolyNav.PolyNavMap GroundMap;
         internal static void Begin()
         {
@@ -107,7 +108,7 @@ namespace CluckmechCoop
             bool bestBoss = false;
             float score = float.NegativeInfinity, distance = float.PositiveInfinity;
             Vector2 basePosition = Base == null ? center : (Vector2)Base.transform.position;
-            foreach (var enemy in Enemies)
+            foreach (var enemy in EnemiesFor(center))
             {
                 if (!Living(enemy) || enemy == exclude) continue;
                 float d = ((Vector2)enemy.transform.position - center).sqrMagnitude;
@@ -162,10 +163,11 @@ namespace CluckmechCoop
         }
         internal void Area(Vector2 point, float radius, float damage, bool critical, Func<模块_基本属性,float> multiplier = null)
         {
-            for (int i = StratagemWorld.Enemies.Count-1; i >= 0; i--)
+            var enemies=StratagemWorld.EnemiesFor(point);
+            for (int i = enemies.Count-1; i >= 0; i--)
             {
-                if (i >= StratagemWorld.Enemies.Count) continue;
-                var enemy = StratagemWorld.Enemies[i];
+                if (i >= enemies.Count) continue;
+                var enemy = enemies[i];
                 if (StratagemWorld.Living(enemy) && StratagemWorld.DistanceSquared(enemy,point) <= radius*radius)
                     Hit(enemy, damage * (multiplier == null ? 1 : multiplier(enemy)), critical);
             }

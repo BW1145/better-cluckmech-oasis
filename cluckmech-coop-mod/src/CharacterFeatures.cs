@@ -185,7 +185,7 @@ namespace CluckmechCoop
     {
         internal static void ChickenCooldown(模块_玩家_技能 skill)
         {
-            if (!ModuleSettings.Extra.Characters || skill == null || !skill.enabled) return;
+            if (!ModuleSettings.Extra.Characters || skill == null || !skill.enabled || skill.GetComponent<OtherworldActor>() != null) return;
             var modifier = UnitModifiers.For(skill.gameObject);
             if (modifier.ChickenCooldownSet) return;
             skill.技能cd -= 1; modifier.ChickenCooldownSet = true;
@@ -235,7 +235,7 @@ namespace CluckmechCoop
     {
         private static void Postfix(模块_玩家_技能 __instance)
         {
-            if (!ModuleSettings.Extra.Characters || !__instance.enabled) return;
+            if (!ModuleSettings.Extra.Characters || !__instance.enabled || __instance.GetComponent<OtherworldActor>() != null) return;
             var modifier = UnitModifiers.For(__instance.gameObject);
             if (!modifier.Burst) modifier.StartCoroutine(modifier.ThreeShots(__instance));
         }

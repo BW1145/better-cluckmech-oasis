@@ -14,7 +14,7 @@ namespace CluckmechCoop
     [BepInPlugin("billy.cluckmech.coop", "更好的鸡械绿洲", Version)]
     public sealed class Plugin : BaseUnityPlugin
     {
-        internal const string Version = "0.5.19";
+        internal const string Version = "0.6.0";
         internal static Plugin Instance;
         internal static TransferService Transfers;
         internal static NetworkService Network;
@@ -49,6 +49,7 @@ namespace CluckmechCoop
             if (scene.buildIndex == 常数类.场景id_选择英雄) RunSaveRepair.Blocked = false;
             Combat.ClearScene(); GrowthPanel.Close(); MapBoonsUi.Clear(); FeatureModal.Clear(); Difficulty.Reset(); ModuleSettings.ClearScene(); CharacterBoons.Started=false;
             StratagemWorld.Clear();
+            KamuiWorld.Clear();OtherworldWorld.Clear();OtherworldDeployment.ClearScene();
             SwallowTargets.Clear();
             Spawner = null; units = null; InCombat = false;
             Panel.Rebuild();
@@ -69,6 +70,7 @@ namespace CluckmechCoop
                 if (canvas != null) NativeUi.Capture(canvas.transform);
             }
             Network.BeginHandshake();
+            if (Spawner != null && OtherworldRegistry.Enabled) OtherworldWorld.Begin();
             CarryCapacity.Apply();Panel.RefreshState(); GrowthPanel.ShowPending(); MapBoonsUi.Attach();
         }
         internal static void BindSpawner(刷怪器 spawner)
@@ -84,6 +86,7 @@ namespace CluckmechCoop
             if (RunSaveRepair.AtMainMenu) return;
             Spawner = spawner; InCombat = true; Combat.Begin(spawner); CharacterBoons.Begin(); WealthEncounter.Begin(spawner);
             StratagemWorld.Begin();
+            if (OtherworldRegistry.Enabled) { OtherworldWorld.Begin(); KamuiWorld.Restore(); }
             SwallowTargets.Begin();
             Panel.RefreshState();
         }
@@ -98,6 +101,7 @@ namespace CluckmechCoop
             Difficulty.Reset(); patches?.UnpatchSelf();
             NativeUi.ReleaseTransferSkin();
             CarryCapacity.Release();
+            KamuiWorld.Clear();OtherworldWorld.Clear();OtherworldAssets.Release();
         }
         internal static 总结脚本 Summary => summary;
         internal static dw单位库 Units { get { if (units == null) units = UnityEngine.Object.FindObjectOfType<dw单位库>(); return units; } }

@@ -12,6 +12,7 @@ namespace CluckmechCoop
     {
         private const string SaveKey = "CluckmechCoop.Expedition.v3";
         private const string ProgressKey = "CluckmechCoop.Progress.v4";
+        private const string CharactersKey = "CluckmechCoop.Characters.v1";
         // Keep failed addon snapshots read-only across menu transitions and autosaves.
         private static readonly System.Collections.Generic.HashSet<string> protectedSaves = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
         private static ConfigEntry<bool> expeditionPreference, transferPreference;
@@ -44,12 +45,13 @@ namespace CluckmechCoop
             Expedition = ExpeditionPreference;
             Transfer = TransferPreference;
             Music = Preference(ModuleId.Music);
-            Extra = new GameplayModules { Speed = Preference(ModuleId.Speed), Characters = Preference(ModuleId.Characters), Energy = Preference(ModuleId.Energy), Growth = Preference(ModuleId.Growth), Shop = Preference(ModuleId.Shop), Stratagems = Preference(ModuleId.Stratagems), Boons = Preference(ModuleId.Boons), Wealth = Preference(ModuleId.Wealth) };
+            Extra = new GameplayModules { Speed = Preference(ModuleId.Speed), Characters = Preference(ModuleId.Characters), Energy = Preference(ModuleId.Energy), Growth = Preference(ModuleId.Growth), Shop = Preference(ModuleId.Shop), Stratagems = Preference(ModuleId.Stratagems), Boons = Preference(ModuleId.Boons), Wealth = Preference(ModuleId.Wealth), Otherworld = Preference(ModuleId.Otherworld) };
             if (Plugin.Role == 2) { Expedition = Transfer = false; Extra = new GameplayModules(); }
             else Plugin.Network.PublishSettings();
         }
         internal static void MainMenu()
         {
+            OtherworldProgress.Clear();KamuiWorld.NewRun();
             InRun = Expedition = Transfer = false;
             Choice = null; Extra = new GameplayModules(); Progress = new RunProgress(); Music = false;
             ClearScene();
@@ -123,6 +125,7 @@ namespace CluckmechCoop
             StratagemDeployment.Capture();
             ES3.Save(ProgressKey, JsonConvert.SerializeObject(Progress), path, SaveSettings());
             ES3.Save(SaveKey, JsonConvert.SerializeObject(Choice), path, SaveSettings());
+            ES3.Save(CharactersKey,JsonConvert.SerializeObject(KamuiWorld.Save()),path,SaveSettings());
         }
         internal static void Load(存档脚本 save)
         {
@@ -131,6 +134,8 @@ namespace CluckmechCoop
             bool failed = false;
             Progress = ReadAddon(path, ProgressKey, new RunProgress(), ValidProgress, false, ref failed);
             Choice = ReadAddon<ExpeditionChoice>(path, SaveKey, null, ValidChoice, true, ref failed);
+            var characters=ReadAddon(path,CharactersKey,new OtherworldSave(),(_,value)=>KamuiWorld.Valid(value),false,ref failed);
+            KamuiWorld.Load(characters);
             if (failed) protectedSaves.Add(path);
             else protectedSaves.Remove(path);
             EnterRun();

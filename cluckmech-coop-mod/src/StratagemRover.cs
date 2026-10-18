@@ -16,6 +16,8 @@ namespace CluckmechCoop
         private int phase;
         private 联机_单位属性同步 sync;
         private Vector2 offset;
+        private float dockUntil;
+        internal float[] SaveRuntime()=>new[]{heat,shots,phase,Mathf.Max(0,dockUntil-Time.time),drone==null?0:drone.transform.position.x-transform.position.x,drone==null?0:drone.transform.position.y-transform.position.y};
         private struct BeamHit {internal 模块_基本属性 Unit;internal float Distance;}
         private readonly List<BeamHit> beamHits=new List<BeamHit>();
         internal float Heat => heat;
@@ -36,9 +38,19 @@ namespace CluckmechCoop
             movement=drone.GetComponent<模块_移动属性>();
             movement.移动速度=root.Parameters.FlightSpeed;movement.运算移动速度();
             heat=shots=0;target=null;nextSearch=0;
-            SetPhase(3);yield return Transit(root.Parameters.ReturnTime,false);
-            if(drone==null || !drone.Alive)yield break;
-            SetPhase(0);
+            var saved=root.Resume?.Rover;
+            if(saved!=null)
+            {
+                heat=saved[0];shots=saved[1];PlaceDrone((Vector2)transform.position+new Vector2(saved[4],saved[5]));
+                SetPhase((int)saved[2]);dockUntil=Time.time+saved[3];
+                if(phase==3){yield return Transit(root.Parameters.ReturnTime,false);SetPhase(0);}
+            }
+            else
+            {
+                SetPhase(3);yield return Transit(root.Parameters.ReturnTime,false);
+                if(drone==null || !drone.Alive)yield break;
+                SetPhase(0);
+            }
             while(root.Alive && drone!=null && drone.Alive)
             {
                 if (phase == 0)
@@ -77,9 +89,12 @@ namespace CluckmechCoop
                     yield return Transit(root.Parameters.ReturnTime,true);
                     if (drone == null || !drone.Alive) continue;
                     SetPhase(2);
+                    dockUntil=Time.time+root.Parameters.DockTime;
+                }
+                if(phase==2)
+                {
                     foreach (var collider in drone.GetComponents<Collider2D>()) collider.enabled = false;
-                    float until = Time.time+root.Parameters.DockTime;
-                    while (root.Alive && drone != null && drone.Alive && Time.time < until)
+                    while (root.Alive && drone != null && drone.Alive && Time.time < dockUntil)
                     {
                         PlaceDrone(DockPoint);
                         yield return null;
@@ -108,7 +123,7 @@ namespace CluckmechCoop
             if(root.Parameters.Piercing)
             {
                 beamHits.Clear();
-                foreach(var enemy in StratagemWorld.Enemies)
+                foreach(var enemy in StratagemWorld.EnemiesFor(start))
                 {
                     if(!StratagemWorld.Living(enemy))continue;
                     if(StratagemWorld.BeamContact(enemy,start,direction,drone.Damage.Range,out float distance))
@@ -138,7 +153,8 @@ namespace CluckmechCoop
                 owner=StratagemWorld.Player(root.Role);
                 ownerMovement=owner==null?null:owner.GetComponent<模块_移动属性>();
             }
-            var anchor=owner!=null?owner.transform:StratagemWorld.Base!=null?StratagemWorld.Base.transform:transform;
+            int space=OtherworldWorld.Space(gameObject);
+            var anchor=owner!=null&&OtherworldWorld.Space(owner.gameObject)==space?owner.transform:space==0&&StratagemWorld.Base!=null?StratagemWorld.Base.transform:transform;
             return (Vector2)anchor.position+offset;
         }
         private void SetPhase(int value)

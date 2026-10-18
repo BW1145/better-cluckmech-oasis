@@ -20,6 +20,49 @@ var original=Assembly.LoadFrom(Path.Combine(managed,"Assembly-CSharp.dll"));
 var mod=Assembly.LoadFrom(Path.Combine(root,"src/bin/Release/net472/CluckmechCoop.dll"));
 int checks=0;
 try{
+if(args.Length>2 && args[2]=="--otherworld")
+{
+    foreach(var type in mod.GetTypes().Where(t=>t.Name.StartsWith("Otherworld")||t.Name.StartsWith("Kamui")))
+    {
+        if(!type.GetCustomAttributes(typeof(HarmonyPatch),false).Any())continue;
+        var targetList=AccessTools.DeclaredMethod(type,"TargetMethods");
+        if(targetList!=null)
+        {
+            foreach(var method in (IEnumerable<MethodBase>)targetList.Invoke(null,null))
+            {if(method==null)throw new Exception("Missing target: "+type.Name);checks++;}
+            continue;
+        }
+        var target=AccessTools.DeclaredMethod(type,"TargetMethod");
+        if(target!=null){if(target.Invoke(null,null)==null)throw new Exception("Missing target: "+type.Name);checks++;continue;}
+        var info=new HarmonyMethod();
+        foreach(HarmonyPatch attribute in type.GetCustomAttributes(typeof(HarmonyPatch),false))
+        {
+            if(attribute.info.declaringType!=null)info.declaringType=attribute.info.declaringType;
+            if(attribute.info.methodName!=null)info.methodName=attribute.info.methodName;
+            if(attribute.info.argumentTypes!=null)info.argumentTypes=attribute.info.argumentTypes;
+        }
+        if(info.declaringType==null||AccessTools.Method(info.declaringType,info.methodName,info.argumentTypes)==null)throw new Exception("Missing binding: "+type.Name);checks++;
+    }
+    foreach(var binding in new[]{("模块_攻击","检索目标","KamuiTargetCandidates"),("模块_玩家_攻击","检索目标","KamuiTargetCandidates"),
+        ("模块_光环","检索光环内敌方","KamuiAuraCandidates"),("模块_光环","检索光环内友方","KamuiAuraCandidates"),
+        ("模块_基本属性","运算生命值上限","OtherworldHealth"),("模块_攻击属性","运算攻击力","OtherworldAttackStats"),
+        ("模块_攻击属性","运算攻击速度","OtherworldAttackRate"),
+        ("建造系统","开始拖动","OtherworldWorkshopPower"),("建造系统","结束拖动延迟","OtherworldWorkshopPower")})
+    {
+        var method=AccessTools.Method(original.GetType(binding.Item1,true),binding.Item2);
+        var type=mod.GetType("CluckmechCoop."+binding.Item3,true);
+        var patch=AccessTools.Method(type,"Transpiler");
+        var before=PatchProcessor.GetOriginalInstructions(method);
+        var after=((IEnumerable<CodeInstruction>)patch.Invoke(null,new object[]{before})).ToList();
+        if(after.Count==before.Count&&after.Zip(before,(a,b)=>a.opcode==b.opcode&&Equals(a.operand,b.operand)).All(x=>x))throw new Exception("No replacement in "+binding);
+        ValidateStack(after);checks++;
+    }
+    var catalog=mod.GetType("CluckmechCoop.OtherworldCatalog",true);
+    var level=AccessTools.Method(catalog,"ResearchLevel");
+    foreach(var example in new[]{(0,0),(9,0),(10,1),(29,1),(30,2),(60,3),(100,4),(550,10),(2100,20)})
+    {if((int)level.Invoke(null,new object[]{example.Item1})!=example.Item2)throw new Exception("Research progression mismatch");checks++;}
+    Console.WriteLine($"PASS: {checks} Otherworld native bindings, retained target selection IL and research thresholds");return;
+}
 if(args.Length>2 && args[2]=="--particle-init")
 {
     var begin=AccessTools.Method(mod.GetType("CluckmechCoop.StratagemNativeParticles",true),"Begin");

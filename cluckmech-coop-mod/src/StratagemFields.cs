@@ -60,6 +60,23 @@ namespace CluckmechCoop
         private static readonly Dictionary<模块_基本属性,StratagemStateHandle> slows = new Dictionary<模块_基本属性,StratagemStateHandle>();
         private static readonly Dictionary<模块_基本属性,Dictionary<StratagemUnit,StratagemStateHandle>> poisons = new Dictionary<模块_基本属性,Dictionary<StratagemUnit,StratagemStateHandle>>();
         private static Coroutine task;
+        internal static List<StratagemSavedField> SaveRuntime(StratagemUnit source,Vector2 center)
+        {
+            var saved=new List<StratagemSavedField>();
+            foreach(var zone in zones)if(zone.Source==source&&zone.Until>Time.time)
+                saved.Add(new StratagemSavedField{X=zone.Center.x-center.x,Y=zone.Center.y-center.y,Radius=zone.Radius,Remaining=zone.Until-Time.time,Scorch=zone.Scorch});
+            return saved;
+        }
+        private static readonly HashSet<int> activeSpaces=new HashSet<int>();
+        private static IEnumerable<模块_基本属性> ActiveTargets()
+        {
+            activeSpaces.Clear();
+            for(int i=0;i<zones.Count;i++)
+            {
+                var zone=zones[i];
+                if(activeSpaces.Add(KamuiWorld.At(zone.Center)))foreach(var target in StratagemWorld.EnemiesFor(zone.Center))yield return target;
+            }
+        }
         internal static void Add(StratagemUnit source,Vector2 center,float radius,float duration,bool scorch)
         {
             if (source == null || !Plugin.InCombat) return;
@@ -99,7 +116,7 @@ namespace CluckmechCoop
                     foreach (var target in new List<模块_基本属性>(zone.Entered)) Exit(zone,target);
                     if (zone.Sensor != null) UnityEngine.Object.Destroy(zone.Sensor);
                 }
-                foreach (var target in StratagemWorld.Enemies)
+                foreach (var target in ActiveTargets())
                 {
                     if (!StratagemWorld.Living(target)) continue;
                     float slow = 0;
