@@ -139,13 +139,25 @@ namespace CluckmechCoop
     {
         private static IEnumerable<MethodBase> TargetMethods()
         {
-            yield return AccessTools.Method(typeof(建造系统),"开始拖动");
-            yield return AccessTools.Method(typeof(建造系统),"结束拖动延迟");
+            yield return TranspilerContract.InstanceVoid(typeof(建造系统), "开始拖动");
+            yield return TranspilerContract.InstanceVoid(typeof(建造系统), "结束拖动延迟");
         }
-        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code)
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code, MethodBase __originalMethod)
         {
-            var field=AccessTools.Field(typeof(模块_基本属性),"花费");var power=AccessTools.Method(typeof(OtherworldDeployment),nameof(OtherworldDeployment.Power));
-            foreach(var instruction in code){yield return instruction;if(instruction.opcode==OpCodes.Ldfld&&Equals(instruction.operand,field))yield return new CodeInstruction(OpCodes.Call,power);}
+            int expected;
+            if (__originalMethod == TranspilerContract.InstanceVoid(typeof(建造系统), "开始拖动")) expected = 1;
+            else if (__originalMethod == TranspilerContract.InstanceVoid(typeof(建造系统), "结束拖动延迟")) expected = 2;
+            else throw new InvalidOperationException($"Unexpected workshop power target: {__originalMethod}");
+            var field = AccessTools.Field(typeof(模块_基本属性), "花费");
+            var power = AccessTools.Method(typeof(OtherworldDeployment), nameof(OtherworldDeployment.Power), new[] { typeof(int) });
+            var instructions = TranspilerContract.Exact(code, $"{nameof(OtherworldWorkshopPower)}.{__originalMethod.Name}", expected,
+                instruction => instruction.opcode == OpCodes.Ldfld && Equals(instruction.operand, field));
+            foreach (var instruction in instructions)
+            {
+                yield return instruction;
+                if (instruction.opcode == OpCodes.Ldfld && Equals(instruction.operand, field))
+                    yield return new CodeInstruction(OpCodes.Call, power);
+            }
         }
     }
 }

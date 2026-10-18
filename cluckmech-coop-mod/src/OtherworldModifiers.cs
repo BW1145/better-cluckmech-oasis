@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
 using UnityEngine;
@@ -37,10 +38,13 @@ namespace CluckmechCoop
             if(unit.Space!=0&&run.Initial==26006)stats.当前攻击力*=run.Has(26119)?2.5f:1.5f;
             if(unit.WarmUntil>Time.time)stats.当前攻击力*=1.5f;
         }
-        internal static IEnumerable<CodeInstruction> Wrap(IEnumerable<CodeInstruction> instructions,Type type,string field,string method)
+        internal static IEnumerable<CodeInstruction> Wrap(IEnumerable<CodeInstruction> instructions, Type type, string field, string method, int expected)
         {
-            var target=AccessTools.Field(type,field);var wrapper=AccessTools.Method(typeof(OtherworldModifiers),method);
-            foreach(var instruction in instructions)
+            var target = AccessTools.Field(type, field);
+            var wrapper = AccessTools.Method(typeof(OtherworldModifiers), method, new[] { typeof(float), type });
+            var checkedCode = TranspilerContract.Exact(instructions, $"{nameof(OtherworldModifiers)}.{method}", expected,
+                instruction => instruction.opcode == OpCodes.Ldfld && Equals(instruction.operand, target));
+            foreach (var instruction in checkedCode)
             {
                 yield return instruction;
                 if(instruction.opcode==OpCodes.Ldfld&&Equals(instruction.operand,target))
@@ -48,18 +52,28 @@ namespace CluckmechCoop
             }
         }
     }
-    [HarmonyPatch(typeof(模块_基本属性),"运算生命值上限")]
+    [HarmonyPatch]
     internal static class OtherworldHealth
-    {private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code)=>OtherworldModifiers.Wrap(code,typeof(模块_基本属性),"生命值倍率",nameof(OtherworldModifiers.Health));}
-    [HarmonyPatch(typeof(模块_攻击属性),"运算攻击力")]
+    {
+        private static MethodBase TargetMethod() => TranspilerContract.InstanceVoid(typeof(模块_基本属性), "运算生命值上限");
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code) =>
+            OtherworldModifiers.Wrap(code, typeof(模块_基本属性), "生命值倍率", nameof(OtherworldModifiers.Health), 1);
+    }
+    [HarmonyPatch]
     internal static class OtherworldAttackStats
     {
-        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code)=>OtherworldModifiers.Wrap(code,typeof(模块_攻击属性),"攻击力",nameof(OtherworldModifiers.BaseAttack));
+        private static MethodBase TargetMethod() => TranspilerContract.InstanceVoid(typeof(模块_攻击属性), "运算攻击力");
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code) =>
+            OtherworldModifiers.Wrap(code, typeof(模块_攻击属性), "攻击力", nameof(OtherworldModifiers.BaseAttack), 2);
         private static void Postfix(模块_攻击属性 __instance)=>OtherworldModifiers.Attack(__instance);
     }
-    [HarmonyPatch(typeof(模块_攻击属性),"运算攻击速度")]
+    [HarmonyPatch]
     internal static class OtherworldAttackRate
-    {private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code)=>OtherworldModifiers.Wrap(code,typeof(模块_攻击属性),"变化百分比攻击速度",nameof(OtherworldModifiers.Rate));}
+    {
+        private static MethodBase TargetMethod() => TranspilerContract.InstanceVoid(typeof(模块_攻击属性), "运算攻击速度");
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code) =>
+            OtherworldModifiers.Wrap(code, typeof(模块_攻击属性), "变化百分比攻击速度", nameof(OtherworldModifiers.Rate), 3);
+    }
     [HarmonyPatch(typeof(模块_攻击属性),"运算攻击范围")]
     internal static class OtherworldAttackRange
     {

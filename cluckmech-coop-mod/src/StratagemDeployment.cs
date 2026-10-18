@@ -83,15 +83,22 @@ namespace CluckmechCoop
         private static void Postfix(int 背包id号,ref GameObject __result,ref GameObject ___当前选中炮台)
         { __result=StratagemDeployment.Preview(背包id号,__result);___当前选中炮台=__result; }
     }
-    [HarmonyPatch(typeof(建造系统),"开始拖动")]
+    [HarmonyPatch]
     internal static class StartStratagemDrag
     {
+        private static System.Reflection.MethodBase TargetMethod() => TranspilerContract.InstanceVoid(typeof(建造系统), "开始拖动");
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code)
         {
-            var original=AccessTools.Method(typeof(dw单位库),"获取单位",new[]{typeof(int)});
-            foreach(var instruction in code)
+            var original = AccessTools.Method(typeof(dw单位库), "获取单位", new[] { typeof(int) });
+            var selected = AccessTools.Method(typeof(StratagemDeployment), nameof(StratagemDeployment.SelectedPrefab), new[] { typeof(dw单位库), typeof(int) });
+            var instructions = TranspilerContract.Exact(code, nameof(StartStratagemDrag), 1, instruction => instruction.Calls(original));
+            foreach (var instruction in instructions)
             {
-                if(instruction.Calls(original)) { instruction.opcode=OpCodes.Call;instruction.operand=AccessTools.Method(typeof(StratagemDeployment),nameof(StratagemDeployment.SelectedPrefab)); }
+                if (instruction.Calls(original))
+                {
+                    instruction.opcode = OpCodes.Call;
+                    instruction.operand = selected;
+                }
                 yield return instruction;
             }
         }

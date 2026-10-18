@@ -20,6 +20,11 @@ var original=Assembly.LoadFrom(Path.Combine(managed,"Assembly-CSharp.dll"));
 var mod=Assembly.LoadFrom(Path.Combine(root,"src/bin/Release/net472/CluckmechCoop.dll"));
 int checks=0;
 try{
+if(args.Length>2 && args[2]=="--transpilers")
+{
+    TranspilerChecks.Run(original,mod,ValidateStack);
+    return;
+}
 if(args.Length>2 && args[2]=="--otherworld")
 {
     foreach(var type in mod.GetTypes().Where(t=>t.Name.StartsWith("Otherworld")||t.Name.StartsWith("Kamui")))
@@ -53,7 +58,7 @@ if(args.Length>2 && args[2]=="--otherworld")
         var type=mod.GetType("CluckmechCoop."+binding.Item3,true);
         var patch=AccessTools.Method(type,"Transpiler");
         var before=PatchProcessor.GetOriginalInstructions(method);
-        var after=((IEnumerable<CodeInstruction>)patch.Invoke(null,new object[]{before})).ToList();
+        var after=((IEnumerable<CodeInstruction>)patch.Invoke(null,patch.GetParameters().Length==2?new object[]{before,method}:new object[]{before})).ToList();
         if(after.Count==before.Count&&after.Zip(before,(a,b)=>a.opcode==b.opcode&&Equals(a.operand,b.operand)).All(x=>x))throw new Exception("No replacement in "+binding);
         ValidateStack(after);checks++;
     }

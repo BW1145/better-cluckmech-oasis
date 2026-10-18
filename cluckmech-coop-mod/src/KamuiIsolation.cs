@@ -11,17 +11,24 @@ namespace CluckmechCoop
     internal static class KamuiTargetCandidates
     {
         private static IEnumerable<MethodBase> TargetMethods()
-        {yield return AccessTools.Method(typeof(模块_攻击),"检索目标");yield return AccessTools.Method(typeof(模块_玩家_攻击),"检索目标");}
+        {
+            yield return TranspilerContract.InstanceVoid(typeof(模块_攻击), "检索目标");
+            yield return TranspilerContract.InstanceVoid(typeof(模块_玩家_攻击), "检索目标");
+        }
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code)
         {
-            var find=AccessTools.Method(typeof(GameObject),nameof(GameObject.FindGameObjectsWithTag));
-            var scoped=AccessTools.Method(typeof(KamuiWorld),nameof(KamuiWorld.Tagged));
-            foreach(var instruction in code)
+            var find = AccessTools.Method(typeof(GameObject), nameof(GameObject.FindGameObjectsWithTag), new[] { typeof(string) });
+            var scoped = AccessTools.Method(typeof(KamuiWorld), nameof(KamuiWorld.Tagged), new[] { typeof(string), typeof(Component) });
+            var instructions = TranspilerContract.Exact(code, nameof(KamuiTargetCandidates), 1, instruction => instruction.Calls(find));
+            foreach (var instruction in instructions)
             {
                 if(instruction.Calls(find))
                 {
-                    var owner=new CodeInstruction(OpCodes.Ldarg_0);owner.labels.AddRange(instruction.labels);instruction.labels.Clear();
-                    yield return owner;yield return new CodeInstruction(OpCodes.Call,scoped);
+                    var owner = new CodeInstruction(OpCodes.Ldarg_0);
+                    owner.labels.AddRange(instruction.labels);
+                    owner.blocks.AddRange(instruction.blocks);
+                    yield return owner;
+                    yield return new CodeInstruction(OpCodes.Call, scoped);
                 }
                 else yield return instruction;
             }
@@ -38,16 +45,25 @@ namespace CluckmechCoop
     internal static class KamuiAuraCandidates
     {
         private static IEnumerable<MethodBase> TargetMethods()
-        {yield return AccessTools.Method(typeof(模块_光环),"检索光环内敌方");yield return AccessTools.Method(typeof(模块_光环),"检索光环内友方");}
+        {
+            yield return TranspilerContract.InstanceVoid(typeof(模块_光环), "检索光环内敌方");
+            yield return TranspilerContract.InstanceVoid(typeof(模块_光环), "检索光环内友方");
+        }
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code)
         {
-            var all=AccessTools.Field(typeof(世界事件系统),"场上所有单位");var scoped=AccessTools.Method(typeof(KamuiWorld),nameof(KamuiWorld.LocalUnits));
-            foreach(var instruction in code)
+            var all = AccessTools.Field(typeof(世界事件系统), "场上所有单位");
+            var scoped = AccessTools.Method(typeof(KamuiWorld), nameof(KamuiWorld.LocalUnits), new[] { typeof(Component) });
+            var instructions = TranspilerContract.Exact(code, nameof(KamuiAuraCandidates), 1,
+                instruction => instruction.opcode == OpCodes.Ldsfld && Equals(instruction.operand, all));
+            foreach (var instruction in instructions)
             {
                 if(instruction.opcode==OpCodes.Ldsfld&&Equals(instruction.operand,all))
                 {
-                    var owner=new CodeInstruction(OpCodes.Ldarg_0);owner.labels.AddRange(instruction.labels);
-                    yield return owner;yield return new CodeInstruction(OpCodes.Call,scoped);
+                    var owner = new CodeInstruction(OpCodes.Ldarg_0);
+                    owner.labels.AddRange(instruction.labels);
+                    owner.blocks.AddRange(instruction.blocks);
+                    yield return owner;
+                    yield return new CodeInstruction(OpCodes.Call, scoped);
                 }
                 else yield return instruction;
             }
