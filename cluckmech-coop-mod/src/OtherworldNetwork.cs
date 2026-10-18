@@ -213,6 +213,11 @@ namespace CluckmechCoop
         private static void Receive(OtherworldMessage message)
         {
             if (Plugin.Role != 2 || message.Token != Plugin.Combat.Token || !OtherworldRegistry.Enabled) return;
+            if (message.Kind == OtherworldMessageKind.DamageStatistics)
+            {
+                OtherworldDamageStatistics.Receive(message.Data);
+                return;
+            }
             if (message.Kind == OtherworldMessageKind.Drop)
             {
                 KamuiDrop.Receive(message.Data, message.Value);

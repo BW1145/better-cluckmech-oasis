@@ -208,7 +208,8 @@ namespace CluckmechCoop
     [HarmonyPatch]
     internal static class KamuiBeforeSceneChange
     {
-        private static IEnumerable<MethodBase> TargetMethods()=>typeof(函数库.场景函数).GetMethods(BindingFlags.Public|BindingFlags.Static).Where(m=>m.Name=="加载场景");
+        private static IEnumerable<MethodBase> TargetMethods()=>typeof(函数库.场景函数).GetMethods(BindingFlags.Public|BindingFlags.Static).Where(m=>m.Name=="加载场景")
+            .Concat(new[]{AccessTools.Method(typeof(Steam联机管理器),"切换场景_联机",new[]{typeof(int)})});
         private static void Prefix()=>KamuiWorld.Capture();
     }
 }

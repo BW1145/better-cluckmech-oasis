@@ -130,7 +130,11 @@ namespace CluckmechCoop
         }
         internal static List<模块_基本属性> LocalUnits(Component owner)=>Rooms.Count==0?世界事件系统.场上所有单位:Candidates(owner);
         internal static void Dash(OtherworldActor actor,Vector2 direction)
-        {if(actor.Space==0&&Plugin.Spawner!=null&&Plugin.Spawner.关卡状态!=刷怪器.关卡状态枚举.结束&&Plugin.Spawner.关卡状态!=刷怪器.关卡状态枚举.无)actor.StartCoroutine(DashRoutine(actor,direction));}
+        {
+            if(actor.Space!=0||Plugin.Spawner==null)return;
+            var phase=Difficulty.PlaybackPhase(Plugin.Spawner);
+            if(phase!=刷怪器.关卡状态枚举.结束&&phase!=刷怪器.关卡状态枚举.无)actor.StartCoroutine(DashRoutine(actor,direction));
+        }
         private static IEnumerator DashRoutine(OtherworldActor actor,Vector2 direction)
         {
             var owner=OtherworldWorld.Unit(actor.gameObject);if(owner==null)yield break;

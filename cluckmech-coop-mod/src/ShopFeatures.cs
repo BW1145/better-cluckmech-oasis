@@ -142,15 +142,34 @@ namespace CluckmechCoop
             var count = AccessTools.PropertyGetter(typeof(List<int>), "Count");
             var setId = AccessTools.PropertySetter(typeof(Vector3Int), "x");
             int draws = 0;
+            bool preferred = false, special = false;
             for (int i = 1; i + 2 < code.Count; i++)
             {
-                if (!code[i].Calls(range) || !code[i+1].Calls(item) || !code[i+2].Calls(setId) || ++draws != 3) continue;
+                if (!code[i].Calls(range) || !code[i+1].Calls(item) || !code[i+2].Calls(setId)) continue;
+                draws++;
+                if (draws == 2)
+                {
+                    var loadShop = new CodeInstruction(OpCodes.Ldarg_0).MoveLabelsFrom(code[i+1]);
+                    code[i+1] = new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(NewShopStock), nameof(PreferredOffer)));
+                    code.Insert(i+1, loadShop);
+                    preferred = true;
+                    continue;
+                }
+                if (draws != 3) continue;
                 if (!code[i-1].Calls(count)) throw new InvalidOperationException("Special shop offer count binding changed");
                 code[i-1] = new CodeInstruction(OpCodes.Ldarg_0).MoveLabelsFrom(code[i-1]);
                 code.Insert(i, new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(NewShopStock), nameof(SpecialOfferCount))));
-                return code;
+                special = true;
+                break;
             }
-            throw new InvalidOperationException("Special shop offer selection binding missing");
+            if (!preferred || !special) throw new InvalidOperationException("Shop offer selection binding missing");
+            return code;
+        }
+        private static int PreferredOffer(List<int> candidates, int index, 商店脚本 shop)
+        {
+            if (candidates.Count != 0) return candidates[index];
+            shop.当前是否符合角色需要 = false;
+            return shop.当前商品[1].x;
         }
         private static int SpecialOfferCount(List<int> candidates, 商店脚本 shop)
         {

@@ -51,7 +51,7 @@ namespace CluckmechCoop
     {
         internal static readonly List<string> Events=new List<string>();
         internal static bool ClosedBeforeCleanup=true;
-        internal static readonly string[] Order={"network","actions","combat","growth","boon-ui","modal","difficulty","module-scene","stratagem","kamui","units","deployment","swallow"};
+        internal static readonly string[] Order={"network","actions","combat","growth","boon-ui","modal","difficulty","module-scene","stratagem","kamui","units","damage-statistics","deployment","swallow"};
         internal static void Record(string item){ClosedBeforeCleanup&= !SceneLifecycle.IsCurrent(SceneLifecycle.Current);Events.Add(item);}
     }
     static class Plugin {internal static bool InCombat;internal static readonly NetworkStub Network=new NetworkStub();internal static readonly CombatStub Combat=new CombatStub();}
@@ -67,6 +67,7 @@ namespace CluckmechCoop
     static class StratagemWorld {internal static void Clear()=>Trace.Record("stratagem");}
     static class KamuiWorld {internal static void Clear()=>Trace.Record("kamui");}
     static class OtherworldWorld {internal static void Clear()=>Trace.Record("units");}
+    static class OtherworldDamageStatistics {internal static void Clear()=>Trace.Record("damage-statistics");}
     static class OtherworldDeployment {internal static void ClearScene()=>Trace.Record("deployment");}
     static class SwallowTargets {internal static void Clear()=>Trace.Record("swallow");}
 }

@@ -32,6 +32,7 @@ namespace CluckmechCoop
             StratagemWorld.Clear();
             KamuiWorld.Clear();
             OtherworldWorld.Clear();
+            OtherworldDamageStatistics.Clear();
             OtherworldDeployment.ClearScene();
             SwallowTargets.Clear();
         }
