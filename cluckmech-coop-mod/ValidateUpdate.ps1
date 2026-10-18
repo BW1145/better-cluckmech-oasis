@@ -29,7 +29,7 @@ function Invoke-Test([string]$name,[string]$folder,[string]$project,[string[]]$e
     if($extra.Count){$arguments+=@('--')+$extra}
     Invoke-Check $name 'dotnet' $arguments
 }
-$known=@('ActionLifetime','Actor','Targets','RuntimeScopes','Visibility','SessionNotifications','Effects','EffectProtocol','SensorPrune','Invulnerability','SaveValidation','Storage','Modules','ModuleLifecycle','Protocol','ActionWiring','RuntimeWiring','NotificationWiring','Transpilers')
+$known=@('ActionLifetime','Actor','Targets','RuntimeScopes','Visibility','CanvasOwnership','NestedHierarchy','SessionNotifications','Effects','EffectProtocol','SensorPrune','Invulnerability','SaveValidation','Storage','Modules','ModuleLifecycle','Protocol','ActionWiring','RuntimeWiring','NotificationWiring','Transpilers')
 foreach($name in $Select){if($name -ne 'All' -and $name -notin $known){throw "Unknown suite: $name"}}
 $suites=if('All' -in $Select){$known}else{$Select}
 try {
@@ -45,6 +45,8 @@ try {
             'Targets' {Invoke-Test $suite 'OtherworldTargets' 'OtherworldTargetsTests.csproj'}
             'RuntimeScopes' {Invoke-Test $suite 'RuntimeLifecycle' 'RuntimeLifecycleTests.csproj'}
             'Visibility' {Invoke-Test $suite 'OtherworldVisibility' 'OtherworldVisibilityTests.csproj'}
+            'CanvasOwnership' {Invoke-Test $suite 'OtherworldVisibility' 'OtherworldVisibilityTests.csproj' @('--canvas-ownership')}
+            'NestedHierarchy' {Invoke-Test $suite 'OtherworldVisibility' 'OtherworldVisibilityTests.csproj' @('--nested-hierarchy')}
             'SessionNotifications' {Invoke-Test $suite 'OtherworldVisibility' 'OtherworldVisibilityTests.csproj' @('--session-notifications')}
             {$_ -in @('Effects','EffectProtocol','SensorPrune','Invulnerability')} {
                 if(-not $effectsPrepared){

@@ -5,7 +5,7 @@
 | 检查层 | Suite | 实际覆盖 |
 |---|---|---|
 | 纯规则 | ActionLifetime、Actor、Targets | 生产动作版本/输入与技能状态；生产范围查询加几何与单位替身，含递归独立快照 |
-| 生产逻辑加替身 | Visibility、SessionNotifications、Effects、SensorPrune、Invulnerability | 隐藏/销毁/重现、渲染缓存与会话消息注册；生产状态与区域聚合，原生状态代码摘录，传感器多碰撞体和无敌转换 |
+| 生产逻辑加替身 | Visibility、CanvasOwnership、NestedHierarchy、SessionNotifications、Effects、SensorPrune、Invulnerability | 隐藏/销毁/重现、渲染缓存、父子单位共享Canvas恢复和深层监听所有权、会话消息注册；生产状态与区域聚合，原生状态代码摘录，传感器多碰撞体和无敌转换 |
 | 生产生命周期加替身 | RuntimeScopes、ModuleLifecycle、Modules、Storage | 实际场景清理协调器/会话状态；完整模块owner、两局与换关、三种角色与模块组合、ES3存储替身的损坏原档保护 |
 | 原生类型/序列化 | SaveValidation、Protocol、EffectProtocol | 实际游戏存档类型及JSON；实际Mirror字节固定样本和往返；战备协议枚举 |
 | 实际程序集绑定 | ActionWiring、RuntimeWiring、NotificationWiring、Transpilers | 最终DLL异步状态机接线、清理与会话注册释放；原生方法签名、精确转译匹配次数、缺失/重复接缝、组合顺序及IL栈 |

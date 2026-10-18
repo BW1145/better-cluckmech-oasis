@@ -4,11 +4,13 @@
 
 八项修复和本轮结构整理已完成，独立审查中两项回归已修复复核。源码和运行素材全部在Git跟踪范围内；没有需要仅从本机搬运的新运行素材。原工作目录中的未跟踪后续设计清单未纳入本轮副本。当前待父任务最终复核、放行发布；不要提前发布Release或安装进正在使用的游戏目录。
 
+父任务追加的嵌套单位Canvas归属问题已修复：共享隐藏计数保留原值，层级监听支持多个持有者，各view仅释放自身。40项Canvas恢复与5项深层动态对象检查、独立只读失败项复核通过；以下构建与包指纹已更新，替代此前6f1c4e4交接中的旧指纹。
+
 ## 文件与证据
 
-完整包：`cluckmech-coop-mod/release/Better-Cluckmech-Oasis-0.6.5-Full.zip`，33,825,556字节；SHA256：`2a111f1e648787d2845cc7e1ee8265fa1217d754a88ded6bec9c09fa55026dbc`。
+完整包：`cluckmech-coop-mod/release/Better-Cluckmech-Oasis-0.6.5-Full.zip`，33,825,754字节；SHA256：`be13a0e83278653a15841bf605b7237d3ebf6943070cadc3f0aaae711555735f`。
 
-主DLL：`e79c691ddd0bde7d57846ea0254e7106dd8035dcff90d6f9dc924be2c0d647df`；诊断DLL：`aafaa4266632fc501ffda0c3c3a126d3c5d9fb7faaed65db73b6e7123f78cfb3`；跳屏DLL：`bf81a0364a2e220cfd5ce9a4f797e41dedaa4fe15de1a2470037df280680f124`。
+主DLL：`7c013286e6726974e89e141624300a4aa4aa549b74717af03dc5e7447684cf12`；诊断DLL：`aafaa4266632fc501ffda0c3c3a126d3c5d9fb7faaed65db73b6e7123f78cfb3`；跳屏DLL：`bf81a0364a2e220cfd5ce9a4f797e41dedaa4fe15de1a2470037df280680f124`。
 
 安装包、bin/obj、原生引用及本机日志不在Git中。源码、测试与验证记录已保存；离线验证的实际覆盖及限制见`../验证记录.md`与`../tests/CHECKS.md`。本机日志在忽略的`artifacts/checks`、`artifacts/eight-fixes`和`artifacts/structure`。不需要重复执行已通过且源码未变的检查。
 

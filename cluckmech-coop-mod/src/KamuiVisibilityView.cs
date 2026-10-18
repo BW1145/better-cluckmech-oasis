@@ -11,7 +11,7 @@ namespace CluckmechCoop
         private readonly List<Transform> transforms=new List<Transform>();
         private readonly List<KamuiVisibilityChildren> children=new List<KamuiVisibilityChildren>();
         private readonly List<Renderer> hidden=new List<Renderer>();
-        private readonly Dictionary<Canvas,bool> previous=new Dictionary<Canvas,bool>();
+        private readonly List<Canvas> hiddenCanvases=new List<Canvas>();
         private bool tracking,visible,dirty=true;
         internal void SetVisible(bool value)
         {
@@ -26,40 +26,52 @@ namespace CluckmechCoop
         private void Rebuild()
         {
             Reveal();
-            foreach(var child in children)if(child!=null&&child.Owner==this)child.Owner=null;
+            foreach(var child in children)if(child!=null)child.Unregister(this);
             children.Clear();renderers.Clear();canvases.Clear();transforms.Clear();
             GetComponentsInChildren(true,renderers);GetComponentsInChildren(true,canvases);GetComponentsInChildren(true,transforms);
             foreach(var transform in transforms)
             {
                 var child=transform.GetComponent<KamuiVisibilityChildren>()??transform.gameObject.AddComponent<KamuiVisibilityChildren>();
-                child.Owner=this;children.Add(child);
+                child.Register(this);children.Add(child);
             }
         }
         private void Apply()
         {
             if(visible)return;
             foreach(var renderer in renderers)if(renderer!=null){OtherworldRenderLease.Hide(renderer);hidden.Add(renderer);}
-            foreach(var canvas in canvases)if(canvas!=null){previous[canvas]=canvas.enabled;canvas.enabled=false;}
+            foreach (var canvas in canvases)
+            {
+                if (canvas==null) continue;
+                OtherworldRenderLease.HideCanvas(canvas);
+                hiddenCanvases.Add(canvas);
+            }
         }
         private void Reveal()
         {
             foreach(var renderer in hidden)OtherworldRenderLease.Reveal(renderer);
             hidden.Clear();
-            foreach(var pair in previous)if(pair.Key!=null)pair.Key.enabled=pair.Value;
-            previous.Clear();
+            foreach (var canvas in hiddenCanvases) OtherworldRenderLease.RevealCanvas(canvas);
+            hiddenCanvases.Clear();
         }
         internal void Release()
         {
             tracking=false;Reveal();dirty=true;
-            foreach(var child in children)if(child!=null&&child.Owner==this)child.Owner=null;
+            foreach(var child in children)if(child!=null)child.Unregister(this);
             children.Clear();renderers.Clear();canvases.Clear();transforms.Clear();
         }
         private void OnDestroy()=>Release();
     }
     internal sealed class KamuiVisibilityChildren:MonoBehaviour
     {
-        internal KamuiVisibilityView Owner;
-        private void OnTransformChildrenChanged()=>Owner?.Changed();
-        private void OnEnable()=>Owner?.Changed();
+        private readonly HashSet<KamuiVisibilityView> owners=new HashSet<KamuiVisibilityView>();
+        internal void Register(KamuiVisibilityView owner)=>owners.Add(owner);
+        internal void Unregister(KamuiVisibilityView owner)=>owners.Remove(owner);
+        private void Changed()
+        {
+            foreach (var owner in owners)
+                if (owner!=null) owner.Changed();
+        }
+        private void OnTransformChildrenChanged()=>Changed();
+        private void OnEnable()=>Changed();
     }
 }

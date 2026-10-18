@@ -8,6 +8,18 @@ static class Program
     static int checks;static void Check(bool value,string name){checks++;if(!value)throw new Exception(name);}
     static void Main(string[] args)
     {
+        if (Array.IndexOf(args,"--nested-hierarchy")>=0)
+        {
+            NestedHierarchy();
+            Console.WriteLine($"PASS {checks} nested unit hierarchy listener ownership checks");
+            return;
+        }
+        if (Array.IndexOf(args,"--canvas-ownership")>=0)
+        {
+            CanvasOwnership();
+            Console.WriteLine($"PASS {checks} parent-child canvas ownership and restoration checks");
+            return;
+        }
         if (Array.IndexOf(args,"--session-notifications")>=0)
         {
             SessionNotifications();
@@ -35,6 +47,74 @@ static class Program
         var obj=new GameObject();obj.AddComponent<NetworkIdentity>().netId=id;
         var unit=obj.AddComponent<OtherworldUnit>();unit.Space=space;unit.Health=obj.AddComponent<\u6a21\u5757_\u57fa\u672c\u5c5e\u6027>();
         obj.AddComponent<Renderer>();OtherworldWorld.Units[obj]=unit;return unit;
+    }
+    static void CanvasOwnership()
+    {
+        foreach(bool original in new[]{false,true})
+        foreach(bool parentHidesFirst in new[]{false,true})
+        foreach(bool parentReleasesFirst in new[]{false,true})
+        {
+            var parent=Unit(100,2);
+            var child=Unit(101,2);
+            parent.transform.Add(child.gameObject);
+            var canvas=child.gameObject.AddComponent<Canvas>();
+            canvas.enabled=original;
+            var parentView=parent.gameObject.AddComponent<KamuiVisibilityView>();
+            var childView=child.gameObject.AddComponent<KamuiVisibilityView>();
+            var firstHide=parentHidesFirst?parentView:childView;
+            var secondHide=parentHidesFirst?childView:parentView;
+            firstHide.SetVisible(false);
+            secondHide.SetVisible(false);
+            Check(!canvas.enabled,"both nested unit views hide the shared canvas");
+
+            // A hierarchy cache rebuild must not recapture another owner's false value.
+            parentView.Changed();
+            parentView.SetVisible(false);
+            Check(!canvas.enabled,"rebuilding one owner preserves the other owner's hide");
+            var firstRelease=parentReleasesFirst?parentView:childView;
+            var lastRelease=parentReleasesFirst?childView:parentView;
+            firstRelease.SetVisible(true);
+            Check(!canvas.enabled,"revealing one unit cannot expose a canvas still owned by the hidden unit");
+            lastRelease.Release();
+            Check(canvas.enabled==original,"last owner restores the actual original canvas state");
+            firstRelease.Release();
+            lastRelease.Release();
+            Check(canvas.enabled==original,"repeated cleanup does not change restored canvas state");
+            OtherworldWorld.Units.Clear();
+        }
+    }
+    static void NestedHierarchy()
+    {
+        var parent=Unit(110,0);
+        var child=Unit(111,2);
+        parent.transform.Add(child.gameObject);
+        var anchor=new GameObject();
+        child.transform.Add(anchor);
+        var original=anchor.AddComponent<Canvas>();
+        var parentView=parent.gameObject.AddComponent<KamuiVisibilityView>();
+        var childView=child.gameObject.AddComponent<KamuiVisibilityView>();
+        parentView.SetVisible(true);
+        childView.SetVisible(false);
+        Check(!original.enabled,"nested child unit starts hidden under a visible parent");
+        parentView.Changed();
+        parentView.SetVisible(true);
+        var grandchild=new GameObject();
+        anchor.transform.Add(grandchild);
+        var renderer=grandchild.AddComponent<Renderer>();
+        var canvas=grandchild.AddComponent<Canvas>();
+        parent.gameObject.Message("LateUpdate");
+        child.gameObject.Message("LateUpdate");
+        Check(renderer.forceRenderingOff&&!canvas.enabled,"parent cache rebuild cannot steal deep child hierarchy notifications");
+        parentView.Release();
+        Check(renderer.forceRenderingOff&&!canvas.enabled,"releasing parent listener preserves hidden child's leases");
+        var later=new GameObject();
+        anchor.transform.Add(later);
+        var laterRenderer=later.AddComponent<Renderer>();
+        child.gameObject.Message("LateUpdate");
+        Check(laterRenderer.forceRenderingOff,"child listener still receives changes after parent releases");
+        childView.Release();
+        Check(original.enabled&&canvas.enabled&&!renderer.forceRenderingOff&&!laterRenderer.forceRenderingOff,"final child cleanup restores all dynamically discovered visuals");
+        OtherworldWorld.Units.Clear();
     }
     static void Visibility()
     {

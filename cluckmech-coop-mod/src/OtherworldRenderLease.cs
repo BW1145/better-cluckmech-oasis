@@ -9,6 +9,28 @@ namespace CluckmechCoop
     {
         private sealed class Lease { internal int Count;internal bool Original; }
         private static readonly Dictionary<Renderer,Lease> hidden=new Dictionary<Renderer,Lease>();
+        private static readonly Dictionary<Canvas,Lease> hiddenCanvases=new Dictionary<Canvas,Lease>();
+
+        internal static void HideCanvas(Canvas canvas)
+        {
+            if (canvas==null) return;
+            if (!hiddenCanvases.TryGetValue(canvas,out var lease))
+            {
+                lease=new Lease { Original=canvas.enabled };
+                hiddenCanvases.Add(canvas,lease);
+            }
+            lease.Count++;
+            canvas.enabled=false;
+        }
+
+        internal static void RevealCanvas(Canvas canvas)
+        {
+            if (ReferenceEquals(canvas,null)||!hiddenCanvases.TryGetValue(canvas,out var lease)) return;
+            if (--lease.Count!=0) return;
+            hiddenCanvases.Remove(canvas);
+            if (canvas!=null) canvas.enabled=lease.Original;
+        }
+
         internal static void Hide(Renderer renderer)
         {
             if(renderer==null)return;
