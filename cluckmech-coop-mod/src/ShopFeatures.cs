@@ -132,11 +132,17 @@ namespace CluckmechCoop
     [HarmonyPatch(typeof(商店脚本), "商店商品运算")]
     internal static class NewShopStock
     {
-        private static void Prefix(商店脚本 __instance) { if (ShopFeatures.Enabled) ShopFeatures.For(__instance).PrepareStock(); }
+        private static readonly List<模块_基本属性.单位分类枚举> emptyPreferences=new List<模块_基本属性.单位分类枚举>();
+        private static void Prefix(商店脚本 __instance) { OtherworldProgress.RestoreNative();if (ShopFeatures.Enabled) ShopFeatures.For(__instance).PrepareStock(); }
         private static void Postfix(商店脚本 __instance) { if (ShopFeatures.Enabled) ShopFeatures.For(__instance).StockReady(false); }
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
-            var code = instructions.ToList();
+            var weights=AccessTools.Field(typeof(角色天赋数据模板),"商店权重加成列表");
+            var code = TranspilerContract.Exact(instructions,"Shop talent preferences",1,
+                c=>c.opcode==OpCodes.Ldfld&&Equals(c.operand,weights));
+            foreach(var c in code)
+                if(c.opcode==OpCodes.Ldfld&&Equals(c.operand,weights))
+                {c.opcode=OpCodes.Call;c.operand=AccessTools.Method(typeof(NewShopStock),nameof(Preferences));}
             var range = AccessTools.Method(typeof(UnityEngine.Random), nameof(UnityEngine.Random.Range), new[] { typeof(int), typeof(int) });
             var item = AccessTools.PropertyGetter(typeof(List<int>), "Item");
             var count = AccessTools.PropertyGetter(typeof(List<int>), "Count");
@@ -171,6 +177,8 @@ namespace CluckmechCoop
             shop.当前是否符合角色需要 = false;
             return shop.当前商品[1].x;
         }
+        private static List<模块_基本属性.单位分类枚举> Preferences(角色天赋数据模板 talent)
+            =>talent==null?emptyPreferences:talent.商店权重加成列表??emptyPreferences;
         private static int SpecialOfferCount(List<int> candidates, 商店脚本 shop)
         {
             // The native preferred-slot replacement leaves its new ID in this pool.

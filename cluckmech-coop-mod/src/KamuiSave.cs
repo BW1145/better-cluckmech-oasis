@@ -16,11 +16,12 @@ namespace CluckmechCoop
         private static readonly Dictionary<string,GameObject> dropPrefabs=new Dictionary<string,GameObject>();
         private static int restoredScene=-1;
         internal static OtherworldSave Save()
-        {Capture();OtherworldDeployment.RefreshLocal();return new OtherworldSave{Players=OtherworldProgress.Players,Rooms=SavedRooms};}
+        {OtherworldProgress.ReadNative(Plugin.Role);Capture();OtherworldDeployment.RefreshLocal();return new OtherworldSave{Players=OtherworldProgress.Players,Rooms=SavedRooms};}
         internal static void Load(OtherworldSave save)
         {
             OtherworldProgress.Players=save.Players;SavedRooms=save.Rooms;
             OtherworldDeployment.Rebind();restoredScene=-1;
+            OtherworldProgress.RestoreNative();
         }
         internal static void NewRun(){SavedRooms.Clear();restoredScene=-1;OtherworldDeployment.Rebind();}
         private static Dictionary<string,float[]> ReadScalars(Component component)

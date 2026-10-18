@@ -7,6 +7,28 @@ using HarmonyLib;
 
 internal static class TranspilerChecks
 {
+    internal static void Shop(Assembly original,Assembly mod,Action<List<CodeInstruction>> validateStack)
+    {
+        var method=AccessTools.DeclaredMethod(original.GetType("商店脚本",true),"商店商品运算");
+        var owner=mod.GetType("CluckmechCoop.NewShopStock",true);
+        var patch=AccessTools.DeclaredMethod(owner,"Transpiler");
+        var before=PatchProcessor.GetOriginalInstructions(method);var after=Apply(patch,before,method);
+        validateStack(after);
+        foreach(string helper in new[]{"Preferences","PreferredOffer","SpecialOfferCount"})
+            Require(after.Count(c=>c.Calls(AccessTools.DeclaredMethod(owner,helper)))==1,"Shop preserved helper: "+helper);
+        var weights=AccessTools.Field(original.GetType("角色天赋数据模板",true),"商店权重加成列表");
+        Require(before.Count(c=>c.opcode==OpCodes.Ldfld&&Equals(c.operand,weights))==1,"original preference seam unchanged");
+        Require(!after.Any(c=>c.opcode==OpCodes.Ldfld&&Equals(c.operand,weights)),"null talent field dereference replaced");
+        var empty=AccessTools.DeclaredMethod(owner,"Preferences").Invoke(null,new object[]{null}) as System.Collections.IList;
+        Require(empty!=null&&empty.Count==0,"null initial talent produces empty preference without dereference");
+        ExpectInvalid(()=>Apply(patch,before.Where(c=>!Equals(c.operand,weights)),method),"Shop talent preferences");
+        var extra=before.Select(c=>new CodeInstruction(c)).ToList();extra.Add(new CodeInstruction(OpCodes.Ldfld,weights));
+        ExpectInvalid(()=>Apply(patch,extra,method),"Shop talent preferences");
+        var progress=mod.GetType("CluckmechCoop.OtherworldProgress",true);
+        var restore=AccessTools.Method(progress,"RestoreNative",Type.EmptyTypes);
+        Require(PatchProcessor.GetOriginalInstructions(AccessTools.Method(mod.GetType("CluckmechCoop.KamuiWorld",true),"Load")).Any(c=>c.Calls(restore)),"load rebinds native talent references before later UI reads");
+        Console.WriteLine("PASS: shop null-talent fallback, retained draw helpers, IL stack, missing/duplicate seams and load rebind wiring");
+    }
     private sealed class Binding
     {
         internal string Type, Target, Patch, SourceType, Source, Helper;

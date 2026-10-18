@@ -1,5 +1,6 @@
 using Mirror;
 using Newtonsoft.Json;
+using System.Linq;
 using UnityEngine;
 
 namespace CluckmechCoop
@@ -153,6 +154,7 @@ namespace CluckmechCoop
                 Hero = run.Hero,
                 Initial = run.Initial,
                 Talents = run.Talents,
+                NativeTalents = run.NativeTalents,
                 Upgrades = run.Upgrades,
                 ShockKills = run.ShockKills,
                 SpaceKills = run.SpaceKills,
@@ -202,7 +204,7 @@ namespace CluckmechCoop
             var current = OtherworldProgress.For(role);
             if (incoming == null || current == null || current.Hero != incoming.Hero || current.Initial != incoming.Initial) return;
             current.Upgrades = incoming.Upgrades;
-            current.Talents = incoming.Talents;
+            OtherworldTalentState.Capture(current,incoming.Initial,incoming.NativeTalents??incoming.Talents.ToList());
             current.BaseInfluence = incoming.BaseInfluence;
             current.LastMachine = incoming.LastMachine;
             current.LastDeployment = Rules.ValidMachine(incoming.LastDeployment) ? incoming.LastDeployment : null;
@@ -229,7 +231,12 @@ namespace CluckmechCoop
                 if (run != null && message.Value == Plugin.Role)
                 {
                     var previous = OtherworldProgress.For(message.Value);
-                    if (previous != null) run.CardIds = previous.CardIds;
+                    if (previous != null)
+                    {
+                        run.CardIds = previous.CardIds;
+                        if(previous.Hero==run.Hero&&previous.Initial==run.Initial)
+                            OtherworldTalentState.Capture(run,run.Initial,previous.NativeTalents??previous.Talents.ToList());
+                    }
                     OtherworldProgress.Players[message.Value] = run;
                     var player = OtherworldActions.Player(message.Value);
                     if (player != null) player.Run = run;

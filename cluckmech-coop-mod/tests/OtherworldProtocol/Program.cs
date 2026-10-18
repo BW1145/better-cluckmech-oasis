@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CluckmechCoop;
 using Mirror;
 
@@ -64,6 +65,25 @@ static class Program
         run.LastDeployment = null;
         run.CardIds.Add("same"); run.CardIds.Add("same");
         Check(!OtherworldDataValidation.Run(run), "duplicate persistent identity rejected");
-        Console.WriteLine($"Otherworld protocol: {checks} checks passed using actual Mirror assembly.");
+        foreach(var initial in OtherworldCatalog.Talents.Where(t=>t.Initial))
+        {
+            var earned=OtherworldCatalog.Talents.Where(t=>OtherworldCatalog.Eligible(t,initial.Hero,initial.Id,new HashSet<int>())).Select(t=>t.Id).ToArray();
+            var original=new OtherworldRun{Hero=initial.Hero,Initial=initial.Id};
+            OtherworldTalentState.Capture(original,initial.Id,earned);
+            var resumed=Newtonsoft.Json.JsonConvert.DeserializeObject<OtherworldRun>(Newtonsoft.Json.JsonConvert.SerializeObject(original));
+            OtherworldTalentState.Capture(resumed,0,new[]{0});
+            Check(resumed.Initial==initial.Id&&resumed.Talents.SetEquals(earned)&&resumed.NativeTalents.Count==earned.Length,"fresh-process ID reload preserves initial and every route talent: "+initial.Id);
+            OtherworldTalentState.Capture(resumed,0,Array.Empty<int>());
+            Check(resumed.Initial==initial.Id&&resumed.Talents.SetEquals(earned),"missing native references do not erase saved IDs: "+initial.Id);
+            OtherworldTalentState.Capture(resumed,initial.Id,earned);
+            Check(resumed.NativeTalents.Count==earned.Length,"repeated capture retains unique references: "+initial.Id);
+        }
+        var legacy=Newtonsoft.Json.JsonConvert.DeserializeObject<OtherworldRun>("{\"Hero\":13,\"Initial\":26005,\"Talents\":[26117]}");
+        OtherworldTalentState.Capture(legacy,0,new[]{0,102});
+        Check(legacy.Initial==26005&&legacy.Talents.SetEquals(new[]{26117})&&legacy.NativeTalents.Contains(102),"legacy custom IDs and native talent IDs survive together");
+        OtherworldTalentState.Capture(legacy,26001,new[]{26101,26118});
+        Check(legacy.Initial==26005&&!legacy.Talents.Contains(26101)&&legacy.Talents.Contains(26118),"foreign hero records do not replace this player talents");
+        legacy.NativeTalents.Add(0);Check(!OtherworldDataValidation.Run(legacy),"zero talent ID is rejected in stable native snapshot");
+        Console.WriteLine($"Otherworld protocol and talent persistence: {checks} checks passed using actual Mirror assembly.");
     }
 }

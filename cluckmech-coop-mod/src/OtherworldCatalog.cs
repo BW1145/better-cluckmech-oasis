@@ -73,6 +73,8 @@ namespace CluckmechCoop
     {
         public int Hero, Initial, Upgrades, ShockKills, SpaceKills;
         public HashSet<int> Talents=new HashSet<int>();
+        [Newtonsoft.Json.JsonProperty(NullValueHandling=Newtonsoft.Json.NullValueHandling.Ignore)]
+        public List<int> NativeTalents;
         public string LastMachine;
         public Machine LastDeployment;
         public List<string> CardIds=new List<string>();

@@ -4,7 +4,8 @@
     <Managed>$(GameDir)/Cluckmech Oasis_Data/Managed</Managed>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../src/OtherworldProtocol.cs"/><Compile Include="../../src/OtherworldDataValidation.cs"/><Compile Include="../../src/OtherworldCatalog.cs"/><Compile Include="../../src/Rules.cs"/><Compile Include="Program.cs"/>
+    <Compile Include="../../src/OtherworldProtocol.cs"/><Compile Include="../../src/OtherworldDataValidation.cs"/><Compile Include="../../src/OtherworldCatalog.cs"/><Compile Include="../../src/OtherworldTalentState.cs"/><Compile Include="../../src/Rules.cs"/><Compile Include="Program.cs"/>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(Managed)/Newtonsoft.Json.dll</HintPath></Reference>
     <Reference Include="Mirror"><HintPath>$(Managed)/Mirror.dll</HintPath></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)/UnityEngine.CoreModule.dll</HintPath></Reference>
   </ItemGroup>

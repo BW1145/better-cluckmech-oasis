@@ -12,6 +12,7 @@ namespace CluckmechCoop
         {
             if (run == null || OtherworldCatalog.Hero(run.Hero) == null || run.Talents == null ||
                 run.Upgrades < 0 || run.ShockKills < 0 || run.SpaceKills < 0 || !Finite(run.BaseInfluence)) return false;
+            if(run.NativeTalents!=null&&(run.NativeTalents.Any(id=>!OtherworldTalentState.Earned(id,run.Hero))||run.NativeTalents.Distinct().Count()!=run.NativeTalents.Count))return false;
 
             if (run.Initial != 0)
             {

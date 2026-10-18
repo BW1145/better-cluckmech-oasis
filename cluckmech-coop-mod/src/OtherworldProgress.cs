@@ -22,9 +22,10 @@ namespace CluckmechCoop
             if(Plugin.Role==0 || role==Plugin.Role)
             {
                 var summary=Plugin.Summary;if(summary==null)return;
+                RestoreNative(summary);
                 hero=summary.单局统计数据.使用角色;initial=summary.单局统计数据.角色初始天赋?.id??0;
                 upgrades=summary.单局统计数据.获得强化;
-                owned=summary.单局统计数据.角色天赋列表.Select(t=>t.id);
+                owned=summary.单局统计数据.角色天赋列表.Where(t=>t!=null).Select(t=>t.id);
             }
             else
             {
@@ -39,11 +40,25 @@ namespace CluckmechCoop
             if(OtherworldCatalog.Hero(hero)==null)return;
             int key=role==0?1:role;
             if(!Players.TryGetValue(key,out var run) || run.Hero!=hero)Players[key]=run=new OtherworldRun{Hero=hero};
-            run.Initial=initial;run.Talents=new HashSet<int>(owned.Where(id=>OtherworldCatalog.Talent(id)?.Initial==false));
+            OtherworldTalentState.Capture(run,initial,owned);
             if(Plugin.Role==0 || role==Plugin.Role)run.Upgrades=upgrades;
             run.BaseInfluence=NativeInfluence(role);
             if(Plugin.Role==0 || role==Plugin.Role)OtherworldDeployment.RefreshLocal();
             OtherworldWorld.Refresh(role);
+        }
+        internal static void RestoreNative()=>RestoreNative(Plugin.Summary);
+        private static void RestoreNative(总结脚本 summary)
+        {
+            if(summary==null)return;
+            var stats=summary.单局统计数据;var run=For(Plugin.Role);
+            if(run==null||run.Hero!=stats.使用角色)return;
+            if(talents==null)talents=Object.FindObjectOfType<数据库_角色天赋>();
+            if(talents==null)return;
+            OtherworldRegistry.Install(talents);
+            if(!OtherworldTalentState.Initial(stats.角色初始天赋?.id??0,run.Hero)&&OtherworldTalentState.Initial(run.Initial,run.Hero))
+                stats.角色初始天赋=talents.查询角色天赋(run.Initial);
+            OtherworldTalentState.Capture(run,stats.角色初始天赋?.id??0,stats.角色天赋列表.Where(t=>t!=null).Select(t=>t.id));
+            stats.角色天赋列表=run.NativeTalents.Select(id=>talents.查询角色天赋(id)).Where(t=>t!=null).ToList();
         }
         internal static float NativeInfluence(int role)
         {
