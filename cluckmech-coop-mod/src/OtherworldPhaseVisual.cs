@@ -10,6 +10,8 @@ namespace CluckmechCoop
         private Mesh mesh;
         private MeshRenderer drawing;
         private SpriteRenderer opening;
+        private MaterialPropertyBlock textureBlock;
+        private Texture frameTexture;
         private Vector3[] rest,vertices;
         private Vector2[] uv;
         private Color[] colors;
@@ -24,7 +26,7 @@ namespace CluckmechCoop
             root.transform.localPosition=actor.VisualOrigin;root.transform.localScale=Vector3.one*actor.VisualScale;
             drawing=root.AddComponent<MeshRenderer>();drawing.sharedMaterial=actor.Body.sharedMaterial;
             drawing.sortingLayerID=actor.Body.sortingLayerID;drawing.sortingOrder=actor.Body.sortingOrder;drawing.enabled=false;
-            var block=new MaterialPropertyBlock();block.SetTexture("_MainTex",actor.CurrentFrame.texture);drawing.SetPropertyBlock(block);
+            textureBlock=new MaterialPropertyBlock();frameTexture=actor.CurrentFrame.texture;textureBlock.SetTexture("_MainTex",frameTexture);drawing.SetPropertyBlock(textureBlock);
             mesh=new Mesh{name="KamuiPhaseBody"};mesh.MarkDynamic();root.AddComponent<MeshFilter>().sharedMesh=mesh;
             rest=new Vector3[Bands*4];vertices=new Vector3[rest.Length];uv=new Vector2[rest.Length];colors=new Color[rest.Length];var triangles=new int[Bands*6];
             var bounds=actor.CurrentFrame.bounds;
@@ -43,8 +45,7 @@ namespace CluckmechCoop
         private void LateUpdate()
         {
             if(actor==null||drawing==null)return;
-            bool phased=actor.Phased&&!actor.Dashing&&!actor.Death.是否玩家死亡;
-            if(actor.Dashing){Stop();wasPhased=false;return;}
+            bool phased=(actor.Phased||actor.Dashing)&&!actor.Death.是否玩家死亡;
             if(phased&&!wasPhased)
             {
                 started=Time.time;playing=true;finish=0;previous=-1;
@@ -54,8 +55,10 @@ namespace CluckmechCoop
             wasPhased=phased;if(!playing)return;
             if(!phased&&Time.time>=finish){Stop();return;}
             drawing.enabled=true;drawing.sortingOrder=actor.Body.sortingOrder;
+            if(frameTexture!=actor.CurrentFrame.texture)
+            {frameTexture=actor.CurrentFrame.texture;textureBlock.SetTexture("_MainTex",frameTexture);drawing.SetPropertyBlock(textureBlock);}
             float age=Time.time-started,weight=phased?Mathf.Clamp01(age/.12f):Mathf.Clamp01((finish-Time.time)/.18f);
-            var visible=OtherworldAssets.VisibleBounds(OtherworldAssets.Hero(actor.Hero,0,actor.FacingDirection));
+            var visible=OtherworldAssets.VisibleBounds(actor.CurrentFrame);
             float width=visible.size.x;
             for(int band=0;band<Bands;band++)
             {

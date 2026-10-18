@@ -10,7 +10,7 @@ namespace CluckmechCoop
         private static KamuiInterest interest;
         private static readonly Dictionary<uint,GameObject> hidden=new Dictionary<uint,GameObject>();
         private static readonly HashSet<GameObject> restored=new HashSet<GameObject>();
-        private static readonly Dictionary<Renderer,bool> previous=new Dictionary<Renderer,bool>();
+        private static readonly HashSet<Renderer> hiddenRenderers=new HashSet<Renderer>();
         private static readonly Dictionary<Canvas,bool> previousCanvases=new Dictionary<Canvas,bool>();
         private static bool registered;
         internal static void Install()
@@ -69,10 +69,9 @@ namespace CluckmechCoop
                 {
                     if(!visible)
                     {
-                        if(!previous.ContainsKey(renderer))previous[renderer]=renderer.forceRenderingOff;
-                        renderer.forceRenderingOff=true;
+                        if(hiddenRenderers.Add(renderer))OtherworldRenderLease.Hide(renderer);
                     }
-                    else if(previous.TryGetValue(renderer,out bool prior)){renderer.forceRenderingOff=prior;previous.Remove(renderer);}
+                    else if(hiddenRenderers.Remove(renderer))OtherworldRenderLease.Reveal(renderer);
                 }
                 foreach(var canvas in unit.GetComponentsInChildren<Canvas>(true))
                 {
@@ -83,7 +82,7 @@ namespace CluckmechCoop
         }
         internal static void Forget(GameObject obj)
         {
-            foreach(var renderer in obj.GetComponentsInChildren<Renderer>(true))previous.Remove(renderer);
+            foreach(var renderer in obj.GetComponentsInChildren<Renderer>(true))if(hiddenRenderers.Remove(renderer))OtherworldRenderLease.Reveal(renderer);
             foreach(var canvas in obj.GetComponentsInChildren<Canvas>(true))previousCanvases.Remove(canvas);
             restored.Remove(obj);
         }
@@ -91,8 +90,8 @@ namespace CluckmechCoop
         {
             foreach(var obj in hidden.Values)if(obj!=null)Object.Destroy(obj);
             hidden.Clear();restored.Clear();
-            foreach(var pair in previous)if(pair.Key!=null)pair.Key.forceRenderingOff=pair.Value;
-            previous.Clear();registered=false;
+            foreach(var renderer in hiddenRenderers)OtherworldRenderLease.Reveal(renderer);
+            hiddenRenderers.Clear();registered=false;
             foreach(var pair in previousCanvases)if(pair.Key!=null)pair.Key.enabled=pair.Value;
             previousCanvases.Clear();
             if(interest!=null)

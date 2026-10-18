@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections.Generic;
 
 namespace CluckmechCoop
 {
@@ -7,8 +6,6 @@ namespace CluckmechCoop
     internal sealed class OtherworldWarpVisual : MonoBehaviour
     {
         private const int Bands=16;
-        private sealed class HideLease {internal int Count;internal bool Original;}
-        private static readonly Dictionary<SpriteRenderer,HideLease> hidden=new Dictionary<SpriteRenderer,HideLease>();
         private SpriteRenderer source,portal;
         private Mesh mesh;
         private Vector3[] rest,vertices;
@@ -18,16 +15,8 @@ namespace CluckmechCoop
         private readonly Sprite[] frames=new Sprite[16];
         private int lastFrame=-1;
         private bool returning,hideSource;
-        internal static void Hide(SpriteRenderer source)
-        {
-            if(!hidden.TryGetValue(source,out var lease))hidden[source]=lease=new HideLease{Original=source.forceRenderingOff};
-            lease.Count++;source.forceRenderingOff=true;
-        }
-        internal static void Reveal(SpriteRenderer source)
-        {
-            if(ReferenceEquals(source,null)||!hidden.TryGetValue(source,out var lease))return;
-            if(--lease.Count==0){hidden.Remove(source);if(source!=null)source.forceRenderingOff=lease.Original;}
-        }
+        internal static void Hide(Renderer source)=>OtherworldRenderLease.Hide(source);
+        internal static void Reveal(Renderer source)=>OtherworldRenderLease.Reveal(source);
 
         internal static void Play(SpriteRenderer source,bool returning,float duration=.55f,bool hideSource=true)
         {

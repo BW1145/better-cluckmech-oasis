@@ -129,12 +129,11 @@ namespace CluckmechCoop
             return units;
         }
         internal static List<模块_基本属性> LocalUnits(Component owner)=>Rooms.Count==0?世界事件系统.场上所有单位:Candidates(owner);
-        internal static void Dash(OtherworldActor actor,Vector2 aim)
-        {if(actor.Space==0&&Plugin.Spawner!=null&&Plugin.Spawner.关卡状态!=刷怪器.关卡状态枚举.结束&&Plugin.Spawner.关卡状态!=刷怪器.关卡状态枚举.无)actor.StartCoroutine(DashRoutine(actor,aim));}
-        private static IEnumerator DashRoutine(OtherworldActor actor,Vector2 aim)
+        internal static void Dash(OtherworldActor actor,Vector2 direction)
+        {if(actor.Space==0&&Plugin.Spawner!=null&&Plugin.Spawner.关卡状态!=刷怪器.关卡状态枚举.结束&&Plugin.Spawner.关卡状态!=刷怪器.关卡状态枚举.无)actor.StartCoroutine(DashRoutine(actor,direction));}
+        private static IEnumerator DashRoutine(OtherworldActor actor,Vector2 direction)
         {
-            actor.Dashing=true;var start=(Vector2)actor.transform.position;
-            var direction=(aim-start).normalized;if(direction==Vector2.zero)direction=Vector2.right;
+            direction=actor.BeginDash(direction);var start=(Vector2)actor.transform.position;
             var end=start+direction*(actor.Run.Has(26114)?5:3);
             if(navigation==null)navigation=Object.FindObjectOfType<导航管理器>();
             if(!navigation.地面导航地图.PointIsValid(end))end=navigation.地面导航地图.GetCloserEdgePoint(end);
@@ -237,6 +236,7 @@ namespace CluckmechCoop
                 }
             }
             KamuiNavigation.Transfer(unit,originalSpace,space);
+            OtherworldDashNetwork.Transferred(unit.GetComponent<OtherworldActor>(),originalSpace,space);
             if(body!=null)OtherworldWarpVisual.Play(body,true);
             if(Plugin.Role==1)
             {

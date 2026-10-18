@@ -9,6 +9,8 @@ namespace CluckmechCoop
     {
         private static Texture2D atlas,space;
         private static Sprite ground;
+        private static readonly Texture2D[] faithful=new Texture2D[2];
+        private static readonly Dictionary<string,int[]>[] faithfulRegions=new Dictionary<string,int[]>[2];
         private static Dictionary<string,int[]> regions;
         private static readonly Dictionary<string,Sprite> sprites=new Dictionary<string,Sprite>();
         private static readonly Dictionary<Sprite,Bounds> visible=new Dictionary<Sprite,Bounds>();
@@ -39,6 +41,50 @@ namespace CluckmechCoop
             visible[sprite]=new Bounds(new Vector3(((r[4]+r[6])*.5f-r[2]*pivot.x)/32, (r[3]-(r[5]+r[7])*.5f-r[3]*pivot.y)/32),new Vector3((r[6]-r[4])/32f,(r[7]-r[5])/32f));
             sprites.Add(key,sprite);return sprite;
         }
+        private static Sprite Faithful(int hero,string key)
+        {
+            if(sprites.TryGetValue(key,out var sprite))return sprite;
+            if(faithful[hero]==null)
+            {
+                faithful[hero]=Load("faithful-"+hero+".png");
+                using(var stream=typeof(Plugin).Assembly.GetManifestResourceStream("CluckmechCoop.OtherworldAssets.faithful-"+hero+".json"))
+                using(var reader=new StreamReader(stream,System.Text.Encoding.UTF8))faithfulRegions[hero]=JsonConvert.DeserializeObject<Dictionary<string,int[]>>(reader.ReadToEnd());
+            }
+            var texture=faithful[hero];var r=faithfulRegions[hero][key];
+            sprite=Sprite.Create(texture,new Rect(r[0],texture.height-r[1]-r[3],r[2],r[3]),new Vector2(.5f,.0625f),32,0,SpriteMeshType.FullRect);
+            visible[sprite]=new Bounds(new Vector3(((r[4]+r[6])*.5f-32)/32,(64-(r[5]+r[7])*.5f-4)/32),new Vector3((r[6]-r[4])/32f,(r[7]-r[5])/32f));
+            sprites.Add(key,sprite);return sprite;
+        }
+        internal static int MovementFrameCount(int hero)=>16;
+        internal static int AttackFrameCount(int hero)=>4;
+        internal static float MovementStridePixels(int hero,int moveFacing,int aimFacing)
+        {
+            hero=FaithfulHero(hero);
+            float angle=(moveFacing&7)*Mathf.PI/4;
+            float x=Mathf.Sin(angle)*(hero==0?20f:16.8f),y=Mathf.Cos(angle)*(hero==0?13.2f:9.6f);
+            return Mathf.Sqrt(x*x+y*y);
+        }
+        internal static Sprite Movement(int hero,int frame,int moveFacing,int aimFacing,bool attacking,int attackFrame=0)
+        {
+            hero=FaithfulHero(hero);
+            int aim=aimFacing&7,relative=(moveFacing-aim+8)&7;
+            string key="gait."+hero+"."+(attacking?"attack":"walk")+"."+aim+"."+relative+"."+((frame%16+16)%16);
+            return Faithful(hero,key+(attacking?"."+((attackFrame%4+4)%4):""));
+        }
+        private static int FaithfulHero(int hero)
+        {
+            if(hero==12||hero==13)return hero-12;
+            throw new System.ArgumentOutOfRangeException(nameof(hero),"Faithful characters require hero ID 12 or 13.");
+        }
+        internal static Sprite Pose(int hero,int aimFacing,bool attacking=false,int attackFrame=0)
+        {
+            hero=FaithfulHero(hero);
+            return Faithful(hero,"pose."+hero+"."+(aimFacing&7)+"."+(attacking?"attack."+((attackFrame%4+4)%4):"idle"));
+        }
+        internal static Sprite Dash(int hero,int direction)
+        {
+            hero=FaithfulHero(hero);return Faithful(hero,"dash."+hero+"."+(direction&7));
+        }
         internal static Sprite Hero(int hero,int row=0,int direction=0)=>Named("hero."+hero+"."+row+"."+direction);
         internal static Sprite Animation(int hero,string action,int frame,int direction)=>Named("anim."+hero+"."+action+"."+frame+"."+direction);
         internal static Bounds VisibleBounds(Sprite sprite)=>visible.TryGetValue(sprite,out var bounds)?bounds:sprite.bounds;
@@ -64,6 +110,7 @@ namespace CluckmechCoop
             foreach(var sprite in sprites.Values)Object.Destroy(sprite);
             sprites.Clear();visible.Clear();if(ground!=null)Object.Destroy(ground);
             if(atlas!=null)Object.Destroy(atlas);if(space!=null)Object.Destroy(space);
+            for(int i=0;i<faithful.Length;i++){if(faithful[i]!=null)Object.Destroy(faithful[i]);faithful[i]=null;faithfulRegions[i]=null;}
             atlas=space=null;ground=null;regions=null;
         }
     }

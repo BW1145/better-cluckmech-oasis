@@ -130,7 +130,7 @@ namespace CluckmechCoop
             bool guest = sender == Steam联机管理器.玩家_客户端;
             if (!guest && sender != Steam联机管理器.玩家_主机) return;
             if (!NetworkJson.TryRead<SessionMessage>(json, out var message) || !ValidMessage(message)) return;
-            if (message.Version != Plugin.Version) { Status = "双方模组版本不一致"; PreparationPanel.ShowStatus(Status); return; }
+            if (message.Version != Plugin.Version) { peer = false; acknowledged = -1; Status = "双方模组版本不一致"; PreparationPanel.ShowStatus(Status); return; }
             if (message.Type == "swallow-request") { SwallowTargets.Handle(message,guest ? 2 : 1,true); return; }
             if (message.Type == "progress" && message.PlayerProgress != null)
             {
@@ -153,7 +153,7 @@ namespace CluckmechCoop
         {
             if (key != ReplyKey || Plugin.Role != 2) return;
             if (!NetworkJson.TryRead<SessionMessage>(json, out var message) || !ValidMessage(message)) return;
-            if (message.Version != Plugin.Version) { Status = "双方模组版本不一致"; PreparationPanel.ShowStatus(Status); return; }
+            if (message.Version != Plugin.Version) { peer = false; acknowledged = -1; Status = "双方模组版本不一致"; PreparationPanel.ShowStatus(Status); return; }
             if (message.Type == "swallow") { SwallowTargets.Handle(message,2,false); return; }
             if (message.Type == "settings")
             {

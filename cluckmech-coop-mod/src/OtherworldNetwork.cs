@@ -27,8 +27,9 @@ namespace CluckmechCoop
         internal static void Disconnect(){serverRegistered=clientRegistered=false;sequences.Clear();}
         internal static void Command(OtherworldActor actor,int action,uint sequence,Vector2 point)
         {
+            if(action==4&&Plugin.Role!=0&&!Plugin.Network.PeerReady)return;
             if(Plugin.Role!=2){actor.Execute(action,point);return;}
-            Register();NetworkClient.Send(new OtherworldMessage{Player=StratagemWorld.Id(actor.gameObject),Kind=action,Sequence=sequence,X=point.x,Y=point.y,Token=Plugin.Combat.Token});
+            Register();NetworkClient.Send(new OtherworldMessage{Player=StratagemWorld.Id(actor.gameObject),Kind=action,Value=action==4?OtherworldMotion.DashProtocol:0,Sequence=sequence,X=point.x,Y=point.y,Token=Plugin.Combat.Token});
         }
         private static bool Finite(float value)=>!float.IsNaN(value)&&!float.IsInfinity(value);
         private static void ReceiveCommand(NetworkConnectionToClient connection,OtherworldMessage message)
@@ -45,6 +46,11 @@ namespace CluckmechCoop
             }
             if(message.Kind==31){KamuiDrop.Collect(actor.Role,message.Data);return;}
             if(message.Kind<0||message.Kind>4)return;
+            if(message.Kind==4)
+            {
+                if(!Plugin.Network.PeerReady||!OtherworldMotion.TryDashCommand(message.Value,message.X,message.Y,out float x,out float y))return;
+                message.X=x;message.Y=y;
+            }
             if(sequences.TryGetValue(message.Player,out uint previous)&&message.Sequence<=previous)return;
             sequences[message.Player]=message.Sequence;
             actor.Execute(message.Kind,new Vector2(message.X,message.Y));

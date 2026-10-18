@@ -192,9 +192,42 @@ namespace CluckmechCoop
             foreach(var type in screens)foreach(string name in new[]{"Start","OnEnable"})
             {var method=type.GetMethod(name,BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance|BindingFlags.DeclaredOnly);if(method!=null)yield return method;}
         }
-        internal static GameObject Portrait(GameObject template,OtherworldHero hero)
+        internal static GameObject Portrait(GameObject template,OtherworldHero hero,bool pause=false)
         {
             var clone=Object.Instantiate(template,template.transform.parent);clone.name=hero.Name;clone.SetActive(false);
+            if(pause)
+            {
+                // The pause prefab is a layered animated portrait, not a single
+                // image. Its first Image is not the body, and the chicken Animator
+                // otherwise writes native sprites back over our replacement.
+                foreach(var animator in clone.GetComponentsInChildren<Animator>(true))animator.enabled=false;
+                var body=clone.transform.Find("角色")?.GetComponent<Image>();
+                var hand=clone.transform.Find("手");if(hand!=null)hand.gameObject.SetActive(false);
+                if(body!=null)
+                {
+                    body.sprite=OtherworldAssets.Portrait(hero.Id);body.overrideSprite=null;
+                    body.type=Image.Type.Simple;body.preserveAspect=true;body.color=Color.white;
+                }
+                foreach(var behaviour in clone.GetComponentsInChildren<MonoBehaviour>(true))
+                    if(behaviour.GetType().Name=="LocalizeStringEvent")behaviour.enabled=false;
+                var tooltip=clone.transform.Find("详细信息提示Icon/角色技能") as RectTransform;
+                if(tooltip!=null)tooltip.sizeDelta=new Vector2(460,270);
+                foreach(var text in clone.GetComponentsInChildren<Text>(true))
+                {
+                    bool perlica=hero.Id==12;
+                    if(text.name=="技能1名字")text.text=perlica?"普通攻击·电磁弹":"普通攻击·苦无";
+                    else if(text.name=="技能1描述")text.text=perlica?"发射电磁弹攻击敌人":"向瞄准方向投掷苦无";
+                    else if(text.name=="技能2名字")text.text=perlica?"主动技能·协议Ω":"主动技能·神威";
+                    else if(text.name=="技能2描述")text.text=perlica?"雷击指定区域，造成攻击力×12伤害并麻痹5秒；冷却8秒":"短按虚化加速，长按冲刺并将沿途敌人带入神威空间；空间内按右键返回";
+                    else continue;
+                    int row=text.name=="技能1名字"?0:text.name=="技能1描述"?1:text.name=="技能2名字"?2:3;
+                    var rect=text.rectTransform;rect.anchorMin=rect.anchorMax=rect.pivot=new Vector2(0,1);
+                    rect.anchoredPosition=new Vector2(15,-15-row*45);rect.sizeDelta=new Vector2(430,row==3?105:40);
+                    text.horizontalOverflow=HorizontalWrapMode.Wrap;text.verticalOverflow=VerticalWrapMode.Truncate;
+                    text.resizeTextForBestFit=true;text.resizeTextMinSize=16;text.resizeTextMaxSize=24;
+                }
+                return clone;
+            }
             var image=clone.GetComponentInChildren<Image>(true);
             if(image!=null){image.sprite=OtherworldAssets.Portrait(hero.Id);image.preserveAspect=true;}
             else
@@ -218,7 +251,7 @@ namespace CluckmechCoop
             else if(field.GetValue(__instance) is GameObject[] objects&&objects.Length>0&&objects.Length<14)
             {
                 var expanded=new GameObject[14];System.Array.Copy(objects,expanded,objects.Length);
-                foreach(var hero in OtherworldCatalog.Heroes)expanded[hero.Id]=Portrait(objects[0],hero);
+                foreach(var hero in OtherworldCatalog.Heroes)expanded[hero.Id]=Portrait(objects[0],hero,__instance is UI_暂停菜单信息显示);
                 field.SetValue(__instance,expanded);
             }
             var names=AccessTools.Field(__instance.GetType(),"角色名字");

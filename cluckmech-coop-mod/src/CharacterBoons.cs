@@ -144,7 +144,13 @@ namespace CluckmechCoop
             current.ticks=new Image[4];
             for(int i=0;i<4;i++)current.ticks[i]=NativeUi.Image(NativeUi.Rect(root,"档位",18+i*108,62,100,18),null,Color.gray);
             current.Refresh();FeatureModal.CursorLast(canvas);
+            var pause=UnityEngine.Object.FindObjectOfType<暂停菜单>();
+            SetPauseVisibility(pause!=null && pause.是否开启);
         }
+        // The map card shares the cursor canvas, which remains active behind the
+        // native pause menu. Hide both its graphics and input while that menu is open.
+        internal static void SetPauseVisibility(bool paused)
+        {if(current!=null)current.gameObject.SetActive(!paused);}
         internal static void RefreshCurrent(){if(current!=null)current.Refresh();}
         private void Refresh()
         {
