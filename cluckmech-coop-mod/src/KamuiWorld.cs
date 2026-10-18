@@ -55,13 +55,13 @@ namespace CluckmechCoop
             if(collider!=null){right=collider.bounds.max.x;middle=collider.bounds.center.y;}
             var center=new Vector2(right+100+Mathf.Max(0,role-1)*100,middle);
             var root=new GameObject("KamuiSpace_"+role);root.SetActive(false);
-            room=new KamuiRoom{Owner=role,Center=center,Bounds=new Rect(center.x-23,center.y-17,46,34),Root=root};
+            room=new KamuiRoom{Owner=role,Center=center,Bounds=new Rect(center.x-19.55f,center.y-14.45f,39.1f,28.9f),Root=root};
             Rooms.Add(space,room);
             var ground=new GameObject("KamuiPlatform");ground.transform.SetParent(root.transform,false);ground.transform.position=center;
             var renderer=ground.AddComponent<SpriteRenderer>();renderer.sprite=OtherworldAssets.Ground;renderer.sortingOrder=-20;
-            ground.transform.localScale=new Vector3(.6f,1,1);
+            ground.transform.localScale=new Vector3(.51f,.85f,1);
             room.Map=root.AddComponent<PolyNavMap>();room.Map.obstaclesMask=0;room.Map.autoRegenerateInterval=0;
-            room.Floor=new[]{center+new Vector2(-17.7f,-11.8f),center+new Vector2(17.7f,-11.8f),center+new Vector2(14.45f,11.6f),center+new Vector2(-14.45f,11.6f)};
+            room.Floor=new[]{center+new Vector2(-17.7f,-11.8f)*.85f,center+new Vector2(17.7f,-11.8f)*.85f,center+new Vector2(14.45f,11.6f)*.85f,center+new Vector2(-14.45f,11.6f)*.85f};
             room.Map.SetCustomMap(new PolyNavMap.PolyMap(new PolyNavMap.Polygon(room.Floor)));
             var air=new GameObject("AirNavigation");air.transform.SetParent(root.transform,false);
             room.AirMap=air.AddComponent<PolyNavMap>();room.AirMap.obstaclesMask=0;room.AirMap.autoRegenerateInterval=0;

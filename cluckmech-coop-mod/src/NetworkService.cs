@@ -20,7 +20,7 @@ namespace CluckmechCoop
         public GameplayModules Modules;
         public RunProgress Progress;
         public PlayerProgress PlayerProgress;
-        public bool Held;
+        public bool Held, Triple;
         public uint Unit;
         public uint[] Targets;
         public float X, Y;
@@ -77,7 +77,7 @@ namespace CluckmechCoop
         {
             Type = "settings", Revision = revision, Expedition = ModuleSettings.Expedition,
             Transfer = ModuleSettings.Transfer, Choice = ModuleSettings.Choice,
-            Modules = ModuleSettings.Extra, Progress = ModuleSettings.Progress, Token = Plugin.Combat?.Token, Held = Plugin.Combat?.Holds.Active ?? false, Delay = Plugin.Combat?.RemainingEnergy ?? 0
+            Modules = ModuleSettings.Extra, Progress = ModuleSettings.Progress, Token = Plugin.Combat?.Token, Held = Plugin.Combat?.Holds.Active ?? false, Triple = Plugin.Combat?.TripleSpeed ?? false, Delay = Plugin.Combat?.RemainingEnergy ?? 0
         });
         internal void SendProgress(PlayerProgress progress) => Send(new SessionMessage { Type = "progress", PlayerProgress = progress });
         internal void Complete(string token) => Broadcast(new SessionMessage { Type = "complete", Token = token });
@@ -119,7 +119,7 @@ namespace CluckmechCoop
                 case "playback": return !string.IsNullOrWhiteSpace(message.Token) && message.Stage >= 0;
                 case "energy": return !string.IsNullOrWhiteSpace(message.Token) && message.Delay <= 10 && message.EnergyBonusUsed >= 0 && message.EnergyBonusUsed <= 2;
                 case "growth-event": return !string.IsNullOrWhiteSpace(message.Token) && message.Stage>=88 && message.Stage<=92 && message.Revision>=0 && message.Revision<=1 && (message.Role==0 || message.Role==20);
-                case "complete": case "speed": case "growth": case "speed-request": case "energy-request": case "rabbit-aim":
+                case "complete": case "speed": case "growth": case "speed-request": case "triple-request": case "energy-request": case "rabbit-aim":
                     return !string.IsNullOrWhiteSpace(message.Token);
                 default: return false;
             }
@@ -171,7 +171,7 @@ namespace CluckmechCoop
                 ModuleSettings.Extra = message.Modules ?? new GameplayModules();
                 ModuleSettings.Progress = message.Progress ?? new RunProgress();
                 CarryCapacity.RefreshPreparation();
-                if (Plugin.Combat != null) { Plugin.Combat.Token = message.Token; Plugin.Combat.Synchronize(message.Held, message.Delay); }
+                if (Plugin.Combat != null) { Plugin.Combat.Token = message.Token; Plugin.Combat.Synchronize(message.Held, message.Delay, message.Triple); }
                 revision = acknowledged = message.Revision; peer = true; Status = "";
                 Send(new SessionMessage { Type = "ack", Revision = revision });
                 CharacterBoons.Synchronize();MapBoonsUi.RefreshCurrent();

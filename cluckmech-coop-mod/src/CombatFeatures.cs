@@ -11,7 +11,8 @@ namespace CluckmechCoop
     {
         internal string Token;
         internal readonly SpeedHolds Holds = new SpeedHolds();
-        private bool localHeld, speedWanted, applyingTime;
+        private bool localHeld, localTripleHeld, speedWanted, tripleWanted, applyingTime;
+        internal bool TripleSpeed => tripleWanted;
         private float normalSpeed = 1, lastApplied = 1, energyUntil, pendingEnergy;
         internal float RemainingEnergy => EnergyActive ? energyUntil - Time.time : pendingEnergy;
         private 模块_基本属性 baseStats;
@@ -44,7 +45,11 @@ namespace CluckmechCoop
             var keyboard = Keyboard.current;
             if (ModuleSettings.Extra.Speed)
             {
-                if (Application.isFocused && !Typing() && keyboard != null && keyboard.leftShiftKey.wasPressedThisFrame && Plugin.Network.SettingsReady)
+                bool input = Application.isFocused && !Typing() && keyboard != null && Plugin.Network.SettingsReady;
+                bool triple = input && (keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed);
+                bool tripleChanged = triple != localTripleHeld;
+                if (tripleChanged) SendTriple(triple);
+                if (input && !tripleChanged && !tripleWanted && keyboard.leftShiftKey.wasPressedThisFrame)
                     SendHold(!speedWanted);
                 ApplySpeed();
             }
@@ -66,15 +71,32 @@ namespace CluckmechCoop
             bool previous=Holds.Active;
             Holds.Clear();Holds.Set(role,value);
             if (previous==value) return;
-            SetSpeed(Holds.Active);
-            Plugin.Network.Broadcast(new SessionMessage { Type = "speed", Token = Token, Held = Holds.Active });
+            SetSpeed(Holds.Active, tripleWanted);
+            BroadcastSpeed();
         }
-        internal void Synchronize(bool held, float energy)
+        private void SendTriple(bool value)
         {
-            SetSpeed(held);
+            localTripleHeld = value;
+            if (Plugin.Role == 0) HostTriple(value);
+            else Plugin.Network.Send(new SessionMessage { Type = "triple-request", Token = Token, Held = value });
+        }
+        internal void HostTriple(bool value)
+        {
+            if (tripleWanted == value && (value || !speedWanted)) return;
+            Holds.Clear(); SetSpeed(false, value); BroadcastSpeed();
+        }
+        private void BroadcastSpeed() => Plugin.Network.Broadcast(new SessionMessage { Type = "speed", Token = Token, Held = speedWanted, Triple = tripleWanted });
+        internal void Synchronize(bool held, float energy, bool triple = false)
+        {
+            SetSpeed(held, triple);
             if (baseStats != null) ApplyEnergy(energy); else pendingEnergy = energy;
         }
-        internal void SetSpeed(bool value) { localHeld = speedWanted = value; ApplySpeed(); }
+        internal void SetSpeed(bool value, bool triple = false)
+        {
+            localHeld = speedWanted = value; tripleWanted = triple;
+            if (!value && !triple) normalSpeed = 1;
+            ApplySpeed();
+        }
         internal void NativeSpeed(float value)
         {
             if (applyingTime || value <= .2f) return;
@@ -86,7 +108,7 @@ namespace CluckmechCoop
             float current = Time.timeScale;
             if (current <= .2f) { lastApplied = current; return; }
             if (current != lastApplied) normalSpeed = current;
-            float value = speedWanted ? 2 : normalSpeed;
+            float value = tripleWanted ? 3 : speedWanted ? 2 : normalSpeed;
             if (current == value) { lastApplied = value; return; }
             applyingTime = true; Time.timeScale = value; applyingTime = false; lastApplied = value;
         }
@@ -131,10 +153,15 @@ namespace CluckmechCoop
                 particles.Play();
             }
         }
-        private void OnApplicationFocus(bool focused) { if (!focused && localHeld) SendHold(false); }
+        private void OnApplicationFocus(bool focused)
+        {
+            if (focused) return;
+            if (localTripleHeld) SendTriple(false);
+            else if (localHeld) SendHold(false);
+        }
         internal void Disconnected()
         {
-            Holds.Clear(); localHeld = false; SetSpeed(false);
+            Holds.Clear(); localHeld = localTripleHeld = false; SetSpeed(false);
         }
         internal void ClearScene()
         {
@@ -148,10 +175,11 @@ namespace CluckmechCoop
     {
         internal static bool ServerReceive(SessionMessage message, int role)
         {
-            if (message.Type != "speed-request" && message.Type != "energy-request" && message.Type != "rabbit-aim") return false;
+            if (message.Type != "speed-request" && message.Type != "triple-request" && message.Type != "energy-request" && message.Type != "rabbit-aim") return false;
             var combat = Plugin.Combat;
             if (combat == null || !Plugin.InCombat || message.Token == null || message.Token != combat.Token) return true;
             if (message.Type == "speed-request" && ModuleSettings.Extra.Speed) combat.HostHold(role, message.Held);
+            else if (message.Type == "triple-request" && ModuleSettings.Extra.Speed) combat.HostTriple(message.Held);
             else if (message.Type == "energy-request") combat.StartEnergy();
             else if (message.Type == "rabbit-aim" && ModuleSettings.Extra.Characters) CharacterFeatures.ReceiveAim(role, message);
             return true;
@@ -161,7 +189,7 @@ namespace CluckmechCoop
             if (message.Type != "speed" && message.Type != "energy" && message.Type != "growth") return false;
             if (message.Type == "growth") { GrowthFeatures.Offer(message.Token); return true; }
             if (Plugin.Combat == null || message.Token == null || message.Token != Plugin.Combat.Token || !Plugin.InCombat) return true;
-            if (message.Type == "speed" && ModuleSettings.Extra.Speed) Plugin.Combat.SetSpeed(message.Held);
+            if (message.Type == "speed" && ModuleSettings.Extra.Speed) Plugin.Combat.SetSpeed(message.Held, message.Triple);
             else if (message.Type == "energy" && ModuleSettings.Extra.Energy && message.EnergyBonusUsed <= ModuleSettings.Progress.EnergyBonus)
             {
                 ModuleSettings.Progress.EnergyBonusUsed = message.EnergyBonusUsed;

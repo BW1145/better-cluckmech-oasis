@@ -95,7 +95,7 @@ namespace CluckmechCoop
                 float speed = Time.timeScale;
                 if (speed <= .2f || speed == previousSpeed) return;
                 previousSpeed = speed;
-                label.text = speed.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "× [Shift]";
+                label.text = speed.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + (speed >= 2.99f ? "× [Ctrl]" : "× [Shift]");
                 label.color = speed > 1.01f ? Amber : Color.white;
             }
         }

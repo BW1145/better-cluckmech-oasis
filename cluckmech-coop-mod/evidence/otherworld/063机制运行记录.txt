@@ -1,0 +1,22 @@
+PASS Shift toggles two times and release retains toggle
+PASS left Ctrl overrides two times with three times
+PASS live speed HUD displays three times and Ctrl
+PASS Ctrl release clears previous two-times toggle and restores one times
+PASS right Ctrl also enables three times
+PASS right Ctrl release restores one times
+PASS Ctrl release takes priority over simultaneous Shift press
+PASS release preserves native pause
+PASS resume after released Ctrl restores one times
+PASS release preserves native construction slow motion
+PASS focus loss releases local three-times state
+PASS three-times broadcast encodes a valid session state
+PASS production peer-state receiver applies three-times broadcast
+PASS release broadcast clears both speed modes
+PASS old-battle speed state is ignored
+PASS disconnect clears three-times state
+PASS platform artwork width and height scale to 85 percent
+PASS navigation floor width scales with artwork
+PASS smaller room has a valid center and matching outside boundary
+PASS four physical boundaries follow resized floor vertices
+PASS native Kamui sound group uses 0.75 gain
+FLOW063 COMPLETE

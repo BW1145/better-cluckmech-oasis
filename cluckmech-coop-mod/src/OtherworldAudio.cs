@@ -31,7 +31,7 @@ namespace CluckmechCoop
             }
             var root=new GameObject("BCO.Otherworld.Kamui");
             var sound=root.AddComponent<DynamicSoundGroup>();
-            sound.groupMasterVolume=.65f;sound.spatialBlendType=MasterAudio.ItemSpatialBlendType.ForceTo2D;
+            sound.groupMasterVolume=.75f;sound.spatialBlendType=MasterAudio.ItemSpatialBlendType.ForceTo2D;
             sound.busName="音效总线";sound.isExistingBus=true;sound.limitPolyphony=true;sound.voiceLimitCount=2;
             var variation=new GameObject("kamui");variation.transform.SetParent(root.transform,false);
             var source=variation.AddComponent<AudioSource>();source.playOnAwake=false;source.clip=clip;source.volume=1;
