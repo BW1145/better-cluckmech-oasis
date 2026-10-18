@@ -10,11 +10,16 @@ namespace CluckmechCoop
         private static KamuiInterest interest;
         private static readonly Dictionary<uint,GameObject> hidden=new Dictionary<uint,GameObject>();
         private static readonly HashSet<GameObject> restored=new HashSet<GameObject>();
-        private static readonly HashSet<Renderer> hiddenRenderers=new HashSet<Renderer>();
-        private static readonly Dictionary<Canvas,bool> previousCanvases=new Dictionary<Canvas,bool>();
+        private static readonly HashSet<uint> destroyed=new HashSet<uint>();
+        private static readonly Dictionary<GameObject,KamuiVisibilityView> views=new Dictionary<GameObject,KamuiVisibilityView>();
+        private static KamuiVisibilityRefresh refresh;
+        private static bool pendingRefresh;
         private static bool registered;
         internal static void Install()
         {
+            Writer<KamuiDestroyedMessage>.write=(writer,message)=>{writer.WriteUInt(message.NetId);writer.WriteString(message.Token);};
+            Reader<KamuiDestroyedMessage>.read=reader=>new KamuiDestroyedMessage{NetId=reader.ReadUInt(),Token=reader.ReadString()};
+            if(refresh==null)refresh=Plugin.Instance.gameObject.AddComponent<KamuiVisibilityRefresh>();
             if(Plugin.Role==1&&interest==null)
             {
                 var prior=NetworkServer.aoi;
@@ -22,6 +27,7 @@ namespace CluckmechCoop
             }
             if(Plugin.Role==0||registered||!NetworkClient.active)return;
             registered=true;
+            NetworkClient.RegisterHandler<KamuiDestroyedMessage>(Destroyed);
             var prefabs=new HashSet<GameObject>();
             if(Plugin.Units!=null)foreach(var unit in Plugin.Units.单位列表)if(unit.单位预制体!=null)prefabs.Add(unit.单位预制体);
             var heroes=Object.FindObjectOfType<yx英雄库>();
@@ -37,12 +43,20 @@ namespace CluckmechCoop
         {
             GameObject obj;
             if(hidden.TryGetValue(message.netId,out obj)&&obj!=null)
-            {hidden.Remove(message.netId);restored.Add(obj);obj.transform.SetPositionAndRotation(message.position,message.rotation);obj.SetActive(true);}
-            else obj=Object.Instantiate(prefab,message.position,message.rotation);
+            {
+                hidden.Remove(message.netId);restored.Add(obj);
+                obj.transform.SetPositionAndRotation(message.position,message.rotation);obj.SetActive(true);
+                var health=obj.GetComponent<模块_基本属性>();
+                if(health!=null)OtherworldWorld.Add(health);
+                Update(obj);
+            }
+            else {hidden.Remove(message.netId);obj=Object.Instantiate(prefab,message.position,message.rotation);}
             return obj;
         }
         private static void Unspawn(GameObject obj)
         {
+            var identity=obj.GetComponent<NetworkIdentity>();
+            if(identity!=null&&destroyed.Remove(identity.netId)){Forget(obj);Object.Destroy(obj);return;}
             var unit=obj.GetComponent<OtherworldUnit>();
             if(unit!=null&&unit.Space!=0&&unit.Health.当前生命值>0)
             {hidden[obj.GetComponent<NetworkIdentity>().netId]=obj;obj.SetActive(false);}
@@ -60,40 +74,69 @@ namespace CluckmechCoop
         }
         internal static void Refresh()
         {
+            if(refresh==null)refresh=Plugin.Instance.gameObject.AddComponent<KamuiVisibilityRefresh>();
+            pendingRefresh=true;
+        }
+        internal static void Flush()
+        {
+            if(!pendingRefresh)return;
+            pendingRefresh=false;
             int space=OtherworldWorld.Space(OtherworldActions.Player(Plugin.Role)?.gameObject);
-            foreach(var unit in OtherworldWorld.Units.Values)
+            foreach(var unit in OtherworldWorld.Units.Values)if(unit!=null)Update(unit.gameObject,space);
+        }
+        internal static void Update(GameObject obj)
+            =>Update(obj,OtherworldWorld.Space(OtherworldActions.Player(Plugin.Role)?.gameObject));
+        private static void Update(GameObject obj,int space)
+        {
+            var unit=OtherworldWorld.Unit(obj);if(unit==null)return;
+            if(!views.TryGetValue(obj,out var view)||view==null)
+            {view=obj.GetComponent<KamuiVisibilityView>()??obj.AddComponent<KamuiVisibilityView>();views[obj]=view;}
+            view.SetVisible(unit.Space==space);
+        }
+        // Disable also happens when Mirror hides a live unit; it releases render leases, never its hidden object.
+        internal static void Removed(OtherworldUnit unit)
+        {
+            if(unit!=null)ReleaseView(unit.gameObject);
+        }
+        private static void ReleaseView(GameObject obj)
+        {
+            if(views.TryGetValue(obj,out var view)){if(view!=null)view.Release();views.Remove(obj);}
+        }
+        internal static void ServerDestroyed(GameObject obj)
+        {
+            if(Plugin.Role!=1||!NetworkServer.active||obj==null||obj.GetComponent<OtherworldUnit>()==null)return;
+            var identity=obj.GetComponent<NetworkIdentity>();if(identity==null||identity.netId==0)return;
+            // Destroy normally goes only to current observers; hidden clients still own an inactive instance.
+            NetworkServer.SendToAll(new KamuiDestroyedMessage{NetId=identity.netId,Token=Plugin.Combat.Token});
+        }
+        private static void Destroyed(KamuiDestroyedMessage message)
+        {
+            if(Plugin.Role!=2||message.Token!=Plugin.Combat.Token)return;
+            if(!hidden.TryGetValue(message.NetId,out var obj))
             {
-                if(unit==null)continue;
-                bool visible=unit.Space==space;
-                foreach(var renderer in unit.GetComponentsInChildren<Renderer>(true))
-                {
-                    if(!visible)
-                    {
-                        if(hiddenRenderers.Add(renderer))OtherworldRenderLease.Hide(renderer);
-                    }
-                    else if(hiddenRenderers.Remove(renderer))OtherworldRenderLease.Reveal(renderer);
-                }
-                foreach(var canvas in unit.GetComponentsInChildren<Canvas>(true))
-                {
-                    if(!visible){if(!previousCanvases.ContainsKey(canvas))previousCanvases[canvas]=canvas.enabled;canvas.enabled=false;}
-                    else if(previousCanvases.TryGetValue(canvas,out bool prior)){canvas.enabled=prior;previousCanvases.Remove(canvas);}
-                }
+                // The native destroy can arrive next while the client's last health value is still positive.
+                if(NetworkClient.spawned.ContainsKey(message.NetId))destroyed.Add(message.NetId);
+                return;
             }
+            hidden.Remove(message.NetId);
+            if(obj!=null){Forget(obj);Object.Destroy(obj);}
         }
         internal static void Forget(GameObject obj)
         {
-            foreach(var renderer in obj.GetComponentsInChildren<Renderer>(true))if(hiddenRenderers.Remove(renderer))OtherworldRenderLease.Reveal(renderer);
-            foreach(var canvas in obj.GetComponentsInChildren<Canvas>(true))previousCanvases.Remove(canvas);
+            ReleaseView(obj);
             restored.Remove(obj);
+            uint found=0;foreach(var pair in hidden)if(pair.Value==obj){found=pair.Key;break;}
+            if(found!=0)hidden.Remove(found);
         }
         internal static void Clear()
         {
-            foreach(var obj in hidden.Values)if(obj!=null)Object.Destroy(obj);
-            hidden.Clear();restored.Clear();
-            foreach(var renderer in hiddenRenderers)OtherworldRenderLease.Reveal(renderer);
-            hiddenRenderers.Clear();registered=false;
-            foreach(var pair in previousCanvases)if(pair.Key!=null)pair.Key.enabled=pair.Value;
-            previousCanvases.Clear();
+            var retired=new List<GameObject>(hidden.Values);hidden.Clear();
+            foreach(var obj in retired)if(obj!=null)Object.Destroy(obj);
+            restored.Clear();destroyed.Clear();
+            foreach(var view in views.Values)if(view!=null)view.Release();views.Clear();
+            if(registered)NetworkClient.UnregisterHandler<KamuiDestroyedMessage>();
+            registered=false;pendingRefresh=false;
+            if(refresh!=null)Object.Destroy(refresh);refresh=null;
             if(interest!=null)
             {
                 if(NetworkServer.aoi==interest)NetworkServer.aoi=interest.Previous;
@@ -109,8 +152,18 @@ namespace CluckmechCoop
             =>(Previous==null||Previous.OnCheckObserver(identity,observer))&&KamuiVisibility.Observe(identity,observer);
         public override void OnRebuildObservers(NetworkIdentity identity,HashSet<NetworkConnectionToClient> observers)
         {foreach(var connection in NetworkServer.connections.Values)if(connection.isReady&&OnCheckObserver(identity,connection))observers.Add(connection);}
-        public override void SetHostVisibility(NetworkIdentity identity,bool visible)=>KamuiVisibility.Refresh();
+        public override void SetHostVisibility(NetworkIdentity identity,bool visible)
+        {
+            if(OtherworldWorld.Unit(identity.gameObject)!=null)KamuiVisibility.Update(identity.gameObject);
+            else if(Previous!=null)Previous.SetHostVisibility(identity,visible);
+            else base.SetHostVisibility(identity,visible);
+        }
     }
+    internal struct KamuiDestroyedMessage:NetworkMessage {internal uint NetId;internal string Token;}
+    internal sealed class KamuiVisibilityRefresh:MonoBehaviour {private void LateUpdate()=>KamuiVisibility.Flush();}
+    [HarmonyPatch(typeof(NetworkServer),nameof(NetworkServer.Destroy),new[]{typeof(GameObject)})]
+    internal static class KamuiBeforeNetworkDestroy
+    {private static void Prefix(GameObject obj)=>KamuiVisibility.ServerDestroyed(obj);}
     [HarmonyPatch(typeof(联机_单位属性同步),"OnStartClient")]
     internal static class KamuiObserverRestore
     {private static bool Prefix(联机_单位属性同步 __instance)=>!KamuiVisibility.Restored(__instance.gameObject);}

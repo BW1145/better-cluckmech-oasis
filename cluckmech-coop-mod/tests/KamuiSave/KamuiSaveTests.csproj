@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems><NuGetAudit>false</NuGetAudit><RequireGameDir>true</RequireGameDir>
+    <Managed>$(GameDir)/Cluckmech Oasis_Data/Managed</Managed>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/KamuiSaveValidation.cs"/><Compile Include="../../src/OtherworldCatalog.cs"/><Compile Include="../../src/Rules.cs"/><Compile Include="Program.cs"/><Compile Include="StorageHarness.cs"/><Compile Include="$(BaseIntermediateOutputPath)StorageMethods.g.cs"/>
+    <Reference Include="Game"><HintPath>$(Managed)/Assembly-CSharp.dll</HintPath></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(Managed)/UnityEngine.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)/UnityEngine.CoreModule.dll</HintPath></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(Managed)/Newtonsoft.Json.dll</HintPath></Reference>
+  </ItemGroup>
+  <Target Name="ExtractStorageMethods" BeforeTargets="CoreCompile">
+    <Exec Command="pwsh -NoProfile -File &quot;$(MSBuildProjectDirectory)/ExtractStorageMethods.ps1&quot; -OutputPath &quot;$(MSBuildProjectDirectory)/$(BaseIntermediateOutputPath)StorageMethods.g.cs&quot;" />
+  </Target>
+</Project>

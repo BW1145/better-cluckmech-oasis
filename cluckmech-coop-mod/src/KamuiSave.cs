@@ -10,46 +10,9 @@ using Object=UnityEngine.Object;
 
 namespace CluckmechCoop
 {
-    internal sealed class OtherworldSave
-    {
-        public Dictionary<int,OtherworldRun> Players=new Dictionary<int,OtherworldRun>();
-        public List<KamuiSavedRoom> Rooms=new List<KamuiSavedRoom>();
-    }
-    internal sealed class KamuiSavedRoom
-    {
-        public int Owner;
-        public List<KamuiSavedUnit> Units=new List<KamuiSavedUnit>();
-        public List<KamuiSavedDrop> Drops=new List<KamuiSavedDrop>();
-    }
-    internal sealed class KamuiSavedUnit
-    {
-        public string Key;
-        public int Id,Owner,Faction,Difficulty;
-        public bool Permanent;
-        public StratagemSaved Stratagem;
-        public List<string> Summons=new List<string>();
-        public float Hatch=-1;
-        public float X,Y,Health,Cooldown,Lifetime=-1,Warm,Rally;
-        public List<int> Affixes=new List<int>();
-        public Dictionary<string,Dictionary<string,float[]>> Components=new Dictionary<string,Dictionary<string,float[]>>();
-        public List<float[]> Elements=new List<float[]>();
-        public List<KamuiSavedStatus> States=new List<KamuiSavedStatus>();
-        public List<模块_状态持续效果.底层状态类> Underlying=new List<模块_状态持续效果.底层状态类>();
-        public List<模块_加成管理器.状态加成类> Buffs=new List<模块_加成管理器.状态加成类>();
-    }
-    internal sealed class KamuiSavedStatus
-    {
-        public int Type,Owner;
-        public string Source;
-        public float Remaining,EffectResistance,TimeResistance;
-        public float[] Values;
-    }
-    internal sealed class KamuiSavedDrop {public string Key,Prefab;public float X,Y;}
     internal static partial class KamuiWorld
     {
         internal static List<KamuiSavedRoom> SavedRooms=new List<KamuiSavedRoom>();
-        private static readonly Type[] statTypes={typeof(模块_基本属性),typeof(模块_攻击属性),typeof(模块_攻击详细属性),typeof(模块_移动属性)};
-        private static readonly Dictionary<Type,FieldInfo[]> scalarFields=new Dictionary<Type,FieldInfo[]>();
         private static readonly Dictionary<string,GameObject> dropPrefabs=new Dictionary<string,GameObject>();
         private static int restoredScene=-1;
         internal static OtherworldSave Save()
@@ -60,44 +23,6 @@ namespace CluckmechCoop
             OtherworldDeployment.Rebind();restoredScene=-1;
         }
         internal static void NewRun(){SavedRooms.Clear();restoredScene=-1;OtherworldDeployment.Rebind();}
-        internal static bool Valid(OtherworldSave save)
-        {
-            if(save?.Players==null||save.Rooms==null)return false;
-            foreach(var pair in save.Players)
-                if(pair.Key<0||pair.Key>2||pair.Value==null||OtherworldCatalog.Hero(pair.Value.Hero)==null||pair.Value.Talents==null||pair.Value.ShockKills<0||pair.Value.SpaceKills<0||pair.Value.Upgrades<0)return false;
-            foreach(var room in save.Rooms)
-            {
-                if(room==null||room.Owner<0||room.Owner>2||room.Units==null||room.Drops==null)return false;
-                foreach(var unit in room.Units)
-                {
-                    if(unit==null||unit.Id<=0||string.IsNullOrEmpty(unit.Key)||!Finite(unit.X)||!Finite(unit.Y)||!Finite(unit.Health)||unit.Health<0||unit.Components==null||unit.States==null||unit.Elements==null||unit.Underlying==null||unit.Buffs==null||unit.Affixes==null||unit.Summons==null)return false;
-                    if(unit.Elements.Any(v=>v==null||v.Length!=20||v.Any(x=>!Finite(x))))return false;
-                    if(unit.States.Any(s=>s==null||s.Values==null||s.Values.Length!=20||s.Values.Any(x=>!Finite(x))||!Finite(s.Remaining)))return false;
-                    foreach(var type in statTypes)
-                        if(unit.Components.TryGetValue(type.Name,out var values))
-                        {
-                            if(values==null)return false;
-                            foreach(var field in Fields(type))if(values.TryGetValue(field.Name,out var v))
-                            {int size=field.FieldType==typeof(Vector4)?4:field.FieldType==typeof(Vector3)?3:field.FieldType==typeof(Vector2)?2:1;if(v==null||v.Length!=size||v.Any(x=>!Finite(x)))return false;}
-                        }
-                    var runtime=unit.Stratagem;
-                    if(runtime!=null&&(runtime.Fields==null||runtime.Impacts==null||runtime.Shield!=null&&(runtime.Shield.Length!=4||runtime.Shield.Any(x=>!Finite(x)))||runtime.Rover!=null&&(runtime.Rover.Length!=6||runtime.Rover.Any(x=>!Finite(x)))))return false;
-                }
-                if(room.Drops.Any(d=>d==null||string.IsNullOrEmpty(d.Prefab)||!Finite(d.X)||!Finite(d.Y)))return false;
-            }
-            return true;
-        }
-        private static bool Finite(float value)=>!float.IsInfinity(value)&&!float.IsNaN(value);
-        private static FieldInfo[] Fields(Type type)
-        {
-            if(!scalarFields.TryGetValue(type,out var fields))
-            {
-                fields=type.GetFields(BindingFlags.Instance|BindingFlags.Public).Where(f=>!f.IsInitOnly&&!f.Name.StartsWith("当前")&&
-                    (f.FieldType==typeof(float)||f.FieldType==typeof(int)||f.FieldType==typeof(bool)||f.FieldType.IsEnum||f.FieldType==typeof(Vector2)||f.FieldType==typeof(Vector3)||f.FieldType==typeof(Vector4))).ToArray();
-                scalarFields[type]=fields;
-            }
-            return fields;
-        }
         private static Dictionary<string,float[]> ReadScalars(Component component)
         {
             var values=new Dictionary<string,float[]>();

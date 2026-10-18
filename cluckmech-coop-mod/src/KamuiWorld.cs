@@ -73,7 +73,7 @@ namespace CluckmechCoop
             }
             root.SetActive(true);
             foreach(var unit in OtherworldWorld.Units.Values.ToArray())
-                if(unit.Space==0&&room.Bounds.Contains(unit.transform.position)){main.Units.Remove(unit);unit.Space=space;room.Units.Add(unit);Navigate(unit,room);}
+                if(unit.Space==0&&room.Bounds.Contains(unit.transform.position)){UnitLifecycle.ChangingSpace(unit);main.Units.Remove(unit);unit.Space=space;room.Units.Add(unit);Navigate(unit,room);}
             main.Dirty=room.Dirty=true;
             if(clock==null)clock=Plugin.Instance.gameObject.AddComponent<KamuiClock>();
             KamuiVisibility.Install();
@@ -133,6 +133,8 @@ namespace CluckmechCoop
         {if(actor.Space==0&&Plugin.Spawner!=null&&Plugin.Spawner.关卡状态!=刷怪器.关卡状态枚举.结束&&Plugin.Spawner.关卡状态!=刷怪器.关卡状态枚举.无)actor.StartCoroutine(DashRoutine(actor,direction));}
         private static IEnumerator DashRoutine(OtherworldActor actor,Vector2 direction)
         {
+            var owner=OtherworldWorld.Unit(actor.gameObject);if(owner==null)yield break;
+            ulong lease=owner.Actions.Capture();
             var start=(Vector2)actor.transform.position;
             if(navigation==null)navigation=Object.FindObjectOfType<导航管理器>();
             if(navigation==null||!KamuiNavigation.TryDash(navigation.地面导航地图,start,direction,actor.Run.Has(26114)?5:3,out var end))yield break;
@@ -143,11 +145,12 @@ namespace CluckmechCoop
             OtherworldNetwork.Effect(actor,6,end,.35f);
             for(float elapsed=0;elapsed<.35f;elapsed+=Time.deltaTime)
             {
-                if(actor==null)yield break;
+                if(actor==null||!owner.Actions.Current(lease))yield break;
                 if(actor.Death.是否玩家死亡){actor.Dashing=false;yield break;}
                 var point=Vector2.Lerp(start,end,elapsed/.35f);actor.transform.position=point;
                 Sweep(actor,previous,point,captured);previous=point;yield return null;
             }
+            if(actor==null||!owner.Actions.Current(lease))yield break;
             actor.transform.position=end;Sweep(actor,previous,end,captured);actor.ReturnPoint=end;
             var room=Ensure(actor.Role);Vector2 destination=room.Center;
             if(!Transfer(OtherworldWorld.Unit(actor.gameObject),actor.Role+1,destination))yield break;
@@ -225,10 +228,13 @@ namespace CluckmechCoop
             var map=MapFor(unit,next);
             if(!KamuiNavigation.TryPoint(map,point,out point,4)||space!=0&&!next.Bounds.Contains(point))return false;
             int originalSpace=unit.Space;
+            UnitLifecycle.ChangingSpace(unit);
             var body=unit.GetComponent<OtherworldActor>()?.Body??unit.GetComponentInChildren<SpriteRenderer>();
             if(body!=null)OtherworldWarpVisual.Play(body,false,.55f,false);
             var old=Room(unit.Space);old?.Units.Remove(unit);if(old!=null)old.Dirty=true;
             unit.Space=space;next.Units.Add(unit);next.Dirty=true;
+            var rigidbody=unit.GetComponent<Rigidbody2D>();
+            if(rigidbody!=null){rigidbody.position=point;rigidbody.MovePosition(point);}
             unit.transform.position=point;Navigate(unit,next);ClearTargets(unit);unit.Refresh();
             if(unit.IsPlayer&&(int)unit.Health.所属玩家==Plugin.Role)
             {

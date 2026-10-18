@@ -9,9 +9,7 @@ namespace CluckmechCoop
     {
         internal static OtherworldActor Player(int role)
         {
-            foreach(var unit in OtherworldWorld.Units.Values)
-                if(unit.IsPlayer&&(int)unit.Health.所属玩家==role)return unit.GetComponent<OtherworldActor>();
-            return null;
+            return OtherworldWorld.Players.TryGetValue(role,out var unit)&&unit!=null?unit.GetComponent<OtherworldActor>():null;
         }
         internal static 模块_状态属性.状态类 State(GameObject source,攻击类型与状态数据库.状态枚举 type,float seconds,Vector4 values)
             =>new 模块_状态属性.状态类{攻击者=source,状态类型=type,加成属性=new 模块_攻击详细属性.状态属性单元{默认持续时间=seconds,当前持续时间=seconds,默认属性效果=values,当前属性效果=values}};
@@ -45,7 +43,12 @@ namespace CluckmechCoop
             if(marked&&actor.Run.Has(26112))actor.StartCoroutine(DelayedBombard(actor,point,radius,damage,ultimate));
         }
         private static IEnumerator DelayedBombard(OtherworldActor actor,Vector2 point,float radius,float damage,bool ultimate)
-        {yield return new WaitForSeconds(1);if(actor!=null)Bombard(actor,point,radius,damage,ultimate);}
+        {
+            var owner=OtherworldWorld.Unit(actor.gameObject);if(owner==null)yield break;
+            ulong lease=owner.Actions.Capture();
+            yield return new WaitForSeconds(1);
+            if(actor!=null&&owner.Actions.Current(lease))Bombard(actor,point,radius,damage,ultimate);
+        }
         private static void Bombard(OtherworldActor actor,Vector2 point,float radius,float damage,bool ultimate,bool rewards=false)
         {
             Visual(actor,ultimate?3:2,point,.5f,radius);OtherworldNetwork.Effect(actor,ultimate?3:2,point,.5f,radius);
@@ -53,7 +56,12 @@ namespace CluckmechCoop
             ApplyBombard(actor,point,radius,damage,rewards);
         }
         private static IEnumerator OrbitalImpact(OtherworldActor actor,Vector2 point,float radius,float damage,bool rewards,int space)
-        {yield return new WaitForSeconds(.14f);if(actor!=null&&actor.Space==space)ApplyBombard(actor,point,radius,damage,rewards);}
+        {
+            var owner=OtherworldWorld.Unit(actor.gameObject);if(owner==null)yield break;
+            ulong lease=owner.Actions.Capture();
+            yield return new WaitForSeconds(.14f);
+            if(actor!=null&&owner.Actions.Current(lease)&&actor.Space==space)ApplyBombard(actor,point,radius,damage,rewards);
+        }
         private static void ApplyBombard(OtherworldActor actor,Vector2 point,float radius,float damage,bool rewards)
         {
             var targets=OtherworldWorld.Near(actor.gameObject,point,radius);
@@ -69,11 +77,12 @@ namespace CluckmechCoop
         }
         private static IEnumerator Pull(OtherworldUnit unit,Vector2 point)
         {
+            ulong lease=unit.Actions.Capture();
             var body=unit.GetComponent<Rigidbody2D>();var movement=unit.GetComponent<模块_移动>();movement?.立刻停止();
             var start=(Vector2)unit.transform.position;var end=Vector2.MoveTowards(start,point,Mathf.Min(2,Vector2.Distance(start,point)));
             for(float elapsed=0;elapsed<.2f;elapsed+=Time.deltaTime)
             {
-                if(unit==null||unit.Health.当前生命值<=0)yield break;
+                if(unit==null||!unit.Actions.Current(lease)||unit.Health.当前生命值<=0)yield break;
                 var position=Vector2.Lerp(start,end,elapsed/.2f);
                 if(body!=null)body.MovePosition(position);else unit.transform.position=position;
                 yield return null;
@@ -118,10 +127,12 @@ namespace CluckmechCoop
         }
         internal static IEnumerator Flame(OtherworldActor actor)
         {
+            var owner=OtherworldWorld.Unit(actor.gameObject);if(owner==null)yield break;
+            ulong lease=owner.Actions.Capture();
             var settled=new HashSet<OtherworldUnit>();
             for(int tick=0;tick<10;tick++)
             {
-                if(actor==null||actor.Death.是否玩家死亡)yield break;
+                if(actor==null||!owner.Actions.Current(lease)||actor.Death.是否玩家死亡)yield break;
                 Vector2 direction=(actor.Aim-(Vector2)actor.transform.position).normalized;
                 Visual(actor,4,actor.transform.position,.24f,1);OtherworldNetwork.Effect(actor,4,actor.transform.position,.24f,1);
                 foreach(var target in OtherworldWorld.Near(actor.gameObject,actor.transform.position,5))

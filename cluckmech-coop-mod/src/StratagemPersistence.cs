@@ -3,18 +3,6 @@ using UnityEngine;
 
 namespace CluckmechCoop
 {
-    internal sealed class StratagemSaved
-    {
-        public string Parent;
-        public int Stage,Index,PendingMines;
-        public float Progress,Wait,Remaining,MineDamage,Arm;
-        public bool Triggered,Releasing,Held;
-        public float[] Shield,Rover;
-        public List<StratagemSavedImpact> Impacts=new List<StratagemSavedImpact>();
-        public List<StratagemSavedField> Fields=new List<StratagemSavedField>();
-    }
-    internal sealed class StratagemSavedImpact {public int Kind;public float X,Y,Wait;}
-    internal sealed class StratagemSavedField {public float X,Y,Radius,Remaining;public bool Scorch;}
     public sealed partial class StratagemUnit
     {
         internal StratagemSaved Resume;
@@ -34,6 +22,10 @@ namespace CluckmechCoop
         private void ResumeRuntime()
         {
             if(Resume==null)return;
+            // The file reader rejects invalid records before spawning. Also guard
+            // this boundary in case a runtime record was changed after loading.
+            if(!KamuiWorld.ValidRuntime(Resume))
+            {Resume=null;Plugin.Warn("[Save] Invalid stratagem runtime; starting from defaults.");return;}
             taskStage=Resume.Stage;taskIndex=Resume.Index;taskProgress=Resume.Progress;
             taskDeadline=Time.time+Resume.Wait;activeUntil=Time.time+Resume.Remaining;
             MineDamage=Resume.MineDamage;mineArmUntil=Time.time+Resume.Arm;triggered=Resume.Triggered;
@@ -47,7 +39,7 @@ namespace CluckmechCoop
             {
                 Vector2 point=room.Center+new Vector2(saved.X,saved.Y);
                 StratagemFields.Add(this,point,saved.Radius,saved.Remaining,saved.Scorch);
-                StratagemEffects.Emit(this,saved.Scorch?2:10,point,saved.Radius,saved.Remaining,Parameters.Gas?1u:0u);
+                StratagemEffects.Emit(this,saved.Scorch?StratagemEffectAction.ShellBlast:StratagemEffectAction.Field,point,saved.Radius,saved.Remaining,Parameters.Gas?1u:0u);
             }
         }
     }

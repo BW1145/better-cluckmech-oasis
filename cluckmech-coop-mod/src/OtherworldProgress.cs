@@ -62,6 +62,7 @@ namespace CluckmechCoop
         internal 模块_攻击详细属性 Detailed;
         internal 模块_移动属性 Movement;
         internal Collider2D[] Shapes;
+        internal readonly UnitActionLifetime Actions=new UnitActionLifetime();
         internal int Space;
         internal bool IsPlayer,IsMachine,DeathRecorded;
         internal bool Permanent,BossGroup,Restoring;
@@ -75,7 +76,9 @@ namespace CluckmechCoop
             IsPlayer=GetComponent<模块_玩家_攻击>()!=null;
             IsMachine=!IsPlayer&&health.ID>=0&&health.当前阵营==阵营数据库.阵营.友方&&!health.单位定位列表.Contains(模块_基本属性.单位定位枚举.基地);
             Shapes=GetComponentsInChildren<Collider2D>(true).Where(c=>c.GetComponentInParent<模块_基本属性>()==health).ToArray();
-            OtherworldWorld.Units[gameObject]=this;KamuiWorld.Added(this);Refresh();
+            OtherworldWorld.Units[gameObject]=this;
+            if(IsPlayer)OtherworldWorld.Players[(int)Health.所属玩家]=this;
+            KamuiWorld.Added(this);Refresh();
         }
         internal void Refresh()
         {
@@ -95,13 +98,14 @@ namespace CluckmechCoop
             Health.当前生命值=Health.当前生命值上限*ratio;
             Attack?.运算攻击力();Attack?.运算攻击速度();Attack?.运算攻击范围();
         }
-        private void OnDisable()=>OtherworldWorld.Remove(this);
-        private void OnDestroy()=>KamuiVisibility.Forget(gameObject);
+        private void OnDisable()=>UnitLifecycle.Removed(Health);
+        private void OnDestroy()=>UnitLifecycle.Destroyed(gameObject);
     }
 
     internal static class OtherworldWorld
     {
         internal static readonly Dictionary<GameObject,OtherworldUnit> Units=new Dictionary<GameObject,OtherworldUnit>();
+        internal static readonly Dictionary<int,OtherworldUnit> Players=new Dictionary<int,OtherworldUnit>();
         internal static bool Active=>OtherworldRegistry.Enabled&&OtherworldProgress.Players.Count>0;
         internal static OtherworldUnit Unit(GameObject obj)=>obj!=null&&Units.TryGetValue(obj,out var unit)?unit:null;
         internal static int Space(GameObject obj)=>Unit(obj)?.Space??0;
@@ -123,8 +127,13 @@ namespace CluckmechCoop
             foreach(var unit in Units.Values)if(unit!=null&&(int)unit.Health.所属玩家==role)unit.Refresh();
             var actor=OtherworldActions.Player(role);if(actor!=null)OtherworldDeployment.SpaceChanged(actor);
         }
-        internal static void Remove(OtherworldUnit unit){KamuiWorld.Removed(unit);Units.Remove(unit.gameObject);}
-        internal static void Clear(){Units.Clear();OtherworldAudio.Clear();}
+        internal static void Remove(OtherworldUnit unit)
+        {
+            KamuiWorld.Removed(unit);Units.Remove(unit.gameObject);
+            int role=(int)unit.Health.所属玩家;
+            if(unit.IsPlayer&&Players.TryGetValue(role,out var player)&&ReferenceEquals(player,unit))Players.Remove(role);
+        }
+        internal static void Clear(){foreach(var unit in Units.Values)if(unit!=null)unit.Actions.Invalidate();Units.Clear();Players.Clear();OtherworldAudio.Clear();}
         internal static List<OtherworldUnit> Near(GameObject source,Vector2 point,float radius)
         {
             int space=Space(source);var result=new List<OtherworldUnit>();

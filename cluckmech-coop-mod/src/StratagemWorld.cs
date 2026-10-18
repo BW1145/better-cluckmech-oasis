@@ -33,7 +33,7 @@ namespace CluckmechCoop
             StratagemNativeParticles.Clear();
             StratagemSurface.Clear();
             Enemies.Clear(); enemySet.Clear(); hitboxes.Clear(); Players.Clear(); Base = null; GroundMap = null;
-            StratagemUnit.Clear(); StratagemFields.Clear(); StratagemShields.Clear(); StratagemDeployment.Clear();
+            StratagemDamage.ClearCaches(); StratagemUnit.Clear(); StratagemFields.Clear(); StratagemShields.Clear(); StratagemDeployment.Clear();
         }
         internal static void Add(模块_基本属性 stats)
         {
@@ -54,7 +54,7 @@ namespace CluckmechCoop
         {
             if (enemySet.Remove(stats)) Enemies.Remove(stats);
             hitboxes.Remove(stats);
-            Players.Remove(stats); StratagemFields.Remove(stats);
+            Players.Remove(stats); StratagemFields.Remove(stats); StratagemDamage.ForgetTarget(stats);
         }
         internal static bool Living(模块_基本属性 stats) => stats != null && stats.当前生命值 > 0 && !stats.当前是否无敌 &&
             stats.当前阵营 == 阵营数据库.阵营.敌方 && enemySet.Contains(stats);
@@ -125,6 +125,7 @@ namespace CluckmechCoop
 
     internal sealed class StratagemDamage
     {
+        private static readonly HashSet<StratagemDamage> sources = new HashSet<StratagemDamage>();
         internal readonly GameObject Source;
         private readonly 模块_攻击属性 attack;
         private readonly 模块_攻击详细属性 detailed;
@@ -132,7 +133,7 @@ namespace CluckmechCoop
         private readonly StratagemUnit unit;
         private readonly Dictionary<模块_基本属性,StratagemStateHandle> burns = new Dictionary<模块_基本属性,StratagemStateHandle>();
         internal StratagemDamage(GameObject source)
-        { Source = source; attack = source.GetComponent<模块_攻击属性>(); detailed = source.GetComponent<模块_攻击详细属性>(); states = source.GetComponent<模块_状态属性>(); unit = source.GetComponent<StratagemUnit>(); }
+        { sources.Add(this); Source = source; attack = source.GetComponent<模块_攻击属性>(); detailed = source.GetComponent<模块_攻击详细属性>(); states = source.GetComponent<模块_状态属性>(); unit = source.GetComponent<StratagemUnit>(); }
         internal float Attack => attack == null ? 0 : attack.当前攻击力;
         internal float Rate => attack == null || !attack.当前是否能攻击 || states != null && states.查询状态(攻击类型与状态数据库.状态枚举.眩晕) ? 0 : attack.当前攻击速度;
         internal float Range => attack == null ? 0 : attack.当前攻击范围;
@@ -194,6 +195,11 @@ namespace CluckmechCoop
             }
             burns[target] = StratagemStateHandle.Create(unit,target,攻击类型与状态数据库.状态枚举.灼烧,seconds,values);
         }
+        internal static void ForgetTarget(模块_基本属性 target)
+        { foreach (var source in sources) source.Forget(target); }
+        internal static void ClearCaches()
+        { foreach (var source in sources) source.burns.Clear(); sources.Clear(); }
+        internal void Dispose() { burns.Clear(); sources.Remove(this); }
         internal void Forget(模块_基本属性 target) => burns.Remove(target);
     }
     [HarmonyPatch(typeof(模块_基本属性), "Awake")]
@@ -201,5 +207,5 @@ namespace CluckmechCoop
     [HarmonyPatch(typeof(模块_受伤), "Start")]
     internal static class CacheReadyStratagemEnemy { private static void Postfix(模块_受伤 __instance) => StratagemWorld.Add(__instance.GetComponent<模块_基本属性>()); }
     [HarmonyPatch(typeof(模块_基本属性), "OnDisable")]
-    internal static class RemoveStratagemEnemy { private static void Prefix(模块_基本属性 __instance) => StratagemWorld.Remove(__instance); }
+    internal static class RemoveStratagemEnemy { private static void Prefix(模块_基本属性 __instance) => UnitLifecycle.Removed(__instance); }
 }

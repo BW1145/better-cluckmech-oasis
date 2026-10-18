@@ -133,7 +133,7 @@ namespace CluckmechCoop
                 for(int i=0;i<beamHits.Count;i++)Hit(beamHits[i].Unit,damage*(i==0?1:.5f),critical);
             }
             else Hit(target,damage,critical);
-            StratagemEffects.Emit(drone,13,drone.transform.position,root.Parameters.Piercing?drone.Damage.Range:0,
+            StratagemEffects.Emit(drone,StratagemEffectAction.DroneBeam,drone.transform.position,root.Parameters.Piercing?drone.Damage.Range:0,
                 1/drone.Damage.Rate+.08f,targetId,aim);
         }
         private void Hit(模块_基本属性 enemy,float damage,bool critical)
@@ -162,7 +162,7 @@ namespace CluckmechCoop
             phase = value;
             if(value!=0&&drone!=null)drone.StopDroneBeam();
             if(drone!=null)drone.Dock(value);
-            if (drone != null) StratagemEffects.Emit(drone,16,drone.transform.position,0,value,StratagemWorld.Id(root.gameObject));
+            if (drone != null) StratagemEffects.Emit(drone,StratagemEffectAction.DronePhase,drone.transform.position,0,value,StratagemWorld.Id(root.gameObject));
         }
         private void MoveDrone(Vector2 destination,float speed)
         {

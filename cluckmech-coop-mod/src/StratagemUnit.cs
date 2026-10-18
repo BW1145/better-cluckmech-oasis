@@ -251,7 +251,7 @@ namespace CluckmechCoop
             if(Parent==null)yield break;
             var p = Parent.Parameters;
             if(Resume==null)mineArmUntil=Time.time+p.ArmTime;
-            StratagemEffects.Emit(this,15,transform.position,p.BlastRadius,Mathf.Max(0,mineArmUntil-Time.time),StratagemWorld.Id(Parent.gameObject),new Vector2(MineDamage,0));
+            StratagemEffects.Emit(this,StratagemEffectAction.MineSetup,transform.position,p.BlastRadius,Mathf.Max(0,mineArmUntil-Time.time),StratagemWorld.Id(Parent.gameObject),new Vector2(MineDamage,0));
             while(Time.time<mineArmUntil)yield return null;
             rig.MineState(false);
             var sensor = new GameObject("MineSensor"); sensor.transform.SetParent(transform,false);
@@ -286,7 +286,7 @@ namespace CluckmechCoop
             if(Resume==null||!Resume.Triggered)taskDeadline=Time.time+p.TriggerTime;
             while(Time.time<taskDeadline)yield return null;
             if (Parent == null) yield break;
-            StratagemEffects.Emit(Parent,0,transform.position,p.BlastRadius);
+            StratagemEffects.Emit(Parent,StratagemEffectAction.Blast,transform.position,p.BlastRadius);
             try
             {
                 Parent.Damage.Area(transform.position,p.BlastRadius,MineDamage,Parent.Damage.Critical());
@@ -310,7 +310,7 @@ namespace CluckmechCoop
                 { taskProgress += Damage.Rate / p.Definition.Rate*Time.deltaTime; yield return null; }
                 if (!Alive) yield break;
                 Vector2 point = center+UnityEngine.Random.insideUnitCircle*p.ScatterRadius;
-                StratagemEffects.Emit(this,1,point,p.BlastRadius);
+                StratagemEffects.Emit(this,StratagemEffectAction.BarrageWarning,point,p.BlastRadius);
                 StartCoroutine(ShellImpact(point));
             }
             yield return new WaitForSeconds(.5f);
@@ -321,12 +321,12 @@ namespace CluckmechCoop
             var pending=new StratagemSavedImpact{Kind=0,X=point.x,Y=point.y,Wait=Time.time+delay};impacts.Add(pending);
             yield return new WaitForSeconds(Mathf.Max(0,delay-.09f));
             if (!Alive) yield break;
-            StratagemEffects.Emit(this,17,point,Parameters.BlastRadius,.09f);
+            StratagemEffects.Emit(this,StratagemEffectAction.ShellWarning,point,Parameters.BlastRadius,.09f);
             yield return new WaitForSeconds(.09f);
             impacts.Remove(pending);
             if (!Alive) yield break;
             Damage.Area(point,Parameters.BlastRadius,Damage.Attack*Parameters.DamageMultiplier,Damage.Critical());
-            StratagemEffects.Emit(this,2,point,Parameters.BlastRadius,Parameters.Scorch?StratagemParameters.ScorchDuration:0);
+            StratagemEffects.Emit(this,StratagemEffectAction.ShellBlast,point,Parameters.BlastRadius,Parameters.Scorch?StratagemParameters.ScorchDuration:0);
             if (Parameters.Scorch) StratagemFields.Add(this,point,1.2f,StratagemParameters.ScorchDuration,true);
         }
         private IEnumerator Laser()
@@ -335,7 +335,7 @@ namespace CluckmechCoop
             if(Resume==null)taskDeadline=Time.time+p.CallDelay;
             if(taskStage==0){while(Time.time<taskDeadline)yield return null;taskStage=1;activeUntil=Time.time+p.Duration;}
             Vector2 center = transform.position;
-            StratagemEffects.Emit(this,3,center,p.BlastRadius,Mathf.Max(0,activeUntil-Time.time));
+            StratagemEffects.Emit(this,StratagemEffectAction.BeamStart,center,p.BlastRadius,Mathf.Max(0,activeUntil-Time.time));
             float until=activeUntil,lastTime=Time.time,nextSearch=0,contactTime=0;
             var clock=new StratagemAttackClock();
             模块_基本属性 target=null,contactTarget=null;
@@ -347,7 +347,7 @@ namespace CluckmechCoop
                     {
                         target=StratagemWorld.Target(center,target==null?6:8,true);nextSearch=Time.time+.5f;
                         beamTarget=target;
-                        StratagemEffects.Emit(this,4,beamPosition,0,0,StratagemWorld.Id(target?.gameObject));
+                        StratagemEffects.Emit(this,StratagemEffectAction.BeamTarget,beamPosition,0,0,StratagemWorld.Id(target?.gameObject));
                     }
                 }
                 float now=Mathf.Min(Time.time,until),delta=now-lastTime;lastTime=now;
@@ -373,7 +373,7 @@ namespace CluckmechCoop
                 if(Time.time>=until)break;
                 yield return null;
             }
-            StratagemEffects.Emit(this,5,beamPosition);
+            StratagemEffects.Emit(this,StratagemEffectAction.BeamEnd,beamPosition);
             ReleaseSource();
         }
         private IEnumerator Eagle()
@@ -383,8 +383,8 @@ namespace CluckmechCoop
             if(taskStage==0){while(Time.time<taskDeadline)yield return null;taskStage=1;taskDeadline=Time.time+.6f+Parameters.CallDelay;}
             if (!Alive) yield break;
             rig.Visible(false);
-            StratagemEffects.Emit(this,6,point);
-            StratagemEffects.Emit(this,7,point,1,.6f+Parameters.CallDelay);
+            StratagemEffects.Emit(this,StratagemEffectAction.EagleFlight,point);
+            StratagemEffects.Emit(this,StratagemEffectAction.EagleBomb,point,1,.6f+Parameters.CallDelay);
             while(Time.time<taskDeadline)yield return null;
             if (!Alive) yield break;
             var p = Parameters;
@@ -404,7 +404,7 @@ namespace CluckmechCoop
                     enemy.GetComponent<模块_移动>()?.被击退(new Vector4(point.x,point.y,2,.2f));
                 }
             }
-            StratagemEffects.Emit(this,8,point,p.BlastRadius);
+            StratagemEffects.Emit(this,StratagemEffectAction.EagleBlast,point,p.BlastRadius);
             ReleaseSource();
         }
         private IEnumerator Mortar()
@@ -436,7 +436,7 @@ namespace CluckmechCoop
         {
             Vector2 direction = point-(Vector2)transform.position;
             rig.Aim(direction);
-            StratagemEffects.Emit(this,9,transform.position,1,.8f,0,point);
+            StratagemEffects.Emit(this,StratagemEffectAction.MortarShot,transform.position,1,.8f,0,point);
             StartCoroutine(MortarImpact(point));
         }
         private IEnumerator MortarImpact(Vector2 point,float delay=.8f)
@@ -445,7 +445,7 @@ namespace CluckmechCoop
             yield return new WaitForSeconds(delay);impacts.Remove(pending);
             if (!Plugin.InCombat) yield break;
             StratagemFields.Add(this,point,Parameters.BlastRadius,Parameters.FieldDuration,false);
-            StratagemEffects.Emit(this,10,point,Parameters.BlastRadius,Parameters.FieldDuration,Parameters.Gas ? 1u : 0u);
+            StratagemEffects.Emit(this,StratagemEffectAction.Field,point,Parameters.BlastRadius,Parameters.FieldDuration,Parameters.Gas ? 1u : 0u);
         }
         internal void ReleaseSource()
         {
@@ -483,11 +483,12 @@ namespace CluckmechCoop
             }
             rig.Die();
             if (Plugin.Role != 2)
-                if (Kind == StratagemKind.Mortar) StratagemEffects.Emit(this,0,transform.position,1);
-                else StratagemEffects.Emit(this,14,transform.position);
+                if (Kind == StratagemKind.Mortar) StratagemEffects.Emit(this,StratagemEffectAction.Blast,transform.position,1);
+                else StratagemEffects.Emit(this,StratagemEffectAction.Death,transform.position);
         }
         private void OnDestroy()
         {
+            Damage?.Dispose();
             EndBeam();
             uint id = StratagemWorld.Id(gameObject);
             if (id != 0) networkUnits.Remove(id);

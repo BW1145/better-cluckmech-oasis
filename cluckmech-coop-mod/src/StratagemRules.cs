@@ -4,6 +4,27 @@ using System.Collections.Generic;
 namespace CluckmechCoop
 {
     internal enum StratagemKind { Mines, Barrage, Laser, Eagle, Mortar, Shield, Rover }
+    internal enum StratagemEffectAction
+    {
+        Blast = 0,
+        BarrageWarning = 1,
+        ShellBlast = 2,
+        BeamStart = 3,
+        BeamTarget = 4,
+        BeamEnd = 5,
+        EagleFlight = 6,
+        EagleBomb = 7,
+        EagleBlast = 8,
+        MortarShot = 9,
+        Field = 10,
+        ShieldHit = 11,
+        ShieldBreak = 12,
+        DroneBeam = 13,
+        Death = 14,
+        MineSetup = 15,
+        DronePhase = 16,
+        ShellWarning = 17,
+    }
     internal struct StratagemAttackClock
     {
         private double progress;
@@ -22,7 +43,8 @@ namespace CluckmechCoop
         public int Kind, Action;
         public uint Root, Target;
         public float X,Y,EndX,EndY,Radius,Duration;
-        internal bool Valid => Kind >= 0 && Kind < 7 && Action >= 0 && Action <= 16 &&
+        internal StratagemEffectAction EffectAction => (StratagemEffectAction)Action;
+        internal bool Valid => Enum.IsDefined(typeof(StratagemKind),Kind) && Enum.IsDefined(typeof(StratagemEffectAction),Action) &&
             Finite(X) && Finite(Y) && Finite(EndX) && Finite(EndY) && Finite(Radius) && Radius >= 0 && Radius <= 20 &&
             Finite(Duration) && Duration >= 0 && Duration <= 60;
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);

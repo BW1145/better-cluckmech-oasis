@@ -174,11 +174,11 @@ namespace CluckmechCoop
         {
             float residual = ShieldGeometry.Residual(raw,root.Parameters.ShieldDamageFactor,ref capacity);
             lastHit = Time.time;
-            StratagemEffects.Emit(root,11,point,1,.4f);
+            StratagemEffects.Emit(root,StratagemEffectAction.ShieldHit,point,1,.4f);
             if (capacity <= 0)
             {
                 restart = Time.time+root.Parameters.Reboot;
-                StratagemEffects.Emit(root,12,transform.position,Radius);
+                StratagemEffects.Emit(root,StratagemEffectAction.ShieldBreak,transform.position,Radius);
                 if (root.Parameters.Discharge)
                     foreach (var enemy in StratagemWorld.EnemiesFor(transform.position))
                         if (StratagemWorld.Living(enemy) && StratagemWorld.DistanceSquared(enemy,transform.position) <= Radius*Radius)

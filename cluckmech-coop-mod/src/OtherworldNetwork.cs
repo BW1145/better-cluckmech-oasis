@@ -24,7 +24,7 @@ namespace CluckmechCoop
             if(NetworkServer.active&&!serverRegistered){NetworkServer.RegisterHandler<OtherworldMessage>(ReceiveCommand);serverRegistered=true;}
             if(NetworkClient.active&&!clientRegistered){NetworkClient.RegisterHandler<OtherworldMessage>(Receive);clientRegistered=true;}
         }
-        internal static void Disconnect(){serverRegistered=clientRegistered=false;sequences.Clear();}
+        internal static void Disconnect(){serverRegistered=clientRegistered=false;sequences.Clear();KamuiVisibility.Clear();}
         internal static void Command(OtherworldActor actor,int action,uint sequence,Vector2 point)
         {
             if(action==4&&Plugin.Role!=0&&!Plugin.Network.PeerReady)return;

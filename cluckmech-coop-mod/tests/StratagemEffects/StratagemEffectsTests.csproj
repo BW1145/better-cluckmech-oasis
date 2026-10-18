@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems><NoWarn>CS0649</NoWarn></PropertyGroup>
-  <ItemGroup><Compile Include="Program.cs"/><Compile Include="obj/ProductionEffects.cs"/><Compile Include="../../src/Rules.cs"/><Compile Include="../../src/StratagemRules.cs"/></ItemGroup>
+  <ItemGroup><Compile Include="Program.cs"/><Compile Include="../../src/StratagemFields.cs"/><Compile Include="obj/ProductionEffects.cs"/><Compile Include="../../src/Rules.cs"/><Compile Include="../../src/StratagemRules.cs"/></ItemGroup>
 </Project>
