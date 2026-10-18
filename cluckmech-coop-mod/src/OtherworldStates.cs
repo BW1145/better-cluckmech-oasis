@@ -9,13 +9,14 @@ namespace CluckmechCoop
     {
         internal int Owner;
         internal int Space;
+        internal bool BurnSpread;
     }
     internal static class OtherworldStates
     {
         internal static OtherworldState Copy(模块_状态属性.状态类 state,int owner,float duration=-1)
         {
             var s=state.加成属性;
-            return new OtherworldState{Owner=owner,Space=OtherworldDamage.ApplyingSpace??(state is OtherworldState tagged?tagged.Space:OtherworldWorld.Space(state.攻击者)),攻击者=state.攻击者,状态类型=state.状态类型,剩余时间=state.剩余时间,
+            return new OtherworldState{Owner=owner,BurnSpread=state is OtherworldState original&&original.BurnSpread,Space=OtherworldDamage.ApplyingSpace??(state is OtherworldState tagged?tagged.Space:OtherworldWorld.Space(state.攻击者)),攻击者=state.攻击者,状态类型=state.状态类型,剩余时间=state.剩余时间,
                 自身抗性属性=state.自身抗性属性,加成属性=new 模块_攻击详细属性.状态属性单元{默认持续时间=duration<0?s.默认持续时间:duration,
                     默认属性效果=s.默认属性效果,变化持续时间=duration<0?s.变化持续时间:0,变化百分比持续时间=duration<0?s.变化百分比持续时间:0,
                     变化属性效果=s.变化属性效果,变化百分比属性效果=s.变化百分比属性效果,当前持续时间=duration<0?s.当前持续时间:duration,当前属性效果=s.当前属性效果}};
@@ -40,7 +41,7 @@ namespace CluckmechCoop
                 }
                 if(state.状态类型==攻击类型与状态数据库.状态枚举.灼烧&&owner.Initial==26005&&spreadBurns.Add(role))
                 {
-                    var burns=states.Where(s=>s.状态类型==攻击类型与状态数据库.状态枚举.灼烧&&
+                    var burns=states.Where(s=>s.状态类型==攻击类型与状态数据库.状态枚举.灼烧&&!(s is OtherworldState propagated&&propagated.BurnSpread)&&
                         (s is OtherworldState mark?mark.Owner==role:s.攻击者!=null&&OtherworldProgress.For(s.攻击者)==owner)).ToArray();
                     var targets = new List<OtherworldUnit>();
                     OtherworldWorld.CollectNearby(victim.gameObject,victim.transform.position,3,targets);
@@ -49,6 +50,7 @@ namespace CluckmechCoop
                     {
                         var combined=Copy(bundle.First(),role,bundle.Key.Remaining);
                         Vector4 total=Vector4.zero;foreach(var burn in bundle)total+=burn.加成属性.当前属性效果;
+                        total.x*=.5f;
                         combined.加成属性.当前属性效果=combined.加成属性.默认属性效果=total;
                         combined.加成属性.变化属性效果=combined.加成属性.变化百分比属性效果=Vector4.zero;
                         Spread(victim,combined,role,Mathf.Max(0,bundle.Key.Remaining),3,targets);
@@ -83,6 +85,7 @@ namespace CluckmechCoop
             {
                 if(target==null||target==victim||target.Space!=victim.Space||target.Health.当前生命值<=0)continue;
                 var copy = Copy(state,role,seconds);
+                if(copy.状态类型==攻击类型与状态数据库.状态枚举.灼烧)copy.BurnSpread=true;
                 copy.攻击者 = source;
                 copy.Space = victim.Space;
                 target.GetComponent<模块_状态属性>()?.增加状态(copy);

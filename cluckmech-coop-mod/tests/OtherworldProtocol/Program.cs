@@ -40,6 +40,10 @@ static class Program
             OtherworldMessageKind.State == 10 && OtherworldMessageKind.Effect == 11 && OtherworldMessageKind.Beam == 12 && OtherworldMessageKind.Transfer == 14 && OtherworldMessageKind.AddEnergy == 15 && OtherworldMessageKind.EnsureRoom == 16 &&
             OtherworldMessageKind.Progress == 20 && OtherworldMessageKind.Drop == 21 && OtherworldMessageKind.SubmitProgress == 30 && OtherworldMessageKind.CollectDrop == 31, "published message numbers retained");
         Check(OtherworldMessageKind.IsCommand(0) && OtherworldMessageKind.IsCommand(4) && !OtherworldMessageKind.IsCommand(-1) && !OtherworldMessageKind.IsCommand(5) && !OtherworldMessageKind.IsCommand(30), "command range excludes server messages");
+        writer.Reset();
+        Writer<OtherworldMessage>.write(writer,new OtherworldMessage{Kind=OtherworldMessageKind.AddGold,Value=15,Token="gold"});
+        var gold=Reader<OtherworldMessage>.read(new NetworkReader(writer.ToArray()));
+        Check(gold.Kind==23&&gold.Value==15&&gold.Token=="gold"&&!OtherworldMessageKind.IsCommand(gold.Kind),"gold reward retains player-scoped server message payload");
         var run = new OtherworldRun { Hero = 12, Initial = 26001, Talents = new HashSet<int> { 26104, 26105 }, BaseInfluence = -.1f };
         Check(OtherworldDataValidation.Run(run) && OtherworldDataValidation.NetworkRun(run), "valid player data accepted at both boundaries");
         run.Initial = 0;

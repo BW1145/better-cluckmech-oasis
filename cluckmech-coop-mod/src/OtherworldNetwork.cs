@@ -253,6 +253,11 @@ namespace CluckmechCoop
                 if (player != null) player.GetComponent<模块_玩家_动力>()?.增加动力(message.Value);
                 return;
             }
+            if (message.Kind == OtherworldMessageKind.AddGold)
+            {
+                if (message.Value > 0 && Plugin.InCombat) Plugin.Summary.获得金钱(message.Value);
+                return;
+            }
             if (!NetworkClient.spawned.TryGetValue(message.Player, out var identity)) return;
             var actor = identity.GetComponent<OtherworldActor>();
             if (actor == null) return;

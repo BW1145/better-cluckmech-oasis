@@ -81,9 +81,11 @@ namespace CluckmechCoop
             OtherworldWorld.CollectNearby(actor.gameObject, point, radius, targets);
             var detailed = actor.GetComponent<模块_攻击详细属性>();
             Vector4 shock = detailed.状态加成列表[(int)攻击类型与状态数据库.状态枚举.感电].当前属性效果;
+            int hits = 0;
             foreach (var target in targets)
             {
                 if (target == null || target.Space != actor.Space || target.Health.当前生命值 <= 0) continue;
+                hits++;
                 Hit(actor, target, damage);
                 Status(target, actor.gameObject, 攻击类型与状态数据库.状态枚举.感电, 5, shock);
                 if (actor.Run.Has(26104) && !target.Health.免疫击退)
@@ -91,7 +93,7 @@ namespace CluckmechCoop
                     actor.StartCoroutine(Pull(target, point));
                 }
             }
-            if (rewards && targets.Count > 0 && actor.Run.Has(26103)) RefundPower(actor, 2);
+            if (rewards && hits > 0 && actor.Run.Has(26103)) RewardGold(actor, hits*5);
         }
         private static IEnumerator Pull(OtherworldUnit unit,Vector2 point)
         {
@@ -116,19 +118,17 @@ namespace CluckmechCoop
                 yield return null;
             }
         }
-        internal static void RefundPower(OtherworldActor actor,int amount)
+        internal static void RewardGold(OtherworldActor actor,int amount)
         {
-            var power=actor.GetComponent<模块_玩家_动力>();
-            if(power==null)return;
-            if(Plugin.Role!=1||actor.Role==1)power.增加动力(amount);
-            else OtherworldNetwork.Send(new OtherworldMessage{Kind=OtherworldMessageKind.AddEnergy,Value=amount},actor.Role);
+            if(Plugin.Role!=1||actor.Role==1)Plugin.Summary.获得金钱(amount);
+            else OtherworldNetwork.Send(new OtherworldMessage{Kind=OtherworldMessageKind.AddGold,Value=amount},actor.Role);
         }
         internal static void Normal(OtherworldActor actor, float damage)
         {
             if (actor.Run.Initial != 26002) return;
             if (++actor.NormalCount%(actor.Run.Has(26107) ? 2 : 4) != 0) return;
             var targets = new List<OtherworldUnit>();
-            OtherworldWorld.CollectNearby(actor.gameObject, actor.transform.position, actor.Attack.当前攻击范围, targets);
+            OtherworldWorld.CollectNearby(actor.gameObject, actor.transform.position, 4, targets);
             OtherworldWorld.SortNearest(targets, actor.Aim);
             int count = Mathf.Min(actor.Run.Has(26107) ? 8 : 6, targets.Count);
             Vector2 previous = actor.Muzzle;
@@ -136,7 +136,7 @@ namespace CluckmechCoop
             {
                 var target = targets[i];
                 if (target == null || target.Space != actor.Space || target.Health.当前生命值 <= 0) continue;
-                Hit(actor, target, damage*4);
+                Hit(actor, target, damage*3);
                 OtherworldFx.Beam(previous, target.transform.position, .18f);
                 OtherworldNetwork.Send(new OtherworldMessage
                 {
@@ -217,11 +217,11 @@ namespace CluckmechCoop
         {
             int viewer=OtherworldWorld.Space(OtherworldActions.Player(Plugin.Role)?.gameObject);
             if(actor.Space!=viewer)return;
-            if(effect==2||effect==3){actor.CastPose();OtherworldVfx.Strike(actor,point,amount,effect==3);}
+            if(effect==2||effect==3){actor.CastPose();OtherworldAudio.Play(effect==3?"perlica-orbital":"perlica-thunder",point);OtherworldVfx.Strike(actor,point,amount,effect==3);}
             else if(effect==4||effect==5)
             {
                 var direction=actor.Aim-point;
-                if(effect==5)OtherworldVfx.Fire(actor,point,direction,6);
+                if(effect==5){OtherworldAudio.Play("obito-fire",point);OtherworldVfx.Fire(actor,point,direction,6);}
                 else
                 {
                     var fx=OtherworldFx.Play(5,point,4,duration);

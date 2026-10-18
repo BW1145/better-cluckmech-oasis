@@ -27,6 +27,7 @@ namespace CluckmechCoop
         internal const int Progress = 20;
         internal const int Drop = 21;
         internal const int DamageStatistics = 22;
+        internal const int AddGold = 23;
         internal const int SubmitProgress = 30;
         internal const int CollectDrop = 31;
 

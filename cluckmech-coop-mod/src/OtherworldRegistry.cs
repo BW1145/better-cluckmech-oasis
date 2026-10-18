@@ -27,6 +27,7 @@ namespace CluckmechCoop
                     hp.生命值=hp.当前生命值=definition.Health;hp.生命再生=5;hp.抗性=hp.格挡值=0;
                     hp.图标=hp.名片=OtherworldAssets.Portrait(definition.Id);
                     var attack=prefab.GetComponent<模块_攻击属性>();attack.攻击力=definition.Attack;attack.攻击速度=definition.Rate;attack.攻击范围=definition.Range;
+                    if(definition.Id==13)attack.穿透数量+=1;
                     var bullet=UnityEngine.Object.Instantiate(attack.子弹,templates.transform);bullet.name="OtherworldProjectile_"+definition.Id;
                     bullet.AddComponent<OtherworldProjectile>().Hero=definition.Id;attack.子弹=bullet;
                     attack.当前造成状态=new List<攻击类型与状态数据库.状态枚举>();

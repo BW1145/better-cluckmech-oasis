@@ -37,6 +37,7 @@ namespace CluckmechCoop
     {
         public int Type,Owner;
         public string Source;
+        public bool BurnSpread;
         public float Remaining,EffectResistance,TimeResistance;
         public float[] Values;
     }

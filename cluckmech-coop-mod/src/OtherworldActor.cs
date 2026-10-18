@@ -50,7 +50,7 @@ namespace CluckmechCoop
         internal int Space=>OtherworldWorld.Space(gameObject);
         internal Vector2 Aim=>Gun.目标;
         internal float Cooldown=>(Hero==12?8f:10f)*(Run.Initial==26003?2:1)*(Run.Has(26102)?.75f:1);
-        internal float NormalFactor=>(Run.Initial==26002?3*(1+Run.Upgrades*.05f):1)*(Time.time<NormalUntil?3:1);
+        internal float NormalFactor=>(Run.Initial==26002?1+Run.Upgrades*.05f:1)*(Time.time<NormalUntil?3:1);
         internal Vector2 Muzzle=>(Vector2)transform.position+Vector2.up*.45f+((Vector2)Gun.目标-(Vector2)transform.position).normalized*.6f;
 
         private void Start()
@@ -304,6 +304,7 @@ namespace CluckmechCoop
         {
             float interval=1/Mathf.Max(.1f,Attack.当前攻击速度);
             motionState.Fired(Time.time,interval);
+            OtherworldAudio.Normal(this);
             if(Plugin.Role!=2)OtherworldActions.Normal(this,damage);
         }
         internal void CastPose()=>castUntil=Time.time+.4f;

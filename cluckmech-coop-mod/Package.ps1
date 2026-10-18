@@ -27,7 +27,9 @@ foreach ($sound in @('barrage.ogg','eagle.ogg','laser-start.ogg','laser-loop.ogg
 $configDir = Join-Path $packageDir 'BepInEx\config'
 $otherworldSoundDir = Join-Path $pluginDir 'OtherworldSounds'
 New-Item -ItemType Directory -Path $otherworldSoundDir -Force | Out-Null
-Copy-Item -LiteralPath (Join-Path $modRoot 'src/OtherworldSounds/kamui.ogg') -Destination $otherworldSoundDir -Force
+foreach ($name in @('kamui','perlica-shot','perlica-thunder','perlica-orbital','obito-throw','obito-fire')) {
+    Copy-Item -LiteralPath (Join-Path $modRoot "src/OtherworldSounds/$name.ogg") -Destination $otherworldSoundDir -Force
+}
 New-Item -ItemType Directory -Path $configDir -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $modRoot 'evidence\startup-destruction\BepInEx.cfg.updated') -Destination (Join-Path $configDir 'BepInEx.cfg') -Force
 [System.IO.File]::WriteAllText((Join-Path $configDir 'billy.cluckmech.coop.diagnostics.cfg'), "[Diagnostics]`r`nDetailedScan = false`r`n", [System.Text.UTF8Encoding]::new($false))
@@ -56,7 +58,9 @@ try {
     if ($audioEntries.Count -ne 10) { throw 'Expected ten OGG music tracks' }
     $soundEntries = @($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -match '^BepInEx/plugins/CluckmechCoop/StratagemSounds/.+\.ogg$' })
     if ($soundEntries.Count -ne 4) { throw 'Expected four stratagem sound effects' }
-    if (-not ($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq 'BepInEx/plugins/CluckmechCoop/OtherworldSounds/kamui.ogg' })) { throw 'Kamui sound effect missing' }
+    foreach ($name in @('kamui','perlica-shot','perlica-thunder','perlica-orbital','obito-throw','obito-fire')) {
+        if (-not ($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq "BepInEx/plugins/CluckmechCoop/OtherworldSounds/$name.ogg" })) { throw "Otherworld sound effect missing: $name" }
+    }
     if (-not ($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq 'BepInEx/plugins/CluckmechCoop/Music/mix.json' })) { throw 'Music calibration missing' }
     foreach ($path in @('winhttp.dll' , 'doorstop_config.ini', 'BepInEx/core/BepInEx.dll', 'BepInEx/core/0Harmony.dll', 'BepInEx/core/BepInEx.Preloader.dll')) {
         if (-not ($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq $path })) { throw "Loader file missing: $path" }

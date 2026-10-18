@@ -1,0 +1,37 @@
+[
+  {
+    "name": "01-佩丽卡-电弧普攻",
+    "duration": 0.34,
+    "sampleRate": 48000,
+    "peakDb": -6.5,
+    "rmsDb": -27.07
+  },
+  {
+    "name": "02-佩丽卡-落雷",
+    "duration": 1.35,
+    "sampleRate": 48000,
+    "peakDb": -3.0,
+    "rmsDb": -21.92
+  },
+  {
+    "name": "03-佩丽卡-轨道重块",
+    "duration": 2.05,
+    "sampleRate": 48000,
+    "peakDb": -2.5,
+    "rmsDb": -19.91
+  },
+  {
+    "name": "04-带土-忍具投掷",
+    "duration": 0.4,
+    "sampleRate": 48000,
+    "peakDb": -7.5,
+    "rmsDb": -26.88
+  },
+  {
+    "name": "05-带土-螺旋火焰",
+    "duration": 1.55,
+    "sampleRate": 48000,
+    "peakDb": -4.0,
+    "rmsDb": -19.51
+  }
+]

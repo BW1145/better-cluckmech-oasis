@@ -46,6 +46,9 @@ static class Program
         if(args.Length>0&&args[0]=="modules"){ModuleStateHarness.Run();return;}
         Check(KamuiWorld.Valid(Healthy()),"native state models, negative modifiers, permanent buffs and elapsed native timers accepted");
         Check(KamuiWorld.Valid(JsonConvert.DeserializeObject<OtherworldSave>(JsonConvert.SerializeObject(Healthy()))),"real JSON nested snapshot round trip");
+        var propagated=Healthy();propagated.Rooms[0].Units[0].States[0].BurnSpread=true;
+        Check(JsonConvert.DeserializeObject<OtherworldSave>(JsonConvert.SerializeObject(propagated)).Rooms[0].Units[0].States[0].BurnSpread,"propagated burn marker survives snapshot JSON round trip");
+        Check(!JsonConvert.DeserializeObject<KamuiSavedStatus>("{}").BurnSpread,"earlier snapshots default to directly applied status");
         Check(KamuiWorld.Valid(new OtherworldSave()),"native-only/default addon accepted");
         Check(KamuiWorld.Valid(JsonConvert.DeserializeObject<OtherworldSave>("{\"Players\":{},\"Rooms\":[{\"Owner\":1,\"Units\":[{\"Id\":16,\"Key\":\"old\"}]}]}")),"older missing optional runtime fields retain initialized defaults");
         Check(!KamuiWorld.Valid(null),"null addon rejected");

@@ -79,7 +79,7 @@ namespace CluckmechCoop
                         if(state.剩余时间<=0)continue;
                         var source=OtherworldWorld.Unit(state.攻击者);
                         entry.States.Add(new KamuiSavedStatus{Type=(int)state.状态类型,Owner=state is OtherworldState own?own.Owner:source!=null&&source.Health.当前阵营==阵营数据库.阵营.友方&&OtherworldProgress.For((int)source.Health.所属玩家)!=null?(int)source.Health.所属玩家:-1,
-                            Source=source?.PersistentId,Remaining=state.剩余时间,Values=Pack(state.加成属性),EffectResistance=state.自身抗性属性.当前效果抗性,TimeResistance=state.自身抗性属性.当前时间抗性});
+                            Source=source?.PersistentId,BurnSpread=state is OtherworldState burn&&burn.BurnSpread,Remaining=state.剩余时间,Values=Pack(state.加成属性),EffectResistance=state.自身抗性属性.当前效果抗性,TimeResistance=state.自身抗性属性.当前时间抗性});
                     }
                     var effects=unit.GetComponent<模块_状态持续效果>();
                     if(effects!=null)entry.Underlying=effects.当前底层状态列表.Select(s=>new 模块_状态持续效果.底层状态类{底层状态=s.底层状态,数值=s.数值,持续时间=s.持续时间}).ToList();
@@ -154,7 +154,7 @@ namespace CluckmechCoop
                         {
                             int sourceOwner=Plugin.Role==0&&state.Owner==1?0:Plugin.Role==1&&state.Owner==0?1:state.Owner;
                             var source=state.Source!=null&&objects.TryGetValue(state.Source,out var found)?found.gameObject:OtherworldActions.Player(sourceOwner)?.gameObject;
-                            stateModule.当前状态列表.Add(new OtherworldState{Owner=sourceOwner,Space=unit.Space,攻击者=source,状态类型=(攻击类型与状态数据库.状态枚举)state.Type,
+                            stateModule.当前状态列表.Add(new OtherworldState{Owner=sourceOwner,Space=unit.Space,BurnSpread=state.BurnSpread,攻击者=source,状态类型=(攻击类型与状态数据库.状态枚举)state.Type,
                                 剩余时间=state.Remaining,加成属性=Unpack(state.Values),自身抗性属性=new 模块_抗性属性.状态抗性单元{当前效果抗性=state.EffectResistance,当前时间抗性=state.TimeResistance}});
                         }
                     }
