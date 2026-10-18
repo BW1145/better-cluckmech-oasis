@@ -26,7 +26,7 @@ namespace CluckmechCoop
             if(Plugin.Role==1&&space-1!=Plugin.Role)drop.Send();
         }
         internal KamuiSavedDrop Save(KamuiRoom room)=>new KamuiSavedDrop{Key=Key,Prefab=name.Replace("(Clone)",""),X=transform.position.x-room.Center.x,Y=transform.position.y-room.Center.y};
-        private void Send(){if(!networked)OtherworldNetwork.Send(new OtherworldMessage{Kind=21,Value=Space-1,Data=JsonConvert.SerializeObject(Save(KamuiWorld.Room(Space)))},Space-1);}
+        private void Send(){if(!networked)OtherworldNetwork.Send(new OtherworldMessage{Kind=OtherworldMessageKind.Drop,Value=Space-1,Data=JsonConvert.SerializeObject(Save(KamuiWorld.Room(Space)))},Space-1);}
         internal static void SendPending(int owner)
         {foreach(var drop in Live.Values)if(drop!=null&&drop.Space==owner+1&&!drop.Collected)drop.Send();}
         internal static void Receive(string data,int owner)

@@ -44,47 +44,75 @@ namespace CluckmechCoop
         }
         private static IEnumerator DelayedBombard(OtherworldActor actor,Vector2 point,float radius,float damage,bool ultimate)
         {
-            var owner=OtherworldWorld.Unit(actor.gameObject);if(owner==null)yield break;
-            ulong lease=owner.Actions.Capture();
+            var owner = OtherworldWorld.Unit(actor.gameObject);
+            if (owner == null) yield break;
+            ulong lease = owner.Actions.Capture();
             yield return new WaitForSeconds(1);
-            if(actor!=null&&owner.Actions.Current(lease))Bombard(actor,point,radius,damage,ultimate);
+            if (actor != null && owner.Actions.Current(lease))
+            {
+                Bombard(actor, point, radius, damage, ultimate);
+            }
         }
         private static void Bombard(OtherworldActor actor,Vector2 point,float radius,float damage,bool ultimate,bool rewards=false)
         {
-            Visual(actor,ultimate?3:2,point,.5f,radius);OtherworldNetwork.Effect(actor,ultimate?3:2,point,.5f,radius);
-            if(ultimate){actor.StartCoroutine(OrbitalImpact(actor,point,radius,damage,rewards,actor.Space));return;}
-            ApplyBombard(actor,point,radius,damage,rewards);
+            Visual(actor, ultimate ? 3 : 2, point, .5f, radius);
+            OtherworldNetwork.Effect(actor, ultimate ? 3 : 2, point, .5f, radius);
+            if (ultimate)
+            {
+                actor.StartCoroutine(OrbitalImpact(actor, point, radius, damage, rewards, actor.Space));
+                return;
+            }
+            ApplyBombard(actor, point, radius, damage, rewards);
         }
         private static IEnumerator OrbitalImpact(OtherworldActor actor,Vector2 point,float radius,float damage,bool rewards,int space)
         {
-            var owner=OtherworldWorld.Unit(actor.gameObject);if(owner==null)yield break;
-            ulong lease=owner.Actions.Capture();
+            var owner = OtherworldWorld.Unit(actor.gameObject);
+            if (owner == null) yield break;
+            ulong lease = owner.Actions.Capture();
             yield return new WaitForSeconds(.14f);
-            if(actor!=null&&owner.Actions.Current(lease)&&actor.Space==space)ApplyBombard(actor,point,radius,damage,rewards);
+            if (actor != null && owner.Actions.Current(lease) && actor.Space == space)
+            {
+                ApplyBombard(actor, point, radius, damage, rewards);
+            }
         }
         private static void ApplyBombard(OtherworldActor actor,Vector2 point,float radius,float damage,bool rewards)
         {
-            var targets=OtherworldWorld.Near(actor.gameObject,point,radius);
-            var detailed=actor.GetComponent<模块_攻击详细属性>();
-            Vector4 shock=detailed.状态加成列表[(int)攻击类型与状态数据库.状态枚举.感电].当前属性效果;
-            foreach(var target in targets)
+            var targets = new List<OtherworldUnit>();
+            OtherworldWorld.CollectNearby(actor.gameObject, point, radius, targets);
+            var detailed = actor.GetComponent<模块_攻击详细属性>();
+            Vector4 shock = detailed.状态加成列表[(int)攻击类型与状态数据库.状态枚举.感电].当前属性效果;
+            foreach (var target in targets)
             {
-                Hit(actor,target,damage);
-                Status(target,actor.gameObject,攻击类型与状态数据库.状态枚举.感电,5,shock);
-                if(actor.Run.Has(26104)&&!target.Health.免疫击退)actor.StartCoroutine(Pull(target,point));
+                if (target == null || target.Space != actor.Space || target.Health.当前生命值 <= 0) continue;
+                Hit(actor, target, damage);
+                Status(target, actor.gameObject, 攻击类型与状态数据库.状态枚举.感电, 5, shock);
+                if (actor.Run.Has(26104) && !target.Health.免疫击退)
+                {
+                    actor.StartCoroutine(Pull(target, point));
+                }
             }
-            if(rewards&&targets.Count>0&&actor.Run.Has(26103))RefundPower(actor,2);
+            if (rewards && targets.Count > 0 && actor.Run.Has(26103)) RefundPower(actor, 2);
         }
         private static IEnumerator Pull(OtherworldUnit unit,Vector2 point)
         {
-            ulong lease=unit.Actions.Capture();
-            var body=unit.GetComponent<Rigidbody2D>();var movement=unit.GetComponent<模块_移动>();movement?.立刻停止();
-            var start=(Vector2)unit.transform.position;var end=Vector2.MoveTowards(start,point,Mathf.Min(2,Vector2.Distance(start,point)));
-            for(float elapsed=0;elapsed<.2f;elapsed+=Time.deltaTime)
+            ulong lease = unit.Actions.Capture();
+            var body = unit.GetComponent<Rigidbody2D>();
+            var movement = unit.GetComponent<模块_移动>();
+            movement?.立刻停止();
+            var start = (Vector2)unit.transform.position;
+            var end = Vector2.MoveTowards(start, point, Mathf.Min(2, Vector2.Distance(start, point)));
+            for (float elapsed = 0; elapsed < .2f; elapsed += Time.deltaTime)
             {
-                if(unit==null||!unit.Actions.Current(lease)||unit.Health.当前生命值<=0)yield break;
-                var position=Vector2.Lerp(start,end,elapsed/.2f);
-                if(body!=null)body.MovePosition(position);else unit.transform.position=position;
+                if (unit == null || !unit.Actions.Current(lease) || unit.Health.当前生命值 <= 0) yield break;
+                var position = Vector2.Lerp(start, end, elapsed/.2f);
+                if (body != null)
+                {
+                    body.MovePosition(position);
+                }
+                else
+                {
+                    unit.transform.position = position;
+                }
                 yield return null;
             }
         }
@@ -93,32 +121,52 @@ namespace CluckmechCoop
             var power=actor.GetComponent<模块_玩家_动力>();
             if(power==null)return;
             if(Plugin.Role!=1||actor.Role==1)power.增加动力(amount);
-            else OtherworldNetwork.Send(new OtherworldMessage{Kind=15,Value=amount},actor.Role);
+            else OtherworldNetwork.Send(new OtherworldMessage{Kind=OtherworldMessageKind.AddEnergy,Value=amount},actor.Role);
         }
-        internal static void Normal(OtherworldActor actor,float damage)
+        internal static void Normal(OtherworldActor actor, float damage)
         {
-            if(actor.Run.Initial!=26002)return;
-            if(++actor.NormalCount%(actor.Run.Has(26107)?2:4)!=0)return;
-            var targets=OtherworldWorld.Near(actor.gameObject,actor.transform.position,actor.Attack.当前攻击范围);
-            targets.Sort((a,b)=>((Vector2)a.transform.position-actor.Aim).sqrMagnitude.CompareTo(((Vector2)b.transform.position-actor.Aim).sqrMagnitude));
-            int count=Mathf.Min(actor.Run.Has(26107)?8:6,targets.Count);
-            Vector2 previous=actor.Muzzle;
-            for(int i=0;i<count;i++)
+            if (actor.Run.Initial != 26002) return;
+            if (++actor.NormalCount%(actor.Run.Has(26107) ? 2 : 4) != 0) return;
+            var targets = new List<OtherworldUnit>();
+            OtherworldWorld.CollectNearby(actor.gameObject, actor.transform.position, actor.Attack.当前攻击范围, targets);
+            OtherworldWorld.SortNearest(targets, actor.Aim);
+            int count = Mathf.Min(actor.Run.Has(26107) ? 8 : 6, targets.Count);
+            Vector2 previous = actor.Muzzle;
+            for (int i = 0; i < count; i++)
             {
-                var target=targets[i];Hit(actor,target,damage*4);
-                OtherworldFx.Beam(previous,target.transform.position,.18f);
-                OtherworldNetwork.Send(new OtherworldMessage{Kind=12,Player=StratagemWorld.Id(actor.gameObject),X=previous.x,Y=previous.y,EndX=target.transform.position.x,EndY=target.transform.position.y,Duration=.18f},actor.Space==0?-1:actor.Role);
-                previous=target.transform.position;
+                var target = targets[i];
+                if (target == null || target.Space != actor.Space || target.Health.当前生命值 <= 0) continue;
+                Hit(actor, target, damage*4);
+                OtherworldFx.Beam(previous, target.transform.position, .18f);
+                OtherworldNetwork.Send(new OtherworldMessage
+                {
+                    Kind = OtherworldMessageKind.Beam,
+                    Player = StratagemWorld.Id(actor.gameObject),
+                    X = previous.x,
+                    Y = previous.y,
+                    EndX = target.transform.position.x,
+                    EndY = target.transform.position.y,
+                    Duration = .18f
+                }, actor.Space == 0 ? -1 : actor.Role);
+                previous = target.transform.position;
             }
-            actor.ReduceCooldown(Mathf.Min(2,count*.5f));
+            actor.ReduceCooldown(Mathf.Min(2, count*.5f));
         }
-        internal static void Counter(OtherworldActor actor,float stored)
+        internal static void Counter(OtherworldActor actor, float stored)
         {
-            Vector2 direction=(actor.Aim-(Vector2)actor.transform.position).normalized;
-            foreach(var target in OtherworldWorld.Near(actor.gameObject,actor.transform.position,6))
-                if(Vector2.Dot(((Vector2)target.transform.position-(Vector2)actor.transform.position).normalized,direction)>=.35f)
-                    Hit(actor,target,actor.Attack.当前攻击力*30+stored,actor.Run.Has(26123));
-            Visual(actor,5,actor.transform.position,.35f,1);OtherworldNetwork.Effect(actor,5,actor.transform.position,.35f,1);
+            Vector2 direction = (actor.Aim-(Vector2)actor.transform.position).normalized;
+            var targets = new List<OtherworldUnit>();
+            OtherworldWorld.CollectNearby(actor.gameObject, actor.transform.position, 6, targets);
+            foreach (var target in targets)
+            {
+                if (target == null || target.Space != actor.Space || target.Health.当前生命值 <= 0) continue;
+                if (Vector2.Dot(((Vector2)target.transform.position-(Vector2)actor.transform.position).normalized, direction) >= .35f)
+                {
+                    Hit(actor, target, actor.Attack.当前攻击力*30+stored, actor.Run.Has(26123));
+                }
+            }
+            Visual(actor, 5, actor.transform.position, .35f, 1);
+            OtherworldNetwork.Effect(actor, 5, actor.transform.position, .35f, 1);
         }
         internal static void Rally(OtherworldActor actor)
         {
@@ -127,27 +175,40 @@ namespace CluckmechCoop
         }
         internal static IEnumerator Flame(OtherworldActor actor)
         {
-            var owner=OtherworldWorld.Unit(actor.gameObject);if(owner==null)yield break;
-            ulong lease=owner.Actions.Capture();
-            var settled=new HashSet<OtherworldUnit>();
-            for(int tick=0;tick<10;tick++)
+            var owner = OtherworldWorld.Unit(actor.gameObject);
+            if (owner == null) yield break;
+            ulong lease = owner.Actions.Capture();
+            var settled = new HashSet<OtherworldUnit>();
+            var targets = new List<OtherworldUnit>();
+            for (int tick = 0; tick < 10; tick++)
             {
-                if(actor==null||!owner.Actions.Current(lease)||actor.Death.是否玩家死亡)yield break;
-                Vector2 direction=(actor.Aim-(Vector2)actor.transform.position).normalized;
-                Visual(actor,4,actor.transform.position,.24f,1);OtherworldNetwork.Effect(actor,4,actor.transform.position,.24f,1);
-                foreach(var target in OtherworldWorld.Near(actor.gameObject,actor.transform.position,5))
+                if (actor == null || !owner.Actions.Current(lease) || actor.Death.是否玩家死亡) yield break;
+                Vector2 direction = (actor.Aim-(Vector2)actor.transform.position).normalized;
+                Visual(actor, 4, actor.transform.position, .24f, 1);
+                OtherworldNetwork.Effect(actor, 4, actor.transform.position, .24f, 1);
+                OtherworldWorld.CollectNearby(actor.gameObject, actor.transform.position, 5, targets);
+                foreach (var target in targets)
                 {
-                    if(Vector2.Dot(((Vector2)target.transform.position-(Vector2)actor.transform.position).normalized,direction)<.5f)continue;
-                    float bonus=0;
-                    if(settled.Add(target))
+                    if (target == null || target.Space != actor.Space || target.Health.当前生命值 <= 0) continue;
+                    if (Vector2.Dot(((Vector2)target.transform.position-(Vector2)actor.transform.position).normalized, direction) < .5f) continue;
+                    float bonus = 0;
+                    if (settled.Add(target))
                     {
-                        var states=target.GetComponent<模块_状态属性>();
-                        if(states!=null)foreach(var state in states.当前状态列表)
-                            if(state.状态类型==攻击类型与状态数据库.状态枚举.灼烧)bonus+=state.加成属性.当前属性效果.x*Mathf.Max(0,state.剩余时间)*2;
+                        var states = target.GetComponent<模块_状态属性>();
+                        if (states != null)
+                        {
+                            foreach (var state in states.当前状态列表)
+                            {
+                                if (state.状态类型 == 攻击类型与状态数据库.状态枚举.灼烧)
+                                {
+                                    bonus += state.加成属性.当前属性效果.x*Mathf.Max(0, state.剩余时间)*2;
+                                }
+                            }
+                        }
                     }
-                    Hit(actor,target,actor.Attack.当前攻击力*2+bonus);
-                    var burn=actor.GetComponent<模块_攻击详细属性>().状态加成列表[(int)攻击类型与状态数据库.状态枚举.灼烧];
-                    Status(target,actor.gameObject,攻击类型与状态数据库.状态枚举.灼烧,burn.当前持续时间,burn.当前属性效果);
+                    Hit(actor, target, actor.Attack.当前攻击力*2+bonus);
+                    var burn = actor.GetComponent<模块_攻击详细属性>().状态加成列表[(int)攻击类型与状态数据库.状态枚举.灼烧];
+                    Status(target, actor.gameObject, 攻击类型与状态数据库.状态枚举.灼烧, burn.当前持续时间, burn.当前属性效果);
                 }
                 yield return new WaitForSeconds(.2f);
             }

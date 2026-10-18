@@ -136,28 +136,51 @@ namespace CluckmechCoop
                 if (zone.Source != null && zone.Until > Time.time) continue;
                 if (zone.Source != null) zone.Source.ActiveFields--;
                 zones.RemoveAt(i);
-                members.Clear(); members.AddRange(zone.Entered);
-                foreach (var target in members) Exit(zone,target);
+                members.Clear();
+                members.AddRange(zone.Entered);
+                foreach (var target in members)
+                {
+                    Exit(zone, target);
+                }
                 if (zone.Sensor != null) UnityEngine.Object.Destroy(zone.Sensor);
             }
             // Work is proportional to actual memberships, independent of unrelated enemies.
             foreach (var zone in zones)
             {
-                members.Clear(); members.AddRange(zone.Entered);
+                zone.Membership?.Prune();
+                members.Clear();
+                members.AddRange(zone.Entered);
                 var source = zone.Source;
                 foreach (var target in members)
                 {
-                    if (!StratagemWorld.Living(target)) { Remove(target); continue; }
-                    if (zone.Scorch) { source.Damage.StandardBurn(target); continue; }
+                    if (!StratagemWorld.Present(target))
+                    {
+                        Remove(target);
+                        continue;
+                    }
+                    if (!StratagemWorld.Living(target)) continue;
+                    if (zone.Scorch)
+                    {
+                        source.Damage.StandardBurn(target);
+                        continue;
+                    }
                     var p = source.Parameters;
-                    if (p.Slow > 0 && (!strongestSlow.TryGetValue(target,out var strongest) || p.Slow > strongest.Source.Parameters.Slow))
+                    if (p.Slow > 0 && (!strongestSlow.TryGetValue(target, out var strongest) ||
+                        p.Slow > strongest.Source.Parameters.Slow))
+                    {
                         strongestSlow[target] = zone;
+                    }
                     if (p.Gas)
                     {
-                        if (!poisons.TryGetValue(target,out var bySource)) poisons.Add(target,bySource = new Dictionary<StratagemUnit,StratagemStateHandle>());
-                        if (!bySource.TryGetValue(source,out var poison) || poison == null || !poison.Valid)
-                            bySource[source] = poison = StratagemStateHandle.Create(source,target,攻击类型与状态数据库.状态枚举.中毒,2,5);
-                        poison?.Maintain(2,5);
+                        if (!poisons.TryGetValue(target, out var bySource))
+                        {
+                            poisons.Add(target, bySource = new Dictionary<StratagemUnit,StratagemStateHandle>());
+                        }
+                        if (!bySource.TryGetValue(source, out var poison) || poison == null || !poison.Valid)
+                        {
+                            bySource[source] = poison = StratagemStateHandle.Create(source, target, 攻击类型与状态数据库.状态枚举.中毒, 2, 5);
+                        }
+                        poison?.Maintain(2, 5);
                     }
                 }
             }
@@ -166,26 +189,40 @@ namespace CluckmechCoop
                 var target = entry.Key;
                 var slowSource = entry.Value.Source;
                 float slow = slowSource.Parameters.Slow;
-                if (!slows.TryGetValue(target,out var handle) || handle == null || !handle.Valid)
-                    slows[target] = handle = StratagemStateHandle.Create(slowSource,target,攻击类型与状态数据库.状态枚举.减速,.75f,slow);
-                handle?.Maintain(.75f,slow);
+                if (!slows.TryGetValue(target, out var handle) || handle == null || !handle.Valid)
+                {
+                    slows[target] = handle = StratagemStateHandle.Create(slowSource, target, 攻击类型与状态数据库.状态枚举.减速, .75f, slow);
+                }
+                handle?.Maintain(.75f, slow);
             }
-            strongestSlow.Clear(); members.Clear();
-            cachedTargets.Clear(); cachedTargets.AddRange(slows.Keys);
-            foreach (var target in cachedTargets) if (slows[target] == null || !slows[target].Valid) slows.Remove(target);
-            cachedTargets.Clear(); cachedTargets.AddRange(poisons.Keys);
+            strongestSlow.Clear();
+            members.Clear();
+            cachedTargets.Clear();
+            cachedTargets.AddRange(slows.Keys);
+            foreach (var target in cachedTargets)
+            {
+                if (slows[target] == null || !slows[target].Valid) slows.Remove(target);
+            }
+            cachedTargets.Clear();
+            cachedTargets.AddRange(poisons.Keys);
             foreach (var target in cachedTargets)
             {
                 var bySource = poisons[target];
-                cachedSources.Clear(); cachedSources.AddRange(bySource.Keys);
-                foreach (var source in cachedSources) if (bySource[source] == null || !bySource[source].Valid) bySource.Remove(source);
+                cachedSources.Clear();
+                cachedSources.AddRange(bySource.Keys);
+                foreach (var source in cachedSources)
+                {
+                    if (bySource[source] == null || !bySource[source].Valid) bySource.Remove(source);
+                }
                 if (bySource.Count == 0) poisons.Remove(target);
             }
-            cachedTargets.Clear(); cachedSources.Clear();
+            cachedTargets.Clear();
+            cachedSources.Clear();
         }
         internal static void Enter(StratagemZone zone,模块_基本属性 target)
         {
-            if (!StratagemWorld.Living(target) || !zone.Entered.Add(target) || zone.Source == null || zone.Scorch || zone.Source.Parameters.Gas) return;
+            if (!StratagemWorld.Present(target) || !zone.Entered.Add(target)) return;
+            if (!StratagemWorld.Living(target) || zone.Source == null || zone.Scorch || zone.Source.Parameters.Gas) return;
             if (stunUntil.TryGetValue(target,out var next) && next > Time.time) return;
             zone.Source.Damage.Status(target,攻击类型与状态数据库.状态枚举.眩晕,zone.Source.Parameters.Stun,Vector4.zero);
             stunUntil[target] = Time.time+5;
@@ -203,26 +240,54 @@ namespace CluckmechCoop
         internal StratagemZone Zone;
         private readonly Dictionary<Collider2D,模块_基本属性> contacts = new Dictionary<Collider2D,模块_基本属性>();
         private readonly Dictionary<模块_基本属性,int> counts = new Dictionary<模块_基本属性,int>();
-        internal void Track(Collider2D collider,模块_基本属性 target)
+        private readonly List<Collider2D> staleContacts = new List<Collider2D>();
+        internal void Prune()
         {
-            if (collider == null || !StratagemWorld.Living(target) || contacts.ContainsKey(collider)) return;
-            contacts.Add(collider,target);
-            counts.TryGetValue(target,out int count); counts[target] = count+1;
-            if (count == 0) StratagemFields.Enter(Zone,target);
+            staleContacts.Clear();
+            foreach (var contact in contacts)
+            {
+                if (contact.Key == null || !contact.Key.enabled || !contact.Key.gameObject.activeInHierarchy ||
+                    !StratagemWorld.Present(contact.Value))
+                {
+                    staleContacts.Add(contact.Key);
+                }
+            }
+            foreach (var collider in staleContacts)
+            {
+                Untrack(collider);
+            }
+            staleContacts.Clear();
+        }
+        internal void Track(Collider2D collider, 模块_基本属性 target)
+        {
+            if (collider == null || !StratagemWorld.Present(target) || contacts.ContainsKey(collider)) return;
+            contacts.Add(collider, target);
+            counts.TryGetValue(target, out int count);
+            counts[target] = count+1;
+            if (count == 0) StratagemFields.Enter(Zone, target);
         }
         internal void Untrack(Collider2D collider)
         {
-            if (ReferenceEquals(collider,null) || !contacts.TryGetValue(collider,out var target)) return;
+            if (ReferenceEquals(collider, null) || !contacts.TryGetValue(collider, out var target)) return;
             contacts.Remove(collider);
             int count = counts[target]-1;
-            if (count > 0) counts[target] = count;
-            else { counts.Remove(target); StratagemFields.Exit(Zone,target); }
+            if (count > 0)
+            {
+                counts[target] = count;
+            }
+            else
+            {
+                counts.Remove(target);
+                StratagemFields.Exit(Zone, target);
+            }
         }
         internal void Forget(模块_基本属性 target)
         {
             if (!counts.Remove(target)) return;
             foreach (var collider in new List<Collider2D>(contacts.Keys))
+            {
                 if (contacts[collider] == target) contacts.Remove(collider);
+            }
         }
         private void OnTriggerEnter2D(Collider2D collider) => Track(collider,collider.GetComponentInParent<模块_基本属性>());
         private void OnTriggerExit2D(Collider2D collider) => Untrack(collider);

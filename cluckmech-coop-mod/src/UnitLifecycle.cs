@@ -4,6 +4,12 @@ namespace CluckmechCoop
 {
     internal static class UnitLifecycle
     {
+        internal static void ClearScene()
+        {
+            foreach (var unit in OtherworldWorld.Units.Values)
+                if (unit != null) unit.Actions.Invalidate();
+        }
+
         internal static void ChangingSpace(OtherworldUnit unit)
         {
             unit.Actions.Invalidate();

@@ -44,6 +44,7 @@ namespace CluckmechCoop
         internal static void Clear() { networkUnits.Clear(); Rovers.Clear(); placedMines.Clear(); }
         private IEnumerator Start()
         {
+            var scene=SceneLifecycle.Current;
             Stats = GetComponent<模块_基本属性>();
             int id = Stats.ID == 20101 ? 20001 : Stats.ID == 20102 ? 20007 : Stats.ID;
             Kind = StratagemCatalog.Unit(id).Kind;
@@ -51,8 +52,8 @@ namespace CluckmechCoop
             rig=gameObject.AddComponent<StratagemRig>();rig.Build(this);image=rig.Body;
             yield return null;
             yield return null;
-            while(OtherworldWorld.Unit(gameObject)?.Restoring==true)yield return null;
-            if (!Plugin.InCombat) yield break;
+            while(SceneLifecycle.IsCurrent(scene)&&OtherworldWorld.Unit(gameObject)?.Restoring==true)yield return null;
+            if (!SceneLifecycle.IsCurrent(scene)||!Plugin.InCombat) yield break;
             Parameters = new StratagemParameters(id,Stats.强化词条列表);
             Damage = new StratagemDamage(gameObject);
             ResumeRuntime();

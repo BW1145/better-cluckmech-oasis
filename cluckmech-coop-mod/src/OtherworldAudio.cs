@@ -14,7 +14,7 @@ namespace CluckmechCoop
         private static Transform group;
         private static Coroutine loading;
         internal static void Begin()
-        {if(group==null&&loading==null)loading=Plugin.Instance.StartCoroutine(Load());}
+        {if(Plugin.InCombat&&group==null&&loading==null)loading=Plugin.Instance.StartCoroutine(Load());}
         private static IEnumerator Load()
         {
             while(Plugin.InCombat&&!MasterAudio.SoundsReady)yield return null;

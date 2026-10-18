@@ -98,10 +98,11 @@ namespace CluckmechCoop
         {
             int scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
             if(Plugin.Role==2||restoredScene==scene||SavedRooms.Count==0||Plugin.Spawner==null)return;
-            restoredScene=scene;Plugin.Instance.StartCoroutine(RestoreRoutine());
+            restoredScene=scene;Plugin.Instance.StartCoroutine(RestoreRoutine(SceneLifecycle.Current));
         }
-        private static IEnumerator RestoreRoutine()
+        private static IEnumerator RestoreRoutine(SceneLifetime scene)
         {
+            if(!SceneLifecycle.IsCurrent(scene))yield break;
             Restoring=true;var objects=new Dictionary<string,OtherworldUnit>();var pending=new List<KeyValuePair<KamuiSavedUnit,OtherworldUnit>>();
             var affixes=Object.FindObjectOfType<cz词缀库>();
             try
@@ -129,6 +130,7 @@ namespace CluckmechCoop
                     }
                 }
                 yield return null;yield return null;yield return null;
+                if(!SceneLifecycle.IsCurrent(scene))yield break;
                 foreach(var pair in pending)
                 {
                     var saved=pair.Key;var unit=pair.Value;if(unit==null)continue;
@@ -183,7 +185,11 @@ namespace CluckmechCoop
                 foreach(var pair in pending)if(pair.Value!=null)pair.Value.Restoring=false;
                 KamuiVisibility.Refresh();
             }
-            finally{foreach(var pair in pending)if(pair.Value!=null)pair.Value.Restoring=false;Restoring=false;}
+            finally
+            {
+                foreach(var pair in pending)if(pair.Value!=null)pair.Value.Restoring=false;
+                if(SceneLifecycle.IsCurrent(scene))Restoring=false;
+            }
         }
         private static void CacheDropPrefabs()
         {

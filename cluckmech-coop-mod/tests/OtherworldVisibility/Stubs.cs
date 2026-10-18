@@ -78,12 +78,13 @@ namespace Mirror
     public static class NetworkClient
     {
         public static bool active=true;public static InterestManagementBase aoi;
+        public static int Registrations,Unregistrations,PrefabRegistrations;
         public static readonly Dictionary<uint,NetworkIdentity> spawned=new Dictionary<uint,NetworkIdentity>();
         public static readonly Dictionary<Type,Delegate> Handlers=new Dictionary<Type,Delegate>();
-        public static void RegisterHandler<T>(Action<T> handler){Handlers[typeof(T)]=handler;}
-        public static void UnregisterHandler<T>(){Handlers.Remove(typeof(T));}
+        public static void RegisterHandler<T>(Action<T> handler){Handlers[typeof(T)]=handler;Registrations++;}
+        public static void UnregisterHandler<T>(){Handlers.Remove(typeof(T));Unregistrations++;}
         public static void UnregisterPrefab(UnityEngine.GameObject prefab){}
-        public static void RegisterPrefab(UnityEngine.GameObject prefab,Func<SpawnMessage,UnityEngine.GameObject> spawn,Action<UnityEngine.GameObject> unspawn){}
+        public static void RegisterPrefab(UnityEngine.GameObject prefab,Func<SpawnMessage,UnityEngine.GameObject> spawn,Action<UnityEngine.GameObject> unspawn){PrefabRegistrations++;}
     }
 }
 public class \u6a21\u5757_\u57fa\u672c\u5c5e\u6027:UnityEngine.Component
@@ -114,6 +115,8 @@ namespace CluckmechCoop
     {
         internal static int Role=2;internal static UnityEngine.Component Instance=new UnityEngine.GameObject().transform;
         internal static UnitPrefabs Units;internal static CombatState Combat=new CombatState();
+        internal static NetworkState Network=new NetworkState();
     }
     internal class CombatState {internal string Token="current-run";}
+    internal class NetworkState {internal bool PeerReady=true;}
 }

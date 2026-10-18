@@ -42,7 +42,9 @@ namespace CluckmechCoop
                 {
                     var burns=states.Where(s=>s.状态类型==攻击类型与状态数据库.状态枚举.灼烧&&
                         (s is OtherworldState mark?mark.Owner==role:s.攻击者!=null&&OtherworldProgress.For(s.攻击者)==owner)).ToArray();
-                    var targets=OtherworldWorld.Near(victim.gameObject,victim.transform.position,3);
+                    var targets = new List<OtherworldUnit>();
+                    OtherworldWorld.CollectNearby(victim.gameObject,victim.transform.position,3,targets);
+                    OtherworldWorld.SortNearest(targets,victim.transform.position);
                     foreach(var bundle in burns.GroupBy(s=>new{Source=s.攻击者,Remaining=s.剩余时间}))
                     {
                         var combined=Copy(bundle.First(),role,bundle.Key.Remaining);
@@ -68,11 +70,21 @@ namespace CluckmechCoop
             if(seconds<=0)return;
             var source=state.攻击者!=null?state.攻击者:OtherworldActions.Player(role)?.gameObject;
             if(source==null)return;
-            var targets=nearby??OtherworldWorld.Near(victim.gameObject,victim.transform.position,3);int count=0;
+            // A recursive death owns a separate list; outer bundles retain their current snapshot.
+            var targets = nearby;
+            if (targets == null)
+            {
+                targets = new List<OtherworldUnit>();
+                OtherworldWorld.CollectNearby(victim.gameObject,victim.transform.position,3,targets);
+                OtherworldWorld.SortNearest(targets,victim.transform.position);
+            }
+            int count = 0;
             foreach(var target in targets)
             {
-                if(target==victim||target.Health.当前生命值<=0)continue;
-                var copy=Copy(state,role,seconds);copy.攻击者=source;copy.Space=victim.Space;
+                if(target==null||target==victim||target.Space!=victim.Space||target.Health.当前生命值<=0)continue;
+                var copy = Copy(state,role,seconds);
+                copy.攻击者 = source;
+                copy.Space = victim.Space;
                 target.GetComponent<模块_状态属性>()?.增加状态(copy);
                 if(++count==maximum)break;
             }

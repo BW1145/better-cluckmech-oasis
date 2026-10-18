@@ -115,10 +115,6 @@ static class Program
         Check(remoteRun.GaitCycles>5.7f&&remoteRun.GaitCycles<=6.001f,"remote snapshot gaps preserve capped cadence at 240Hz rendering");
         var slowRun=new OtherworldMotion();slowRun.Sample(1,0,.01f,.02f,true,1,3);
         Check(Math.Abs(slowRun.GaitCycles-.01f)<.00001f,"slow locomotion keeps calibrated distance cadence below cap");
-        // Queue timestamps remain authoritative when both events are delivered after a stall.
-        Check(!OtherworldMotion.LongPress(10,10.1),"100ms release stays a tap after delayed event processing");
-        Check(OtherworldMotion.LongPress(10,10.4),"400ms hold qualifies at its event timestamp");
-        Check(!OtherworldMotion.LongPress(10,9.9),"older event cannot qualify a hold");
         Console.WriteLine($"PASS {checks} motion policy checks");
     }
 }

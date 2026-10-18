@@ -102,7 +102,7 @@ namespace CluckmechCoop
         private void OnDestroy()=>UnitLifecycle.Destroyed(gameObject);
     }
 
-    internal static class OtherworldWorld
+    internal static partial class OtherworldWorld
     {
         internal static readonly Dictionary<GameObject,OtherworldUnit> Units=new Dictionary<GameObject,OtherworldUnit>();
         internal static readonly Dictionary<int,OtherworldUnit> Players=new Dictionary<int,OtherworldUnit>();
@@ -134,22 +134,6 @@ namespace CluckmechCoop
             if(unit.IsPlayer&&Players.TryGetValue(role,out var player)&&ReferenceEquals(player,unit))Players.Remove(role);
         }
         internal static void Clear(){foreach(var unit in Units.Values)if(unit!=null)unit.Actions.Invalidate();Units.Clear();Players.Clear();OtherworldAudio.Clear();}
-        internal static List<OtherworldUnit> Near(GameObject source,Vector2 point,float radius)
-        {
-            int space=Space(source);var result=new List<OtherworldUnit>();
-            var candidates=KamuiWorld.CandidatesIn(space);
-            foreach(var health in candidates)
-            {
-                if(health==null||!Units.TryGetValue(health.gameObject,out var unit))continue;
-                if(unit==null||unit.Space!=space||unit.Health.当前阵营!=阵营数据库.阵营.敌方||unit.Health.当前生命值<=0||unit.Health.当前是否无敌)continue;
-                float distance=float.PositiveInfinity;bool hurt=unit.Shapes.Any(s=>s!=null&&s.enabled&&s.isTrigger);
-                foreach(var shape in unit.Shapes)
-                    if(shape!=null&&shape.enabled&&shape.gameObject.activeInHierarchy&&(!hurt||shape.isTrigger))distance=Mathf.Min(distance,((Vector2)shape.ClosestPoint(point)-point).sqrMagnitude);
-                if(distance<=radius*radius)result.Add(unit);
-            }
-            result.Sort((a,b)=>((Vector2)a.transform.position-point).sqrMagnitude.CompareTo(((Vector2)b.transform.position-point).sqrMagnitude));
-            return result;
-        }
     }
 
     [HarmonyPatch(typeof(模块_基本属性),"Start")]

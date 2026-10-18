@@ -19,6 +19,8 @@ namespace CluckmechCoop
         internal 模块_移动属性 Movement;
         private 模块_玩家_移动 playerMovement;
         private readonly OtherworldMotion motionState=new OtherworldMotion();
+        private readonly OtherworldActorInputState inputState=new OtherworldActorInputState();
+        private readonly OtherworldActorSkillState skillState=new OtherworldActorSkillState();
         private Vector2 dashDirection;
         internal OtherworldRun Run;
         internal SpriteRenderer Body;
@@ -26,7 +28,8 @@ namespace CluckmechCoop
         internal int FacingDirection;
         internal Vector3 VisualOrigin;
         internal float VisualScale;
-        internal int Role,Hero,Charges;
+        internal int Role,Hero;
+        internal int Charges=>skillState.Charges;
         internal float PhaseUntil,NormalUntil,StoredDamage;
         internal bool Dashing;
         internal bool FilterKamuiSnapshots;
@@ -37,9 +40,7 @@ namespace CluckmechCoop
         internal readonly HashSet<世界类.伤害数据包> Avoided=new HashSet<世界类.伤害数据包>();
         private SpriteRenderer nativeBody;
         private Vector3 previous;
-        private float castUntil,rechargeAt;
-        private bool held,dashStarted,inputArmed,qualified;
-        private double inputStarted;
+        private float castUntil;
         private InputAction rightAction;
         private uint sequence;
         private Coroutine clientDash;
@@ -59,7 +60,7 @@ namespace CluckmechCoop
             Death=GetComponent<模块_玩家_死亡>();Movement=GetComponent<模块_移动属性>();
             playerMovement=GetComponent<模块_玩家_移动>();
             OtherworldProgress.ReadNative(Role);Run=OtherworldProgress.For(Role)??new OtherworldRun{Hero=Hero};
-            Charges=MaximumCharges;
+            skillState.Initialize(MaximumCharges);
             OtherworldWorld.Add(Health);
             if(Run.Initial==26005)
             {
@@ -102,51 +103,97 @@ namespace CluckmechCoop
             if(Plugin.Role==2&&Role==2)OtherworldNetwork.Progress(Role);
             KamuiVisibility.Refresh();
         }
-        internal void Input(InputAction.CallbackContext context,bool allowed)
+        internal void Input(InputAction.CallbackContext context, bool allowed)
         {
-            if(Run==null)return;
-            if(context.canceled)
+            if (Run == null)
+                return;
+
+            if (context.canceled)
             {
-                if(inputArmed)
+                if (inputState.Armed)
                 {
-                    if(allowed&&Application.isFocused)QualifyHold(context.time);
-                    OtherworldNetwork.Command(this,Hero==12&&allowed&&Application.isFocused?0:2,++sequence,Aim);
+                    if (allowed && Application.isFocused)
+                        QualifyHold(context.time);
+                    OtherworldNetwork.Command(this,
+                        Hero == 12 && allowed && Application.isFocused
+                            ? OtherworldMessageKind.Cast
+                            : OtherworldMessageKind.ReleaseInput,
+                        ++sequence, Aim);
                 }
-                inputArmed=false;rightAction=null;return;
+
+                inputState.Reset();
+                rightAction = null;
+                return;
             }
-            if(context.started&&allowed&&(Time.timeScale>0||Space!=0))
-            {inputArmed=true;qualified=false;inputStarted=context.time;rightAction=context.action;if(Hero==13)OtherworldNetwork.Command(this,1,++sequence,Aim);}
-        }
-        internal void Execute(int action,Vector2 aim)
-        {
-            if(action==2){held=false;return;}
-            if(Death.是否玩家死亡||!Plugin.InCombat)return;
-            if(action==1&&Hero==13&&Space!=0){KamuiWorld.Return(this);return;}
-            if(Time.timeScale<=0)return;
-            if(action==4)
-            {if(Hero==13&&held&&!dashStarted){dashStarted=true;held=false;KamuiWorld.Dash(this,aim);}return;}
-            if(action==3||Charges<=0||Dashing)return;
-            if(Hero==12&&action==0)
+
+            if (context.started && inputState.Start(context.time, allowed && Application.isFocused,
+                Time.timeScale > 0 || Space != 0))
             {
-                Spend();castUntil=Time.time+.4f;
-                OtherworldActions.Cast(this,aim);
-            }
-            else if(Hero==13&&action==1)
-            {
-                Spend();held=true;dashStarted=false;BeginPhase();
+                rightAction = context.action;
+                if (Hero == 13)
+                    OtherworldNetwork.Command(this, OtherworldMessageKind.BeginPhase, ++sequence, Aim);
             }
         }
-        private void Spend()
+
+        internal void Execute(int action, Vector2 aim)
         {
-            Charges--;if(rechargeAt<=Time.time)rechargeAt=Time.time+Cooldown;
-            OtherworldNetwork.State(this);
+            if (action == OtherworldMessageKind.ReleaseInput)
+            {
+                skillState.Release();
+                return;
+            }
+            if (Death.是否玩家死亡 || !Plugin.InCombat)
+                return;
+            if (action == OtherworldMessageKind.BeginPhase && Hero == 13 && Space != 0)
+            {
+                KamuiWorld.Return(this);
+                return;
+            }
+            if (Time.timeScale <= 0)
+                return;
+
+            if (action == OtherworldMessageKind.Dash)
+            {
+                if (Hero == 13 && skillState.Dash())
+                    KamuiWorld.Dash(this, aim);
+                return;
+            }
+            if (action == OtherworldMessageKind.ReservedCommand || Charges <= 0 || Dashing)
+                return;
+
+            if (Hero == 12 && action == OtherworldMessageKind.Cast)
+            {
+                Spend();
+                castUntil = Time.time + .4f;
+                OtherworldActions.Cast(this, aim);
+            }
+            else if (Hero == 13 && action == OtherworldMessageKind.BeginPhase)
+            {
+                Spend(true);
+                BeginPhase();
+            }
         }
+
+        private void Spend(bool hold = false)
+        {
+            if (skillState.Spend(Time.time, Cooldown, hold))
+                OtherworldNetwork.State(this);
+        }
+
         internal void ReduceCooldown(float seconds)
-        {if(rechargeAt>Time.time){rechargeAt=Mathf.Max(Time.time,rechargeAt-seconds);OtherworldNetwork.State(this);}}
-        internal void ReceiveState(int charges,float remaining)
-        {Charges=charges;rechargeAt=Time.time+remaining;}
-        internal float Remaining=>Charges>0?0:Mathf.Max(0,rechargeAt-Time.time);
-        internal float RechargeRemaining=>Mathf.Max(0,rechargeAt-Time.time);
+        {
+            if (skillState.Reduce(Time.time, seconds))
+                OtherworldNetwork.State(this);
+        }
+
+        internal void ReceiveState(int charges, float remaining)
+        {
+            if (Run != null)
+                skillState.Receive(charges, remaining, MaximumCharges, Time.time);
+        }
+
+        internal float Remaining => skillState.Remaining(Time.time);
+        internal float RechargeRemaining => skillState.RechargeRemaining(Time.time);
         internal int MaximumCharges=>Run.Initial==26004?3:1;
         internal void BeginPhase(bool continueAction=false)
         {
@@ -182,20 +229,32 @@ namespace CluckmechCoop
         }
         private void Update()
         {
-            if(Health==null)return;
-            var current=OtherworldProgress.For(Role);if(current!=null)Run=current;
-            if(inputArmed&&Time.timeScale<=0){inputArmed=false;rightAction=null;OtherworldNetwork.Command(this,2,++sequence,Aim);}
-            if(inputArmed&&rightAction!=null&&rightAction.IsPressed())QualifyHold(UnityEngine.InputSystem.LowLevel.InputState.currentTime);
-            if(Plugin.Role!=2)
+            if (Health == null)
+                return;
+            var current = OtherworldProgress.For(Role);
+            if (current != null)
+                Run = current;
+
+            if (inputState.Armed && Time.timeScale <= 0)
+                CancelInput(true);
+            if (inputState.Armed && rightAction != null && rightAction.IsPressed())
+                QualifyHold(UnityEngine.InputSystem.LowLevel.InputState.currentTime);
+
+            if (Plugin.Role != 2)
             {
-                int maximum=MaximumCharges;
-                if(Charges<maximum&&Time.time>=rechargeAt){Charges++;rechargeAt=Charges<maximum?Time.time+Cooldown:0;OtherworldNetwork.State(this);}
+                if (skillState.Recharge(Time.time, Cooldown, MaximumCharges))
+                    OtherworldNetwork.State(this);
             }
             if(PhaseUntil>0&&Time.time>=PhaseUntil)
             {
                 EndPhase(Plugin.Role!=2&&!Dashing);
             }
-            if(Death.是否玩家死亡){held=false;if(PhaseUntil>0)EndPhase(false);}
+            if (Death.是否玩家死亡)
+            {
+                CancelInput(false);
+                if (PhaseUntil > 0)
+                    EndPhase(false);
+            }
             Skill.技能cd=Cooldown;Skill.当前技能cd=Remaining;
             if(chargeLabel!=null)
             {
@@ -250,8 +309,8 @@ namespace CluckmechCoop
         internal void CastPose()=>castUntil=Time.time+.4f;
         private void QualifyHold(double now)
         {
-            if(Hero!=13||qualified||!Application.isFocused||!OtherworldMotion.LongPress(inputStarted,now)||Time.timeScale<=0)return;
-            qualified=true;OtherworldNetwork.Command(this,4,++sequence,DashDirection);
+            if (Hero == 13 && inputState.Qualify(now, Application.isFocused && Time.timeScale > 0))
+                OtherworldNetwork.Command(this, OtherworldMessageKind.Dash, ++sequence, DashDirection);
         }
         internal void ClientDash(Vector2 end,float seconds)
         {CancelClientDash();clientDash=StartCoroutine(DashLocally(end,seconds));}
@@ -263,9 +322,28 @@ namespace CluckmechCoop
         }
         internal void CancelClientDash(){if(clientDash!=null)StopCoroutine(clientDash);clientDash=null;Dashing=false;}
         private void FixedUpdate(){if(Dashing&&TryGetComponent<Rigidbody2D>(out var body))body.velocity=Vector2.zero;}
+        private void CancelInput(bool notify)
+        {
+            bool armed = inputState.Reset(), held = skillState.Release();
+            rightAction = null;
+            if (notify && (armed || held))
+                OtherworldNetwork.Command(this, OtherworldMessageKind.ReleaseInput, ++sequence, Aim);
+        }
+
         private void OnApplicationFocus(bool focused)
-        {if(!focused&&(held||inputArmed)){held=inputArmed=false;rightAction=null;OtherworldNetwork.Command(this,2,++sequence,Aim);}}
-        private void OnDisable(){held=inputArmed=false;rightAction=null;CancelClientDash();Avoided.Clear();if(PhaseUntil>0)EndPhase(false);}
+        {
+            if (!focused)
+                CancelInput(true);
+        }
+
+        private void OnDisable()
+        {
+            CancelInput(false);
+            CancelClientDash();
+            Avoided.Clear();
+            if (PhaseUntil > 0)
+                EndPhase(false);
+        }
     }
 
     [HarmonyPatch(typeof(模块_玩家_技能),"按键触发_技能")]

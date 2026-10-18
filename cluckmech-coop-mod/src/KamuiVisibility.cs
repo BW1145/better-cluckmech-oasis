@@ -14,20 +14,43 @@ namespace CluckmechCoop
         private static readonly Dictionary<GameObject,KamuiVisibilityView> views=new Dictionary<GameObject,KamuiVisibilityView>();
         private static KamuiVisibilityRefresh refresh;
         private static bool pendingRefresh;
-        private static bool registered;
+        private static bool prefabsRegistered;
+        private static bool messagesInitialized, messagesRegistered;
+
+        internal static void RegisterMessages()
+        {
+            if (!messagesInitialized)
+            {
+                Writer<KamuiDestroyedMessage>.write = (writer, message) =>
+                {
+                    writer.WriteUInt(message.NetId);
+                    writer.WriteString(message.Token);
+                };
+                Reader<KamuiDestroyedMessage>.read = reader => new KamuiDestroyedMessage
+                {
+                    NetId = reader.ReadUInt(),
+                    Token = reader.ReadString()
+                };
+                messagesInitialized = true;
+            }
+            if (NetworkClient.active && !messagesRegistered)
+            {
+                NetworkClient.RegisterHandler<KamuiDestroyedMessage>(Destroyed);
+                messagesRegistered = true;
+            }
+        }
+
         internal static void Install()
         {
-            Writer<KamuiDestroyedMessage>.write=(writer,message)=>{writer.WriteUInt(message.NetId);writer.WriteString(message.Token);};
-            Reader<KamuiDestroyedMessage>.read=reader=>new KamuiDestroyedMessage{NetId=reader.ReadUInt(),Token=reader.ReadString()};
+            RegisterMessages();
             if(refresh==null)refresh=Plugin.Instance.gameObject.AddComponent<KamuiVisibilityRefresh>();
             if(Plugin.Role==1&&interest==null)
             {
                 var prior=NetworkServer.aoi;
                 interest=Plugin.Instance.gameObject.AddComponent<KamuiInterest>();interest.Previous=prior;
             }
-            if(Plugin.Role==0||registered||!NetworkClient.active)return;
-            registered=true;
-            NetworkClient.RegisterHandler<KamuiDestroyedMessage>(Destroyed);
+            if(Plugin.Role==0||prefabsRegistered||!NetworkClient.active)return;
+            prefabsRegistered=true;
             var prefabs=new HashSet<GameObject>();
             if(Plugin.Units!=null)foreach(var unit in Plugin.Units.单位列表)if(unit.单位预制体!=null)prefabs.Add(unit.单位预制体);
             var heroes=Object.FindObjectOfType<yx英雄库>();
@@ -104,8 +127,9 @@ namespace CluckmechCoop
         }
         internal static void ServerDestroyed(GameObject obj)
         {
-            if(Plugin.Role!=1||!NetworkServer.active||obj==null||obj.GetComponent<OtherworldUnit>()==null)return;
+            if(Plugin.Role!=1||!NetworkServer.active||Plugin.Network?.PeerReady!=true||obj==null||obj.GetComponent<OtherworldUnit>()==null)return;
             var identity=obj.GetComponent<NetworkIdentity>();if(identity==null||identity.netId==0)return;
+            RegisterMessages();
             // Destroy normally goes only to current observers; hidden clients still own an inactive instance.
             NetworkServer.SendToAll(new KamuiDestroyedMessage{NetId=identity.netId,Token=Plugin.Combat.Token});
         }
@@ -134,8 +158,7 @@ namespace CluckmechCoop
             foreach(var obj in retired)if(obj!=null)Object.Destroy(obj);
             restored.Clear();destroyed.Clear();
             foreach(var view in views.Values)if(view!=null)view.Release();views.Clear();
-            if(registered)NetworkClient.UnregisterHandler<KamuiDestroyedMessage>();
-            registered=false;pendingRefresh=false;
+            prefabsRegistered=false;pendingRefresh=false;
             if(refresh!=null)Object.Destroy(refresh);refresh=null;
             if(interest!=null)
             {
@@ -143,6 +166,14 @@ namespace CluckmechCoop
                 if(NetworkClient.aoi==interest)NetworkClient.aoi=interest.Previous;
                 Object.Destroy(interest);interest=null;
             }
+        }
+
+        internal static void Disconnect()
+        {
+            Clear();
+            if (messagesRegistered)
+                NetworkClient.UnregisterHandler<KamuiDestroyedMessage>();
+            messagesRegistered = false;
         }
     }
     internal sealed class KamuiInterest:InterestManagement

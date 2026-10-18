@@ -41,7 +41,9 @@ static class Program
     private static void BadRuntime(string name,Action<StratagemSaved> mutate)=>BadUnit(name,u=>mutate(u.Stratagem));
     static void Main(string[] args)
     {
-        if(args.Length>0&&args[0]=="storage"){StorageHarness.Run();return;}
+        if(args.Length>0&&args[0].TrimStart('-')=="lifecycle"){LifecycleHarness.Run();return;}
+        if(args.Length>0&&args[0]=="storage"){ModuleSettings.Initialize(new BepInEx.Configuration.ConfigFile());StorageHarness.Run();return;}
+        if(args.Length>0&&args[0]=="modules"){ModuleStateHarness.Run();return;}
         Check(KamuiWorld.Valid(Healthy()),"native state models, negative modifiers, permanent buffs and elapsed native timers accepted");
         Check(KamuiWorld.Valid(JsonConvert.DeserializeObject<OtherworldSave>(JsonConvert.SerializeObject(Healthy()))),"real JSON nested snapshot round trip");
         Check(KamuiWorld.Valid(new OtherworldSave()),"native-only/default addon accepted");

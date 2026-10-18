@@ -16,5 +16,12 @@ $output = 'using System; using System.Collections.Generic; using System.Reflecti
     '}' +
     'public partial class 模块_状态属性 {' + (Read-Block $native 'public class 状态类') +
     (Read-Block $native 'public void 增加状态(') + (Read-Block $native 'public bool 查询状态(') + '}'
+foreach ($marker in @('        internal static bool Present(', '        internal static bool Living(')) {
+    $start = $damage.IndexOf($marker)
+    if ($start -lt 0) { throw "Missing production predicate: $marker" }
+    $end = $damage.IndexOf(';', $start) + 1
+    $predicate = $damage.Substring($start, $end - $start)
+    $output += 'namespace CluckmechCoop { internal static partial class StratagemWorld {' + $predicate + '} }'
+}
 New-Item -ItemType Directory -Path (Join-Path $PSScriptRoot 'obj') -Force | Out-Null
 [System.IO.File]::WriteAllText((Join-Path $PSScriptRoot 'obj/ProductionEffects.cs'),$output,[System.Text.UTF8Encoding]::new($false))

@@ -6,8 +6,14 @@ using Mirror;
 static class Program
 {
     static int checks;static void Check(bool value,string name){checks++;if(!value)throw new Exception(name);}
-    static void Main()
+    static void Main(string[] args)
     {
+        if (Array.IndexOf(args,"--session-notifications")>=0)
+        {
+            SessionNotifications();
+            Console.WriteLine($"PASS {checks} session notification registration and scene-boundary checks");
+            return;
+        }
         foreach(bool original in new[]{false,true})
         {
             var renderer=new UnityEngine.Renderer{forceRenderingOff=original};
@@ -78,13 +84,74 @@ static class Program
         Check(visible.gameObject.Destroyed&&KamuiVisibility.Find(11)==null,"authoritative death cannot be recached when client health is stale");
         var pending=Unit(12,2);Invoke("Unspawn",pending.gameObject);KamuiVisibility.Forget(pending.gameObject);
         Check(KamuiVisibility.Find(12)==null,"external object destruction clears hidden reference");
-        var disconnect=Unit(13,2);Invoke("Unspawn",disconnect.gameObject);KamuiVisibility.Clear();
+        var disconnect=Unit(13,2);Invoke("Unspawn",disconnect.gameObject);KamuiVisibility.Disconnect();
         Check(disconnect.gameObject.Destroyed&&KamuiVisibility.Find(13)==null,"disconnect destroys cached hidden instances");
         Check(!NetworkClient.Handlers.ContainsKey(typeof(KamuiDestroyedMessage)),"disconnect unregisters destroy handler");
         Plugin.Role=1;NetworkServer.active=true;var host=Unit(14,2);KamuiVisibility.Install();KamuiVisibility.ServerDestroyed(host.gameObject);
         Check(NetworkServer.Sent.Count==1&&((KamuiDestroyedMessage)NetworkServer.Sent[0]).NetId==14,"server broadcasts original netId independently of observers");
         Check(Writer<KamuiDestroyedMessage>.write!=null&&Reader<KamuiDestroyedMessage>.read!=null,"custom message serialization bound");
         Plugin.Role=2;KamuiVisibility.ServerDestroyed(host.gameObject);Check(NetworkServer.Sent.Count==1,"clients cannot broadcast authoritative destruction");
-        KamuiVisibility.Clear();OtherworldWorld.Units.Clear();NetworkClient.spawned.Clear();
+        KamuiVisibility.Disconnect();OtherworldWorld.Units.Clear();NetworkClient.spawned.Clear();
+    }
+    static void SessionNotifications()
+    {
+        Plugin.Role=1;
+        NetworkServer.active=true;
+        Plugin.Network.PeerReady=false;
+        var ordinary=Unit(40,0);
+        KamuiVisibility.ServerDestroyed(ordinary.gameObject);
+        Check(NetworkServer.Sent.Count==0,"no new message reaches a peer before the plugin handshake");
+
+        // Both session handshakes register messages even if neither actor ever creates a room.
+        Plugin.Role=2;
+        KamuiVisibility.RegisterMessages();
+        var clientHandler=(Action<KamuiDestroyedMessage>)NetworkClient.Handlers[typeof(KamuiDestroyedMessage)];
+        Check(Writer<KamuiDestroyedMessage>.write!=null&&Reader<KamuiDestroyedMessage>.read!=null,"session registers serializer and reader without Ensure");
+        Check(NetworkClient.PrefabRegistrations==0&&NetworkServer.aoi==null,"message registration does not install room AOI or prefab reuse");
+        int registrations=NetworkClient.Registrations;
+        KamuiVisibility.RegisterMessages();
+        Check(NetworkClient.Registrations==registrations,"repeated session registration keeps one handler");
+
+        Plugin.Role=1;
+        Plugin.Network.PeerReady=true;
+        KamuiVisibility.ServerDestroyed(ordinary.gameObject);
+        Check(NetworkServer.Sent.Count==1,"ordinary enemy destruction is serializable before the first Ensure");
+        Plugin.Role=2;
+        clientHandler((KamuiDestroyedMessage)NetworkServer.Sent[0]);
+        Check(NetworkClient.Handlers.ContainsKey(typeof(KamuiDestroyedMessage)),"hero12 client with no room accepts notification through its session handler");
+
+        foreach(bool hostFirst in new[]{true,false})
+        {
+            Plugin.Role=hostFirst?1:2;
+            KamuiVisibility.Install();
+            KamuiVisibility.Clear();
+            Check(NetworkClient.Handlers.ContainsKey(typeof(KamuiDestroyedMessage)),"clearing first peer room preserves session handler");
+            Plugin.Role=hostFirst?2:1;
+            KamuiVisibility.Install();
+            Check(NetworkClient.Registrations==registrations,"either peer can Ensure first without replacing message registration");
+            KamuiVisibility.Clear();
+        }
+
+        Plugin.Role=2;
+        var hidden=Unit(41,2);
+        Invoke("Unspawn",hidden.gameObject);
+        KamuiVisibility.Clear();
+        Check(hidden.gameObject.Destroyed&&KamuiVisibility.Find(41)==null,"scene clear reclaims hidden objects");
+        Check(NetworkClient.Handlers.ContainsKey(typeof(KamuiDestroyedMessage)),"scene clear retains live session message dispatch");
+        clientHandler(new KamuiDestroyedMessage{NetId=41,Token=Plugin.Combat.Token});
+        Check(KamuiVisibility.Find(41)==null,"in-flight old scene notification is harmless with no cached target");
+
+        int unregistrations=NetworkClient.Unregistrations;
+        KamuiVisibility.Disconnect();
+        KamuiVisibility.Disconnect();
+        Check(!NetworkClient.Handlers.ContainsKey(typeof(KamuiDestroyedMessage))&&NetworkClient.Unregistrations==unregistrations+1,"disconnect unregisters exactly once");
+        NetworkClient.active=false;
+        KamuiVisibility.RegisterMessages();
+        Check(!NetworkClient.Handlers.ContainsKey(typeof(KamuiDestroyedMessage)),"inactive client does not register a session handler");
+        NetworkClient.active=true;
+        KamuiVisibility.RegisterMessages();
+        Check(NetworkClient.Handlers.ContainsKey(typeof(KamuiDestroyedMessage))&&NetworkClient.Registrations==registrations+1,"reconnect registers a fresh active session handler");
+        KamuiVisibility.Disconnect();
+        OtherworldWorld.Units.Clear();
     }
 }

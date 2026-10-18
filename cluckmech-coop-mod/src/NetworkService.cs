@@ -31,36 +31,45 @@ namespace CluckmechCoop
         internal const string RequestKey = "CluckmechCoop.Session.Request.v3", ReplyKey = "CluckmechCoop.Session.Reply.v3";
         private static readonly MethodInfo rpc = AccessTools.Method(typeof(联机玩家控件), "发送消息广播_Rpc", new[] { typeof(string), typeof(string) });
         private Coroutine handshake;
-        private bool peer;
-        private int revision, acknowledged = -1;
+        private readonly NetworkSessionState session = new NetworkSessionState();
         internal string Status = "等待队友同步模组设置";
-        internal bool PeerReady => Plugin.Role == 0 || peer;
-        internal bool SettingsReady => Plugin.Role == 0 || peer && acknowledged == revision;
+        internal bool PeerReady => Plugin.Role == 0 || session.Peer;
+        internal bool SettingsReady => Plugin.Role == 0 || session.Ready;
         internal void PlayerCreated(联机玩家控件 player) => BeginHandshake();
         internal void BeginHandshake()
         {
-            if (OtherworldRegistry.Enabled) OtherworldNetwork.Register();
+            OtherworldNetwork.Register();
             if (Plugin.Role == 0 || handshake != null) return;
-            handshake = Plugin.Instance.StartCoroutine(Handshake());
+            session.Open();
+            handshake = Plugin.Instance.StartCoroutine(Handshake(session.Capture(),SceneLifecycle.Current));
         }
-        private IEnumerator Handshake()
+        private IEnumerator Handshake(ulong lease,SceneLifetime scene)
         {
             yield return null;
-            for (int i = 0; i < 12 && !SettingsReady; i++)
+            for (int i = 0; i < 12 && !SettingsReady && session.Current(lease) && SceneLifecycle.IsCurrent(scene); i++)
             {
                 Send(new SessionMessage { Type = "hello", Role = Plugin.Role });
                 yield return new WaitForSecondsRealtime(0.5f);
             }
+            if (session.Current(lease)) handshake = null;
+        }
+        internal void ClearScene()
+        {
+            session.CancelPending();
+            if (handshake != null) Plugin.Instance.StopCoroutine(handshake);
             handshake = null;
         }
-        internal void Disconnect()
+        internal void Disconnect() => Disconnect(true);
+        internal void Shutdown() => Disconnect(false);
+        private void Disconnect(bool refreshUi)
         {
+            ClearScene();
+            session.Close();
             OtherworldNetwork.Disconnect();
-            if (handshake != null) Plugin.Instance.StopCoroutine(handshake);
-            handshake = null; peer = false; revision = 0; acknowledged = -1; Status = "等待队友同步模组设置";
+            Status = "等待队友同步模组设置";
             Plugin.Combat?.Disconnected();
             Plugin.Transfers.Disconnect();
-            Plugin.Panel.RefreshState();
+            if (refreshUi) Plugin.Panel.RefreshState();
         }
         internal void Send(SessionMessage message)
         {
@@ -70,12 +79,12 @@ namespace CluckmechCoop
         internal void PublishSettings()
         {
             if (Plugin.Role != 1) return;
-            revision++; Status = "等待队友同步模组设置";
+            session.Published(); Status = "等待队友同步模组设置";
             BroadcastSettings();
         }
         private void BroadcastSettings() => Broadcast(new SessionMessage
         {
-            Type = "settings", Revision = revision, Expedition = ModuleSettings.Expedition,
+            Type = "settings", Revision = session.Revision, Expedition = ModuleSettings.Expedition,
             Transfer = ModuleSettings.Transfer, Choice = ModuleSettings.Choice,
             Modules = ModuleSettings.Extra, Progress = ModuleSettings.Progress, Token = Plugin.Combat?.Token, Held = Plugin.Combat?.Holds.Active ?? false, Triple = Plugin.Combat?.TripleSpeed ?? false, Delay = Plugin.Combat?.RemainingEnergy ?? 0
         });
@@ -130,22 +139,22 @@ namespace CluckmechCoop
             bool guest = sender == Steam联机管理器.玩家_客户端;
             if (!guest && sender != Steam联机管理器.玩家_主机) return;
             if (!NetworkJson.TryRead<SessionMessage>(json, out var message) || !ValidMessage(message)) return;
-            if (message.Version != Plugin.Version) { peer = false; acknowledged = -1; Status = "双方模组版本不一致"; PreparationPanel.ShowStatus(Status); return; }
+            if (message.Version != Plugin.Version) { session.Mismatch(); Status = "双方模组版本不一致"; PreparationPanel.ShowStatus(Status); return; }
             if (message.Type == "swallow-request") { SwallowTargets.Handle(message,guest ? 2 : 1,true); return; }
             if (message.Type == "progress" && message.PlayerProgress != null)
             {
-                ModuleSettings.Progress.Players[guest ? 2 : 1] = message.PlayerProgress;
+                ModuleSettings.SetPlayerProgress(guest ? 2 : 1,message.PlayerProgress);
                 Plugin.Summary?.保存单局存档();
             }
             else if (FeatureNetwork.ServerReceive(message, guest ? 2 : 1)) return;
             else if (message.Type == "hello")
             {
-                if (guest) peer = true;
+                if (guest) session.PeerSeen();
                 BroadcastSettings();
             }
-            else if (message.Type == "ack" && guest && message.Revision == revision)
+            else if (message.Type == "ack" && guest && message.Revision == session.Revision)
             {
-                peer = true; acknowledged = revision; Status = "";
+                session.Acknowledge(); Status = "";
                 PreparationPanel.RefreshAll(); Plugin.Panel.RefreshState();
             }
         }
@@ -153,27 +162,16 @@ namespace CluckmechCoop
         {
             if (key != ReplyKey || Plugin.Role != 2) return;
             if (!NetworkJson.TryRead<SessionMessage>(json, out var message) || !ValidMessage(message)) return;
-            if (message.Version != Plugin.Version) { peer = false; acknowledged = -1; Status = "双方模组版本不一致"; PreparationPanel.ShowStatus(Status); return; }
+            if (message.Version != Plugin.Version) { session.Mismatch(); Status = "双方模组版本不一致"; PreparationPanel.ShowStatus(Status); return; }
             if (message.Type == "swallow") { SwallowTargets.Handle(message,2,false); return; }
             if (message.Type == "settings")
             {
-                if (message.Revision < revision) return;
-                if (message.Choice != null)
-                {
-                    bool same = ModuleSettings.Choice != null && ModuleSettings.Choice.Token == message.Choice.Token;
-                    message.Choice.RewardApplied = same && ModuleSettings.Choice.RewardApplied;
-                    if (same) message.Choice.Locked |= ModuleSettings.Choice.Locked;
-                }
-                ModuleSettings.EnterRun();
-                ModuleSettings.Expedition = message.Expedition;
-                ModuleSettings.Transfer = message.Transfer;
-                ModuleSettings.Choice = message.Choice;
-                ModuleSettings.Extra = message.Modules ?? new GameplayModules();
-                ModuleSettings.Progress = message.Progress ?? new RunProgress();
+                if (message.Revision < session.Revision) return;
+                ModuleSettings.ApplyHostSettings(message.Expedition,message.Transfer,message.Choice,message.Modules,message.Progress);
                 CarryCapacity.RefreshPreparation();
                 if (Plugin.Combat != null) { Plugin.Combat.Token = message.Token; Plugin.Combat.Synchronize(message.Held, message.Delay, message.Triple); }
-                revision = acknowledged = message.Revision; peer = true; Status = "";
-                Send(new SessionMessage { Type = "ack", Revision = revision });
+                session.AcceptSettings(message.Revision); Status = "";
+                Send(new SessionMessage { Type = "ack", Revision = session.Revision });
                 CharacterBoons.Synchronize();MapBoonsUi.RefreshCurrent();
                 PreparationPanel.RefreshAll();
                 Plugin.Panel.RefreshState();

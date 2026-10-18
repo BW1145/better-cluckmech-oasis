@@ -63,12 +63,8 @@ namespace CluckmechCoop
             if(save?.Players==null||save.Rooms==null)return false;
             foreach(var pair in save.Players)
             {
-                var run=pair.Value;
-                if(pair.Key<0||pair.Key>2||run==null||OtherworldCatalog.Hero(run.Hero)==null||run.Talents==null||run.ShockKills<0||run.SpaceKills<0||run.Upgrades<0||!Finite(run.BaseInfluence))return false;
-                if(run.Initial!=0&&(OtherworldCatalog.Talent(run.Initial)?.Hero!=run.Hero||!OtherworldCatalog.Talent(run.Initial).Initial))return false;
-                if(run.Talents.Any(id=>OtherworldCatalog.Talent(id)==null||OtherworldCatalog.Talent(id).Hero!=run.Hero||OtherworldCatalog.Talent(id).Initial))return false;
-                if(run.LastDeployment!=null&&(!Rules.ValidMachine(run.LastDeployment)||run.LastDeployment.Upgrades.Any(id=>id<=0)))return false;
-                if(run.CardIds!=null&&(run.CardIds.Any(string.IsNullOrWhiteSpace)||run.CardIds.Distinct().Count()!=run.CardIds.Count))return false;
+                // Older snapshots may omit Initial or contain talents from an older branch policy.
+                if (pair.Key < 0 || pair.Key > 2 || !OtherworldDataValidation.Run(pair.Value)) return false;
             }
             var owners=new HashSet<int>();var keys=new HashSet<string>();
             foreach(var room in save.Rooms)
@@ -126,7 +122,7 @@ namespace CluckmechCoop
         private static bool Status(int type)=>Enum.IsDefined(typeof(攻击类型与状态数据库.状态枚举),type)&&type!=(int)攻击类型与状态数据库.状态枚举.枚举数量;
         private static bool Values(float[] values,int size)=>values!=null&&values.Length==size&&values.All(Finite);
         private static bool Nonnegative(float value)=>Finite(value)&&value>=0;
-        private static bool Finite(float value)=>!float.IsInfinity(value)&&!float.IsNaN(value);
+        private static bool Finite(float value) => OtherworldDataValidation.Finite(value);
         private static bool Scalar(Type type,float[] values)
         {
             int size=type==typeof(Vector4)?4:type==typeof(Vector3)?3:type==typeof(Vector2)?2:1;

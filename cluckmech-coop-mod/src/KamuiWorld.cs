@@ -77,7 +77,7 @@ namespace CluckmechCoop
             main.Dirty=room.Dirty=true;
             if(clock==null)clock=Plugin.Instance.gameObject.AddComponent<KamuiClock>();
             KamuiVisibility.Install();
-            if(Plugin.Role==1)OtherworldNetwork.Send(new OtherworldMessage{Kind=16,Value=role},role);
+            if(Plugin.Role==1)OtherworldNetwork.Send(new OtherworldMessage{Kind=OtherworldMessageKind.EnsureRoom,Value=role},role);
             return room;
         }
         internal static void Added(OtherworldUnit unit)
@@ -223,23 +223,36 @@ namespace CluckmechCoop
         }
         internal static bool Transfer(OtherworldUnit unit,int space,Vector2 point,bool refresh=true)
         {
-            if(unit==null)return false;
-            var next=Room(space);if(next==null)return false;
+            if (unit==null) return false;
+            var next=Room(space);
+            if (next==null) return false;
             var map=MapFor(unit,next);
-            if(!KamuiNavigation.TryPoint(map,point,out point,4)||space!=0&&!next.Bounds.Contains(point))return false;
+            if (!KamuiNavigation.TryPoint(map,point,out point,4) || space!=0&&!next.Bounds.Contains(point)) return false;
+
             int originalSpace=unit.Space;
             UnitLifecycle.ChangingSpace(unit);
             var body=unit.GetComponent<OtherworldActor>()?.Body??unit.GetComponentInChildren<SpriteRenderer>();
-            if(body!=null)OtherworldWarpVisual.Play(body,false,.55f,false);
-            var old=Room(unit.Space);old?.Units.Remove(unit);if(old!=null)old.Dirty=true;
-            unit.Space=space;next.Units.Add(unit);next.Dirty=true;
+            if (body!=null) OtherworldWarpVisual.Play(body,false,.55f,false);
+            var old=Room(unit.Space);
+            old?.Units.Remove(unit);
+            if (old!=null) old.Dirty=true;
+            unit.Space=space;
+            next.Units.Add(unit);
+            next.Dirty=true;
             var rigidbody=unit.GetComponent<Rigidbody2D>();
-            if(rigidbody!=null){rigidbody.position=point;rigidbody.MovePosition(point);}
-            unit.transform.position=point;Navigate(unit,next);ClearTargets(unit);unit.Refresh();
-            if(unit.IsPlayer&&(int)unit.Health.所属玩家==Plugin.Role)
+            if (rigidbody!=null)
+            {
+                rigidbody.position=point;
+                rigidbody.MovePosition(point);
+            }
+            unit.transform.position=point;
+            Navigate(unit,next);
+            ClearTargets(unit);
+            unit.Refresh();
+            if (unit.IsPlayer&&(int)unit.Health.所属玩家==Plugin.Role)
             {
                 var camera=Object.FindObjectOfType<摄像机固定>();
-                if(camera!=null)
+                if (camera!=null)
                 {
                     var position=new Vector3(point.x,point.y,0);
                     AccessTools.Field(typeof(摄像机固定),"实际位置").SetValue(camera,position);
@@ -250,13 +263,21 @@ namespace CluckmechCoop
             }
             KamuiNavigation.Transfer(unit,originalSpace,space);
             OtherworldDashNetwork.Transferred(unit.GetComponent<OtherworldActor>(),originalSpace,space);
-            if(body!=null)OtherworldWarpVisual.Play(body,true);
-            if(Plugin.Role==1)
+            if (body!=null) OtherworldWarpVisual.Play(body,true);
+            if (Plugin.Role==1)
             {
-                OtherworldNetwork.Send(new OtherworldMessage{Kind=14,Player=StratagemWorld.Id(unit.gameObject),Value=space,X=point.x,Y=point.y});
-                var identity=unit.GetComponent<NetworkIdentity>();if(identity!=null)NetworkServer.RebuildObservers(identity,false);
+                OtherworldNetwork.Send(new OtherworldMessage
+                {
+                    Kind=OtherworldMessageKind.Transfer,
+                    Player=StratagemWorld.Id(unit.gameObject),
+                    Value=space,
+                    X=point.x,
+                    Y=point.y
+                });
+                var identity=unit.GetComponent<NetworkIdentity>();
+                if (identity!=null) NetworkServer.RebuildObservers(identity,false);
             }
-            if(refresh)KamuiVisibility.Refresh();
+            if (refresh) KamuiVisibility.Refresh();
             return true;
         }
         private static void Navigate(OtherworldUnit unit,KamuiRoom room)
@@ -310,9 +331,21 @@ namespace CluckmechCoop
         }
         internal static void Clear()
         {
-            Rooms.Clear();main.Units.Clear();main.Candidates.Clear();main.Tags.Clear();main.Dirty=true;navigation=null;
-            if(clock!=null)Object.Destroy(clock);clock=null;KamuiVisibility.Clear();KamuiNavigation.Clear();
-            OtherworldFx.Clear();KamuiDrop.Live.Clear();
+            Restoring=false;
+            foreach (var room in Rooms.Values)
+                if (room.Root!=null) Object.Destroy(room.Root);
+            Rooms.Clear();
+            main.Units.Clear();
+            main.Candidates.Clear();
+            main.Tags.Clear();
+            main.Dirty=true;
+            navigation=null;
+            if (clock!=null) Object.Destroy(clock);
+            clock=null;
+            KamuiVisibility.Clear();
+            KamuiNavigation.Clear();
+            OtherworldFx.Clear();
+            KamuiDrop.Live.Clear();
             OtherworldVfx.Clear();
         }
     }

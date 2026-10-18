@@ -56,8 +56,9 @@ namespace CluckmechCoop
             hitboxes.Remove(stats);
             Players.Remove(stats); StratagemFields.Remove(stats); StratagemDamage.ForgetTarget(stats);
         }
-        internal static bool Living(模块_基本属性 stats) => stats != null && stats.当前生命值 > 0 && !stats.当前是否无敌 &&
+        internal static bool Present(模块_基本属性 stats) => stats != null && stats.当前生命值 > 0 &&
             stats.当前阵营 == 阵营数据库.阵营.敌方 && enemySet.Contains(stats);
+        internal static bool Living(模块_基本属性 stats) => Present(stats) && !stats.当前是否无敌;
         internal static float DistanceSquared(模块_基本属性 target,Vector2 point)
         {
             if (!hitboxes.TryGetValue(target,out var shapes)) return float.PositiveInfinity;

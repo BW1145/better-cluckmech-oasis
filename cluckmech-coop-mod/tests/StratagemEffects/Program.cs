@@ -15,7 +15,20 @@ namespace UnityEngine
     public static class Time { public static float time; }
     public enum RigidbodyType2D { Kinematic }
     public sealed class Rigidbody2D { public RigidbodyType2D bodyType; }
-    public class Collider2D { public T GetComponentInParent<T>() => default; }
+    public class Collider2D
+    {
+        public bool enabled = true, Destroyed;
+        public readonly GameObject gameObject = new GameObject();
+        public T GetComponentInParent<T>() => default;
+        public static bool operator ==(Collider2D a,Collider2D b)
+        {
+            bool absentA=ReferenceEquals(a,null)||a.Destroyed,absentB=ReferenceEquals(b,null)||b.Destroyed;
+            return absentA&&absentB || !absentA&&!absentB&&ReferenceEquals(a,b);
+        }
+        public static bool operator !=(Collider2D a,Collider2D b) => !(a==b);
+        public override bool Equals(object value) => ReferenceEquals(this,value);
+        public override int GetHashCode() => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
+    }
     public sealed class CircleCollider2D : Collider2D { public float radius; public bool isTrigger; }
     public enum SendMessageOptions { DontRequireReceiver }
     public sealed class Transform { public Vector3 position; }
@@ -37,6 +50,7 @@ namespace UnityEngine
     public sealed class GameObject
     {
         public GameObject(string name="") { }
+        public bool activeInHierarchy = true;
         public readonly Transform transform = new Transform();
         private readonly Dictionary<Type,object> parts = new Dictionary<Type,object>();
         public readonly Dictionary<string,int> Messages = new Dictionary<string,int>();
@@ -58,6 +72,9 @@ public sealed class 模块_基本属性
 {
     public readonly GameObject gameObject; public Transform transform => gameObject.transform;
     public bool Living = true, Enemy = true;
+    public float 当前生命值 => Living ? 10 : 0;
+    public 阵营数据库.阵营 当前阵营 => Enemy ? 阵营数据库.阵营.敌方 : 阵营数据库.阵营.友方;
+    public bool 当前是否无敌;
     public 模块_基本属性(GameObject go) {gameObject=go;}
     public T GetComponent<T>() => gameObject.GetComponent<T>();
 }
@@ -132,13 +149,15 @@ namespace CluckmechCoop
         }
     }
     internal sealed class StratagemSavedField { public float X,Y,Radius,Remaining; public bool Scorch; }
-    internal static class StratagemWorld
+    internal static partial class StratagemWorld
     {
         internal static List<模块_基本属性> Enemies=new List<模块_基本属性>();
+        private static readonly HashSet<模块_基本属性> enemySet = new HashSet<模块_基本属性>();
+        internal static void Register(模块_基本属性 target) => enemySet.Add(target);
+        internal static void Unregister(模块_基本属性 target) => enemySet.Remove(target);
         internal static int GlobalScans;
         internal static List<模块_基本属性> EnemiesFor(Vector2 point) { GlobalScans++; return Enemies; }
         internal static float DistanceSquared(模块_基本属性 target,Vector2 point) => ((Vector2)target.transform.position-point).sqrMagnitude;
-        internal static bool Living(模块_基本属性 stats) => stats!=null&&stats.Living&&stats.Enemy;
     }
 }
 static class Program
@@ -149,7 +168,9 @@ static class Program
     {
         var go=new GameObject(); var hp=go.Add(new 模块_基本属性(go));
         var resistance=go.Add(new 模块_抗性属性());
-        go.Add(new 模块_状态属性(go,resistance));go.Add(new 模块_状态持续效果());go.Add(new 模块_受伤());return hp;
+        go.Add(new 模块_状态属性(go,resistance));go.Add(new 模块_状态持续效果());go.Add(new 模块_受伤());
+        StratagemWorld.Register(hp);
+        return hp;
     }
     private static int BurnCount(StratagemDamage damage) => ((IDictionary)typeof(StratagemDamage).GetField("burns",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(damage)).Count;
     private static HashSet<StratagemDamage> Sources() => (HashSet<StratagemDamage>)typeof(StratagemDamage).GetField("sources",BindingFlags.Static|BindingFlags.NonPublic).GetValue(null);
@@ -211,8 +232,109 @@ static class Program
         StratagemFields.Clear();StratagemWorld.Enemies.Clear();
         foreach(var source in new[]{weak,strong,gasA,gasB})source.Damage.Dispose();
     }
+    private static void SensorPruneChecks()
+    {
+        StratagemFields.Clear();
+        Time.time=0;
+        var source=FieldSource(25055);
+        var zone=AddField(source);
+        var target=Actor();
+        var first=new Collider2D();
+        var second=new Collider2D();
+        zone.Membership.Track(first,target);
+        zone.Membership.Track(second,target);
+        StratagemFields.Tick();
+        first.enabled=false;
+        StratagemFields.Tick();
+        Check(zone.Entered.Contains(target),"pruning one disabled child collider preserves its other live contact");
+        second.gameObject.activeInHierarchy=false;
+        StratagemFields.Tick();
+        Check(!zone.Entered.Contains(target),"last inactive child collider is pruned even if Unity omits exit");
+        var poison=target.GetComponent<模块_状态属性>().当前状态列表.Single(x=>x.状态类型==攻击类型与状态数据库.状态枚举.中毒);
+        poison.剩余时间=.3f;
+        StratagemFields.Tick();
+        Check(poison.剩余时间==.3f,"pruned living target no longer receives field poison refresh");
+        first.enabled=true;
+        zone.Membership.Track(first,target);
+        StratagemFields.Tick();
+        Check(zone.Entered.Contains(target),"reenabled collider can enter after stale contact removal");
+        first.Destroyed=true;
+        StratagemFields.Tick();
+        Check(!zone.Entered.Contains(target),"destroyed Unity collider key is removed using reference identity");
+        var replacement=new Collider2D();
+        zone.Membership.Track(replacement,target);
+        Check(zone.Entered.Contains(target),"replacement collider is tracked after destroyed contact cleanup");
+        Check(StratagemWorld.GlobalScans==0,"sensor maintenance visits tracked contacts without a world enemy scan");
+        StratagemFields.Clear();
+        source.Damage.Dispose();
+    }
+    private static void InvulnerabilityChecks()
+    {
+        StratagemFields.Clear();
+        Time.time = 0;
+        var gas = FieldSource(25055);
+        var fire = FieldSource();
+        var gasZone = AddField(gas);
+        var fireZone = AddField(fire, true);
+        var target = Actor();
+        var states = target.GetComponent<模块_状态属性>();
+        target.当前是否无敌 = true;
+        gasZone.Membership.Track(new Collider2D(), target);
+        fireZone.Membership.Track(new Collider2D(), target);
+        StratagemFields.Tick();
+        Check(gasZone.Entered.Contains(target) && fireZone.Entered.Contains(target),
+            "invulnerable entry retains physical memberships through sensor pruning");
+        Check(states.当前状态列表.Count == 0, "invulnerable member receives no field damage or status");
+        target.当前是否无敌 = false;
+        StratagemFields.Tick();
+        Check(states.当前状态列表.Count(x => x.状态类型 == 攻击类型与状态数据库.状态枚举.减速) == 1,
+            "stationary invulnerable entrant receives slow after immunity ends");
+        Check(states.当前状态列表.Count(x => x.状态类型 == 攻击类型与状态数据库.状态枚举.中毒) == 1,
+            "stationary invulnerable entrant receives poison after immunity ends");
+        Check(states.当前状态列表.Count(x => x.状态类型 == 攻击类型与状态数据库.状态枚举.灼烧) == 1,
+            "stationary invulnerable entrant receives scorch after immunity ends");
+
+        target.当前是否无敌 = true;
+        states.Tick(4);
+        StratagemFields.Tick();
+        Check(gasZone.Entered.Contains(target) && fireZone.Entered.Contains(target) && states.当前状态列表.Count == 0,
+            "becoming invulnerable inside fields keeps contacts without refreshing effects");
+        target.当前是否无敌 = false;
+        StratagemFields.Tick();
+        Check(states.当前状态列表.Count(x => x.状态类型 == 攻击类型与状态数据库.状态枚举.减速) == 1 &&
+            states.当前状态列表.Count(x => x.状态类型 == 攻击类型与状态数据库.状态枚举.中毒) == 1 &&
+            states.当前状态列表.Count(x => x.状态类型 == 攻击类型与状态数据库.状态枚举.灼烧) == 1,
+            "effects resume after in-field immunity ends without a new trigger entry");
+
+        target.当前是否无敌 = true;
+        StratagemFields.Remove(target);
+        states.Tick(4);
+        target.当前是否无敌 = false;
+        StratagemFields.Tick();
+        Check(!gasZone.Entered.Contains(target) && !fireZone.Entered.Contains(target) && states.当前状态列表.Count == 0,
+            "space-change removal still prevents effects leaking from old field memberships");
+        StratagemWorld.Unregister(target);
+        gasZone.Membership.Track(new Collider2D(), target);
+        Check(!gasZone.Entered.Contains(target), "unregistered enemy cannot gain a physical field membership");
+        Check(StratagemWorld.GlobalScans == 0, "immunity transitions require no global enemy scan");
+        StratagemFields.Clear();
+        gas.Damage.Dispose();
+        fire.Damage.Dispose();
+    }
     static void Main(string[] args)
     {
+        if (args.Contains("--invulnerability"))
+        {
+            InvulnerabilityChecks();
+            Console.WriteLine($"PASS: {checks} field physical membership and invulnerability checks");
+            return;
+        }
+        if (args.Contains("--sensor-prune"))
+        {
+            SensorPruneChecks();
+            Console.WriteLine($"PASS: {checks} disabled, inactive and destroyed sensor contact checks");
+            return;
+        }
         if (args.Contains("--effect-protocol"))
         {
             foreach (StratagemEffectAction action in Enum.GetValues(typeof(StratagemEffectAction)))

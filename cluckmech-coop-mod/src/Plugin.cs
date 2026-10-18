@@ -41,25 +41,24 @@ namespace CluckmechCoop
             Steam联机管理器.事件_玩家控件创建.AddListener(Network.PlayerCreated);
             Steam联机管理器.事件_玩家离开.AddListener(Network.Disconnect);
             SceneManager.sceneLoaded += Loaded;
-            StartCoroutine(CaptureScene());
+            SceneLifecycle.Enter(SceneManager.GetActiveScene().handle);
+            StartCoroutine(CaptureScene(SceneLifecycle.Current));
             Log($"更好的鸡械绿洲 {Version} loaded; {patches.GetPatchedMethods().Count()} patches");
         }
         private void Loaded(Scene scene, LoadSceneMode mode)
         {
             if (scene.buildIndex == 常数类.场景id_选择英雄) RunSaveRepair.Blocked = false;
-            Combat.ClearScene(); GrowthPanel.Close(); MapBoonsUi.Clear(); FeatureModal.Clear(); Difficulty.Reset(); ModuleSettings.ClearScene(); CharacterBoons.Started=false;
-            StratagemWorld.Clear();
-            KamuiWorld.Clear();OtherworldWorld.Clear();OtherworldDeployment.ClearScene();
-            SwallowTargets.Clear();
+            if (!SceneLifecycle.Enter(scene.handle)) return;
             Spawner = null; units = null; InCombat = false;
             Panel.Rebuild();
             if (scene.buildIndex == 常数类.场景id_开始菜单) { Network.Disconnect(); ModuleSettings.MainMenu(); }
             else ModuleSettings.EnterRun();
-            StartCoroutine(CaptureScene());
+            StartCoroutine(CaptureScene(SceneLifecycle.Current));
         }
-        private IEnumerator CaptureScene()
+        private IEnumerator CaptureScene(SceneLifetime scene)
         {
             yield return null;
+            if (!SceneLifecycle.IsCurrent(scene)) yield break;
             summary = UnityEngine.Object.FindObjectOfType<总结脚本>();
             Spawner = UnityEngine.Object.FindObjectOfType<刷怪器>();
             if (RunSaveRepair.AtMainMenu) Spawner = null;
@@ -84,6 +83,8 @@ namespace CluckmechCoop
         internal static void CombatStarted(刷怪器 spawner)
         {
             if (RunSaveRepair.AtMainMenu) return;
+            if (SceneLifecycle.Current == null) SceneLifecycle.Enter(SceneManager.GetActiveScene().handle);
+            if (!SceneLifecycle.Current.BeginCombat()) return;
             Spawner = spawner; InCombat = true; Combat.Begin(spawner); CharacterBoons.Begin(); WealthEncounter.Begin(spawner);
             StratagemWorld.Begin();
             if (OtherworldRegistry.Enabled) { OtherworldWorld.Begin(); KamuiWorld.Restore(); }
@@ -98,10 +99,12 @@ namespace CluckmechCoop
             Steam联机管理器.事件_玩家控件创建.RemoveListener(Network.PlayerCreated);
             Steam联机管理器.事件_玩家离开.RemoveListener(Network.Disconnect);
             SceneManager.sceneLoaded -= Loaded;
-            Difficulty.Reset(); patches?.UnpatchSelf();
+            SceneLifecycle.Leave();
+            Network?.Shutdown();
+            patches?.UnpatchSelf();
             NativeUi.ReleaseTransferSkin();
             CarryCapacity.Release();
-            KamuiWorld.Clear();OtherworldWorld.Clear();OtherworldAssets.Release();
+            OtherworldAssets.Release();
         }
         internal static 总结脚本 Summary => summary;
         internal static dw单位库 Units { get { if (units == null) units = UnityEngine.Object.FindObjectOfType<dw单位库>(); return units; } }

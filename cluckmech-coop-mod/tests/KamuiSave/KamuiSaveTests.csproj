@@ -4,13 +4,12 @@
     <Managed>$(GameDir)/Cluckmech Oasis_Data/Managed</Managed>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../src/KamuiSaveValidation.cs"/><Compile Include="../../src/OtherworldCatalog.cs"/><Compile Include="../../src/Rules.cs"/><Compile Include="Program.cs"/><Compile Include="StorageHarness.cs"/><Compile Include="$(BaseIntermediateOutputPath)StorageMethods.g.cs"/>
+    <Compile Include="../../src/KamuiSaveValidation.cs"/><Compile Include="../../src/OtherworldDataValidation.cs"/><Compile Include="../../src/OtherworldCatalog.cs"/><Compile Include="../../src/Rules.cs"/><Compile Include="../../src/ExpansionRules.cs"/><Compile Include="../../src/StratagemRules.cs"/><Compile Include="../../src/ModuleSettings.cs"/>
+    <Compile Include="../../src/ModulePreferences.cs"/><Compile Include="../../src/ModuleRunState.cs"/><Compile Include="../../src/ModuleSaveStore.cs"/>
+    <Compile Include="Program.cs"/><Compile Include="StorageHarness.cs"/><Compile Include="ModuleStateHarness.cs"/><Compile Include="LifecycleHarness.cs"/>
     <Reference Include="Game"><HintPath>$(Managed)/Assembly-CSharp.dll</HintPath></Reference>
     <Reference Include="UnityEngine"><HintPath>$(Managed)/UnityEngine.dll</HintPath></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)/UnityEngine.CoreModule.dll</HintPath></Reference>
     <Reference Include="Newtonsoft.Json"><HintPath>$(Managed)/Newtonsoft.Json.dll</HintPath></Reference>
   </ItemGroup>
-  <Target Name="ExtractStorageMethods" BeforeTargets="CoreCompile">
-    <Exec Command="pwsh -NoProfile -File &quot;$(MSBuildProjectDirectory)/ExtractStorageMethods.ps1&quot; -OutputPath &quot;$(MSBuildProjectDirectory)/$(BaseIntermediateOutputPath)StorageMethods.g.cs&quot;" />
-  </Target>
 </Project>

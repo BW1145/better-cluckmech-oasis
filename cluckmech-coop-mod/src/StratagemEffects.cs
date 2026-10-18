@@ -22,10 +22,11 @@ namespace CluckmechCoop
         }
         private static IEnumerator WaitForUnit(StratagemEffectMessage message)
         {
+            var scene=SceneLifecycle.Current;
             string token=Plugin.Combat.Token;
             float until=Time.time+2;
-            while(Plugin.InCombat&&token==Plugin.Combat.Token&&Time.time<until&&!StratagemUnit.TryFind(message.Root,out _))yield return null;
-            if(Plugin.InCombat&&token==Plugin.Combat.Token&&StratagemUnit.TryFind(message.Root,out _))PlayReady(message);
+            while(SceneLifecycle.IsCurrent(scene)&&Plugin.InCombat&&token==Plugin.Combat.Token&&Time.time<until&&!StratagemUnit.TryFind(message.Root,out _))yield return null;
+            if(SceneLifecycle.IsCurrent(scene)&&Plugin.InCombat&&token==Plugin.Combat.Token&&StratagemUnit.TryFind(message.Root,out _))PlayReady(message);
         }
         private static void PlayReady(StratagemEffectMessage message,StratagemUnit localRoot=null)
         {
