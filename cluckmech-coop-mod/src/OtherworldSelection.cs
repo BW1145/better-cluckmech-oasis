@@ -170,7 +170,7 @@ namespace CluckmechCoop
                 else if(text.name=="角色定位")text.text=perlica?"电磁轰击与战备调度":"虚化突袭与神威空间";
                 else if(text.name=="技能名字")text.text=title++==0?(perlica?"普通攻击·电磁弹":"普通攻击·苦无"): (perlica?"主动技能·协议Ω":"主动技能·神威");
                 else if(text.name=="技能描述")text.text=description++==0?(perlica?"发射电磁弹攻击敌人":"向瞄准方向投掷苦无"):
-                    perlica?"雷击指定区域，造成攻击力×12伤害并麻痹5秒；冷却8秒":"短按虚化加速，长按冲刺并将沿途敌人带入神威空间；空间内按右键返回";
+                    perlica?OtherworldCatalog.PerlicaSkillDescription:OtherworldCatalog.ObitoSkillDescription;
                 else if(text.text=="500")text.text=hero.Health.ToString("0");
                 else if(text.text=="20")text.text=hero.Attack.ToString("0");
                 else if(text.text=="4")text.text=hero.Speed.ToString("0.#");
@@ -218,7 +218,7 @@ namespace CluckmechCoop
                     if(text.name=="技能1名字")text.text=perlica?"普通攻击·电磁弹":"普通攻击·苦无";
                     else if(text.name=="技能1描述")text.text=perlica?"发射电磁弹攻击敌人":"向瞄准方向投掷苦无";
                     else if(text.name=="技能2名字")text.text=perlica?"主动技能·协议Ω":"主动技能·神威";
-                    else if(text.name=="技能2描述")text.text=perlica?"雷击指定区域，造成攻击力×12伤害并麻痹5秒；冷却8秒":"短按虚化加速，长按冲刺并将沿途敌人带入神威空间；空间内按右键返回";
+                    else if(text.name=="技能2描述")text.text=perlica?OtherworldCatalog.PerlicaSkillDescription:OtherworldCatalog.ObitoSkillDescription;
                     else continue;
                     int row=text.name=="技能1名字"?0:text.name=="技能1描述"?1:text.name=="技能2名字"?2:3;
                     var rect=text.rectTransform;rect.anchorMin=rect.anchorMax=rect.pivot=new Vector2(0,1);

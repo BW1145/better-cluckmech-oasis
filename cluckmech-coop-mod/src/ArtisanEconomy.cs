@@ -105,16 +105,16 @@ namespace CluckmechCoop
         private void Refresh()
         {
             var progress=ModuleSettings.LocalProgress;
-            string line="C级返款50%　B级返款20%";
+            string line="C级返还50%　B级返还20%";
             int slot=Plugin.Summary.当前选中的背包id;
             if(progress.ArtisanPaid>0 && slot>=0 && slot<Plugin.Summary.当前拥有炮台.Count)
             {
                 int tier=Plugin.Units.获取单位单元(Plugin.Summary.当前拥有炮台[slot].炮台id).单位等级;
-                line="本次支付"+progress.ArtisanPaid+"，预计返款"+ArtisanEconomy.Refund(progress.ArtisanPaid,tier);
+                line="本次支付"+progress.ArtisanPaid+"金币，预计返还"+ArtisanEconomy.Refund(progress.ArtisanPaid,tier)+"金币";
             }
             pending.text=line;pending.gameObject.SetActive(progress.ArtisanPaid>0);
             details.transform.parent.gameObject.SetActive(progress.ArtisanPaid==0);
-            details.text=line+"\n强化净花费 "+progress.ArtisanSpend+"／"+PlayerProgress.ArtisanThreshold+"　"+LastReceipt;
+            details.text=line+"\n强化净花费（金币） "+progress.ArtisanSpend+"／"+PlayerProgress.ArtisanThreshold+"　"+LastReceipt;
             benefit.GetComponentInChildren<Text>().text="自选强化　剩余"+progress.ArtisanCredits+"次";
             benefit.interactable=progress.ArtisanCredits>0 && progress.ArtisanPaid==0;
         }

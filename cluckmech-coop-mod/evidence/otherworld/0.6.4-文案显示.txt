@@ -1,0 +1,26 @@
+TALENT 26006 rect=(423.84, 81.00) preferred=81 font=24 fit=False content=神威空间内部署鸡械消耗0动力，放置冷却缩短50%。空间内所属鸡械最大生命×2、攻击力×1.5。
+TALENT 26008 rect=(423.84, 138.00) preferred=138 font=24 fit=False content=虚化时长翻倍。每次被虚化躲过的敌方攻击，将其伤害的50%转为储能。
+虚化结束时向瞄准方向释放螺旋火焰，造成攻击力×30＋储能的伤害；随后3秒普攻伤害×3。
+TALENT 26001 rect=(423.84, 166.50) preferred=166.5 font=24 fit=False content=本人及所属鸡械的麻痹效果提高100%，麻痹附带25%基础脆弱，并随全局元素影响增强。
+研究每级还需10、20、30……名受本人或所属鸡械麻痹的敌人死亡；每级全局元素影响提高10%。
+TALENT 26002 rect=(423.84, 166.50) preferred=166.5 font=24 fit=False content=普攻伤害×3、射程增加2格。每第四次普攻追加闪链，最多命中6名敌人，每名受到单发普攻400%的伤害。
+闪链每命中一名敌人，右键冷却减少0.5秒，每条最多减少2秒；本局每获得一次鸡械强化，普攻成长倍率增加5%。
+FIT 异界角色 preferred=265.5 available=554
+FIT 倍速 preferred=186 available=554
+FIT 更好的角色右键强化 preferred=464.25 available=554
+FIT 基地车后备隐藏能源 preferred=146.25 available=554
+FIT 音乐扩展 preferred=265.5 available=554
+FIT 强化成长 preferred=543.75 available=554
+FIT 商店扩展 preferred=345 available=554
+FIT 强化远征 preferred=225.75 available=554
+FIT 队友转交 preferred=106.5 available=554
+FIT 跳过开屏 preferred=106.5 available=554
+OVER 地狱潜兵战备鸡械 preferred=663 available=554
+FIT 战备协同 preferred=305.25 available=554
+FIT 财不露白 preferred=186 available=554
+FIT 原版运行修复 preferred=186 available=554
+COPY064 COMPLETE
+FIT 地狱潜兵战备鸡械 preferred=543.75 available=554
+COPY064 COMPLETE
+FIT 地狱潜兵战备鸡械 preferred=543.75 available=554
+COPY064 COMPLETE

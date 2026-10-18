@@ -110,14 +110,14 @@ namespace CluckmechCoop
             else if (transfer.Kind == "machine")
             {
                 if (transfer.Index < 0 || transfer.Index >= source.Machines.Count || !SameMachine(source.Machines[transfer.Index], transfer.Expected))
-                    result.Error = "背包已变化，请重新选择机械";
+                    result.Error = "背包已变化，请重新选择鸡械";
                 else
                 {
                     target.Machines.Add(source.Machines[transfer.Index].Copy());
                     source.Machines.RemoveAt(transfer.Index);
                 }
             }
-            else result.Error = "请选择金币或机械";
+            else result.Error = "请选择金币或鸡械";
             return result;
         }
     }

@@ -89,7 +89,7 @@ namespace CluckmechCoop
             reward = NativeUi.Label(rect, "", 0, 12, 0, 60, 26);
             reward.rectTransform.anchorMin = new Vector2(0.3f, 1); reward.rectTransform.anchorMax = new Vector2(0.9f, 1); reward.rectTransform.sizeDelta = new Vector2(0, 60);
 
-            row.AddComponent<RuleTooltip>().Text = "原版敌人全部出完并消灭后，再出现一次；血量×2，攻击力×2。";
+            row.AddComponent<RuleTooltip>().Text = "清除本场全部敌人后，追加一轮相同敌群，最大生命×2、攻击力×2。";
         }
     }
     [HarmonyPatch(typeof(UI_设置界面), "Start")]

@@ -108,7 +108,7 @@ namespace CluckmechCoop
         {
             if (current == null || current.coupon == null) return;
             current.coupon.interactable = !current.State.TicketBought && Plugin.Summary.当前金钱数 >= 30;
-            current.coupons.text = "剩余刷新券：" + ModuleSettings.LocalProgress.Coupons;
+            current.coupons.text = "剩余工匠刷新次数：" + ModuleSettings.LocalProgress.Coupons;
             current.coupon.GetComponentInChildren<Text>().text = current.State.TicketBought ? "已购买" : "2次工匠刷新  30金币";
         }
         private void OnDestroy() { if (current == this) current = null; }

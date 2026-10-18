@@ -72,9 +72,9 @@ namespace CluckmechCoop
             NativeUi.Label(body,"每30次付费刷新获得一次自选鸡械；每消费800金币获得一次轮盘。",10,54,972,42,23);
             var pick=NativeUi.TransferAction(body,"自选鸡械　剩余"+p.ShopPicks+"次",10,118,460,68,Pick);pick.interactable=p.ShopPicks>0;
             var spin=NativeUi.TransferAction(body,"奖励轮盘　剩余"+p.ShopSpins+"次",500,118,460,68,Wheel);spin.interactable=p.ShopSpins>0;
-            NativeUi.Label(body,"奖励范围：本店当前允许出现且已解锁的鸡械。\n进度余数与领取机会本局跨店保留。",10,208,972,80,24);
+            NativeUi.Label(body,"奖励范围：本店当前允许出现且已解锁的鸡械。\n消费与刷新进度、未领取机会本局跨店保留。",10,208,972,80,24);
             NativeUi.Label(body,"随机鸡械4台　40%\n工匠刷新10次　30%\n金币500　25%\n自选鸡械1次　5%",10,324,972,200,27);
-            NativeUi.Label(body,p.ShopReceipt??"在本店购买或付费刷新可积累回馈。",10,548,972,142,23);
+            NativeUi.Label(body,p.ShopReceipt??"购买鸡械、购买工匠刷新次数和付费刷新均计入商店消费。",10,548,972,142,23);
         }
         private void Pick()
         {
@@ -110,11 +110,11 @@ namespace CluckmechCoop
         private void Wheel()
         {
             Clear();NativeUi.TransferAction(body,"返回",10,0,140,48,Home);
-            NativeUi.Label(body,"随机鸡械4台40%　刷新10次30%　500金币25%　自选鸡械5%",164,0,806,54,23);
+            NativeUi.Label(body,"随机鸡械4台40%　工匠刷新10次30%　500金币25%　自选鸡械5%",164,0,806,54,23);
             var wheelRect=NativeUi.Rect(body,"轮盘",246,78,500,500);
             wheelRect.pivot=new Vector2(.5f,.5f);wheelRect.anchoredPosition=new Vector2(496,-328);
             var wheel=wheelRect.gameObject.AddComponent<ShopWheelGraphic>();wheel.raycastTarget=false;
-            string[] labels={"鸡械×4\n40%","刷新×10\n30%","500金币\n25%","自选鸡械\n5%"};
+            string[] labels={"鸡械×4\n40%","工匠刷新×10\n30%","500金币\n25%","自选鸡械\n5%"};
             float[] angles={72,198,297,351};
             for(int i=0;i<4;i++)
             {

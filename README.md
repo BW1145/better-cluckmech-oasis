@@ -15,7 +15,7 @@
 | 财不露白 | 每位携带超过2000金币的玩家为下场战斗招来12只强敌，分3批出现。 |
 | 队友转交 | 向队友转交金币和指定鸡械，保留强化内容及上限。 |
 | 跳过开屏 | 启动时跳过商标展示，主菜单可开关，下次启动生效。 |
-| 地狱潜兵战备鸡械 | 七台新鸡械与33项专属强化，接入原版商店、奖励、工匠及携带卡槽。 |
+| 地狱潜兵战备鸡械 | 七台新鸡械与30项专属强化，接入原版商店、奖励、工匠及携带卡槽。 |
 | 异界角色 | 佩丽卡与宇智波带土，各四种初始天赋及分支成长；带土拥有本局跨关保留的独立神威空间。 |
 | 原版运行修复 | 修复随从动画、伤害通知、火山气泡及场景界面错误；开关下次启动生效。 |
 
@@ -50,6 +50,6 @@ python ./ValidateStratagemAssets.py
 
 退出游戏后执行`./Install.ps1 -GameDir 游戏目录`安装完整包，并保留现有模块设置。其他行为检查和资源检查见[开发记录](cluckmech-coop-mod/继续开发.md)及[验证记录](cluckmech-coop-mod/验证记录.md)。
 
-主插件构建使用运行目录的九份OGG；音乐制作脚本另需Python、FFmpeg、FluidSynth及SoundFont。FFmpeg和FluidSynth从系统PATH读取，也可分别用 `FFMPEG`、`FLUIDSYNTH` 环境变量指定；`SOUNDFONT` 指定音色库，默认使用音乐目录内的 `tools/GeneralUser-GS.sf2`。主菜单音乐通过 `python cluckmech-coop-mod/PrepareMenuMusic.py "源音频文件"` 制作。参考清单的路径相对于 `cluckmech-music` 目录。音乐响度在离线阶段校准，游戏运行时直接播放。
+主插件构建使用运行目录的10份音乐OGG；音乐制作脚本另需Python、FFmpeg、FluidSynth及SoundFont。FFmpeg和FluidSynth从系统PATH读取，也可分别用 `FFMPEG`、`FLUIDSYNTH` 环境变量指定；`SOUNDFONT` 指定音色库，默认使用音乐目录内的 `tools/GeneralUser-GS.sf2`。主菜单音乐通过 `python cluckmech-coop-mod/PrepareMenuMusic.py "源音频文件"` 制作。参考清单的路径相对于 `cluckmech-music` 目录。音乐响度在离线阶段校准，游戏运行时直接播放。
 
-战备PNG图集嵌入插件，十份OGG音效位于插件旁的`StratagemSounds`。素材检查使用Pillow，音效制作脚本`art/MakeStratagemSounds.py`使用NumPy和SoundFile。制作参考与资源说明见[战备美术](cluckmech-coop-mod/art/README.md)。
+战备PNG图集嵌入插件，4份OGG战备音效位于插件旁的`StratagemSounds`，1份神威音效位于`OtherworldSounds`。素材检查使用Pillow，音效制作脚本`art/MakeStratagemSounds.py`使用NumPy和SoundFile。制作参考与资源说明见[战备美术](cluckmech-coop-mod/art/README.md)。

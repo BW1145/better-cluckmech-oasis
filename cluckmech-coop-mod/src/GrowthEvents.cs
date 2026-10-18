@@ -17,7 +17,7 @@ namespace CluckmechCoop
         internal static readonly GrowthEvent[] All = {
             new GrowthEvent { Id=88, Layout=50, Name="退休工程狮",
                 Story="退休的工程狮正把调试券分成两叠：\n“这叠十张，拿了就能用。那只封好的工具袋嘛，里面可能有二十张，也可能全是过期收据。你挑一样吧！”",
-                Choice="收下十张调试券", Alternative="试试封好的工具袋", Reward="获得10次工匠强化刷新", AlternativeReward="50%获得20次刷新，50%获得0次",
+                Choice="收下十张调试券", Alternative="试试封好的工具袋", Reward="获得10次工匠刷新", AlternativeReward="50%获得20次刷新，50%获得0次",
                 Result="你数好十张调试券，装进工具箱。", AlternativeResult="你打开工具袋，仔细翻找了一遍。" },
             new GrowthEvent { Id=89, Layout=10, Name="多带一件",
                 Story="工程狮敲了敲基地车后面的空支架：\n“这么大个地方，空着多可惜！”\n他拿来一套折叠挂架，又指了指收购箱：“不装的话，这套零件也能卖一百五。”",
@@ -137,7 +137,7 @@ namespace CluckmechCoop
                 Plugin.Log("[Growth] Event claimed: "+entry.Id+"; choice "+choice+"; lottery "+roll);
             }
             string reward=choice==0?entry.Reward:entry.AlternativeReward;
-            if(entry.Id==88 && choice==1)reward="获得"+roll+"次工匠强化刷新";
+            if(entry.Id==88 && choice==1)reward="获得"+roll+"次工匠刷新";
             resultText.text=(choice==0?entry.Result:entry.AlternativeResult)+"\n\n<color=#00FF02>"+reward+"。</color>";
             upper.SetActive(false);lower.SetActive(false);result.SetActive(true);
         }
