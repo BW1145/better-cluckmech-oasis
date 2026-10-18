@@ -30,7 +30,7 @@ namespace CluckmechCoop
         {
             bool ultimate=actor.Run.Has(26101),marked=actor.MarkUntil>Time.time&&(actor.Mark-point).sqrMagnitude<=3.5f*3.5f;
             float radius=(ultimate?3.5f:1.8f)*(marked?1.5f:1);
-            float damage=actor.Attack.当前攻击力*(ultimate?80:12)*(actor.Run.Initial==26004?4:1);
+            float damage=actor.Attack.当前攻击力*(ultimate?80:12)*(actor.Run.Initial==26004?2:1);
             if(actor.Run.Initial==26004)
             {
                 var attacks=new List<float>();
@@ -40,16 +40,22 @@ namespace CluckmechCoop
                 for(int i=0;i<Mathf.Min(5,attacks.Count);i++)damage+=attacks[i]*(actor.Run.Has(26111)?4:2);
                 actor.Mark=point;actor.MarkUntil=Time.time+8;
             }
-            var hit=Bombard(actor,point,radius,damage,ultimate);
-            if(hit&&actor.Run.Has(26103))RefundPower(actor,2);
+            Bombard(actor,point,radius,damage,ultimate,true);
             if(actor.Run.Initial==26003)OtherworldDeployment.Dispatch(actor,point,actor.Run.Has(26109)?2:1);
             if(marked&&actor.Run.Has(26112))actor.StartCoroutine(DelayedBombard(actor,point,radius,damage,ultimate));
         }
         private static IEnumerator DelayedBombard(OtherworldActor actor,Vector2 point,float radius,float damage,bool ultimate)
         {yield return new WaitForSeconds(1);if(actor!=null)Bombard(actor,point,radius,damage,ultimate);}
-        private static bool Bombard(OtherworldActor actor,Vector2 point,float radius,float damage,bool ultimate)
+        private static void Bombard(OtherworldActor actor,Vector2 point,float radius,float damage,bool ultimate,bool rewards=false)
         {
             Visual(actor,ultimate?3:2,point,.5f,radius);OtherworldNetwork.Effect(actor,ultimate?3:2,point,.5f,radius);
+            if(ultimate){actor.StartCoroutine(OrbitalImpact(actor,point,radius,damage,rewards,actor.Space));return;}
+            ApplyBombard(actor,point,radius,damage,rewards);
+        }
+        private static IEnumerator OrbitalImpact(OtherworldActor actor,Vector2 point,float radius,float damage,bool rewards,int space)
+        {yield return new WaitForSeconds(.14f);if(actor!=null&&actor.Space==space)ApplyBombard(actor,point,radius,damage,rewards);}
+        private static void ApplyBombard(OtherworldActor actor,Vector2 point,float radius,float damage,bool rewards)
+        {
             var targets=OtherworldWorld.Near(actor.gameObject,point,radius);
             var detailed=actor.GetComponent<模块_攻击详细属性>();
             Vector4 shock=detailed.状态加成列表[(int)攻击类型与状态数据库.状态枚举.感电].当前属性效果;
@@ -59,7 +65,7 @@ namespace CluckmechCoop
                 Status(target,actor.gameObject,攻击类型与状态数据库.状态枚举.感电,5,shock);
                 if(actor.Run.Has(26104)&&!target.Health.免疫击退)actor.StartCoroutine(Pull(target,point));
             }
-            return targets.Count>0;
+            if(rewards&&targets.Count>0&&actor.Run.Has(26103))RefundPower(actor,2);
         }
         private static IEnumerator Pull(OtherworldUnit unit,Vector2 point)
         {
@@ -139,11 +145,16 @@ namespace CluckmechCoop
         {
             int viewer=OtherworldWorld.Space(OtherworldActions.Player(Plugin.Role)?.gameObject);
             if(actor.Space!=viewer)return;
-            if(effect==2||effect==3){actor.CastPose();OtherworldFx.Play(effect==2?0:1,point,amount*2,duration);}
+            if(effect==2||effect==3){actor.CastPose();OtherworldVfx.Strike(actor,point,amount,effect==3);}
             else if(effect==4||effect==5)
             {
-                var fx=OtherworldFx.Play(effect==4?5:6,point,4,duration);
-                var direction=actor.Aim-point;fx.transform.rotation=Quaternion.Euler(0,0,Mathf.Atan2(direction.y,direction.x)*Mathf.Rad2Deg);
+                var direction=actor.Aim-point;
+                if(effect==5)OtherworldVfx.Fire(actor,point,direction,6);
+                else
+                {
+                    var fx=OtherworldFx.Play(5,point,4,duration);
+                    fx.transform.rotation=Quaternion.Euler(0,0,Mathf.Atan2(direction.y,direction.x)*Mathf.Rad2Deg);
+                }
             }
         }
     }
@@ -163,7 +174,7 @@ namespace CluckmechCoop
             if(fx==null){var created=new GameObject("OtherworldEffect");fx=created.AddComponent<OtherworldFx>();fx.renderer=created.AddComponent<SpriteRenderer>();}
             var obj=fx.gameObject;obj.transform.position=point;obj.transform.rotation=Quaternion.identity;obj.SetActive(true);
             if(!sequences.TryGetValue(row,out var frames))
-            {frames=new Sprite[8];for(int i=0;i<8;i++)frames[i]=OtherworldAssets.Named("effect."+row+"."+i);sequences[row]=frames;}
+            {frames=new Sprite[8];for(int i=0;i<8;i++)frames[i]=OtherworldAssets.Named(row==2?"electric.chain."+i:"effect."+row+"."+i);sequences[row]=frames;}
             fx.frames=frames;fx.row=row;fx.current=-1;fx.time=0;fx.renderer.sprite=frames[0];
             var body=OtherworldActions.Player(Plugin.Role)?.Body;
             if(body!=null){fx.renderer.sortingLayerID=body.sortingLayerID;fx.renderer.sortingOrder=body.sortingOrder+2;}
@@ -172,6 +183,8 @@ namespace CluckmechCoop
         internal static void Beam(Vector2 from,Vector2 to,float duration)
         {
             var fx=Play(2,(from+to)*.5f,Vector2.Distance(from,to),duration);
+            var bounds=OtherworldAssets.VisibleBounds(fx.frames[0]);
+            fx.transform.localScale=new Vector3(Vector2.Distance(from,to)/bounds.size.x,.3f/bounds.size.y,1);
             fx.transform.rotation=Quaternion.Euler(0,0,Mathf.Atan2(to.y-from.y,to.x-from.x)*Mathf.Rad2Deg);
         }
         private void Update()

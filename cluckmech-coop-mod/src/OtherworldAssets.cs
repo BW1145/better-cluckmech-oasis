@@ -7,11 +7,12 @@ namespace CluckmechCoop
 {
     internal static class OtherworldAssets
     {
-        private static Texture2D atlas,space;
+        private static Texture2D atlas,space,vfx;
         private static Sprite ground;
         private static readonly Texture2D[] faithful=new Texture2D[2];
         private static readonly Dictionary<string,int[]>[] faithfulRegions=new Dictionary<string,int[]>[2];
         private static Dictionary<string,int[]> regions;
+        private static Dictionary<string,int[]> vfxRegions;
         private static readonly Dictionary<string,Sprite> sprites=new Dictionary<string,Sprite>();
         private static readonly Dictionary<Sprite,Bounds> visible=new Dictionary<Sprite,Bounds>();
         private static Texture2D Load(string file)
@@ -27,17 +28,26 @@ namespace CluckmechCoop
         internal static Sprite Named(string key)
         {
             if(sprites.TryGetValue(key,out var sprite))return sprite;
-            if(atlas==null)
+            bool effect=key.StartsWith("electric.")||key.StartsWith("spiral.")||key=="orbital.block";
+            if(effect&&vfx==null)
+            {
+                vfx=Load("vfx.png");
+                using(var stream=typeof(Plugin).Assembly.GetManifestResourceStream("CluckmechCoop.OtherworldAssets.vfx.json"))
+                using(var reader=new StreamReader(stream,System.Text.Encoding.UTF8))vfxRegions=JsonConvert.DeserializeObject<Dictionary<string,int[]>>(reader.ReadToEnd());
+            }
+            if(!effect&&atlas==null)
             {
                 atlas=Load("characters.png");
                 using(var stream=typeof(Plugin).Assembly.GetManifestResourceStream("CluckmechCoop.OtherworldAssets.characters.json"))
                 using(var reader=new StreamReader(stream,System.Text.Encoding.UTF8))regions=JsonConvert.DeserializeObject<Dictionary<string,int[]>>(reader.ReadToEnd());
             }
-            var r=regions[key];
+            var texture=effect?vfx:atlas;var r=(effect?vfxRegions:regions)[key];
             var pivot=key.StartsWith("hero.")||key.StartsWith("anim.")?new Vector2(.5f,.0625f):new Vector2(.5f,.5f);
             if(key.StartsWith("effect.0.")||key.StartsWith("effect.1."))pivot=new Vector2(.5f,.1f);
             if(key.StartsWith("effect.5.")||key.StartsWith("effect.6."))pivot=new Vector2(.1f,.5f);
-            sprite=Sprite.Create(atlas,new Rect(r[0],atlas.height-r[1]-r[3],r[2],r[3]),pivot,32,0,SpriteMeshType.FullRect);
+            if(key.StartsWith("electric.strike."))pivot=new Vector2(.5f,.09f);
+            if(key=="orbital.block")pivot=new Vector2(.5f,.0625f);
+            sprite=Sprite.Create(texture,new Rect(r[0],texture.height-r[1]-r[3],r[2],r[3]),pivot,32,0,SpriteMeshType.FullRect);
             visible[sprite]=new Bounds(new Vector3(((r[4]+r[6])*.5f-r[2]*pivot.x)/32, (r[3]-(r[5]+r[7])*.5f-r[3]*pivot.y)/32),new Vector3((r[6]-r[4])/32f,(r[7]-r[5])/32f));
             sprites.Add(key,sprite);return sprite;
         }
@@ -110,6 +120,7 @@ namespace CluckmechCoop
             foreach(var sprite in sprites.Values)Object.Destroy(sprite);
             sprites.Clear();visible.Clear();if(ground!=null)Object.Destroy(ground);
             if(atlas!=null)Object.Destroy(atlas);if(space!=null)Object.Destroy(space);
+            if(vfx!=null)Object.Destroy(vfx);vfx=null;vfxRegions=null;
             for(int i=0;i<faithful.Length;i++){if(faithful[i]!=null)Object.Destroy(faithful[i]);faithful[i]=null;faithfulRegions[i]=null;}
             atlas=space=null;ground=null;regions=null;
         }

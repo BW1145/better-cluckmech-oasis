@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
@@ -12,6 +13,30 @@ namespace CluckmechCoop
         private static readonly MethodInfo add=AccessTools.Method(typeof(PolyNavMap),"AddObstacle");
         private static readonly FieldInfo pending=AccessTools.Field(typeof(PolyNavMap),"regenerateFlag");
         private static readonly HashSet<PolyNavMap> dirty=new HashSet<PolyNavMap>();
+        internal static bool PrivateMap(PolyNavMap map)
+        {foreach(var room in KamuiWorld.Rooms.Values)if(room.Map==map||room.AirMap==map)return true;return false;}
+        internal static bool Finite(Vector2 point)=>!float.IsNaN(point.x)&&!float.IsInfinity(point.x)&&!float.IsNaN(point.y)&&!float.IsInfinity(point.y);
+        internal static bool TryPoint(PolyNavMap map,Vector2 desired,out Vector2 point,float maximumCorrection=float.PositiveInfinity)
+        {
+            point=desired;if(map==null||!Finite(desired))return false;
+            if(map.PointIsValid(desired))return true;
+            var candidate=map.GetCloserEdgePoint(desired);
+            if(!Finite(candidate)||!map.PointIsValid(candidate)||(candidate-desired).sqrMagnitude>maximumCorrection*maximumCorrection)return false;
+            point=candidate;return true;
+        }
+        internal static bool TryDash(PolyNavMap map,Vector2 start,Vector2 direction,float distance,out Vector2 end)
+        {
+            end=start;if(map==null||!Finite(start)||!Finite(direction)||!map.PointIsValid(start))return false;
+            var desired=start+direction.normalized*distance;
+            if(map.PointIsValid(desired)&&map.CheckLOS(start,desired)){end=desired;return true;}
+            float low=0,high=1;
+            for(int i=0;i<9;i++)
+            {
+                float middle=(low+high)*.5f;var candidate=Vector2.Lerp(start,desired,middle);
+                if(map.PointIsValid(candidate)&&map.CheckLOS(start,candidate))low=middle;else high=middle;
+            }
+            end=Vector2.Lerp(start,desired,low);return (end-start).sqrMagnitude>.0001f;
+        }
         internal static void Transfer(OtherworldUnit unit,int from,int to)
         {
             if(from==to||KamuiWorld.Navigation==null)return;
@@ -32,6 +57,19 @@ namespace CluckmechCoop
             dirty.Clear();
         }
         internal static void Clear()=>dirty.Clear();
+    }
+    [HarmonyPatch(typeof(PolyNavAgent),"SetDestination",new[]{typeof(Vector2),typeof(Action<bool>)})]
+    internal static class KamuiValidDestination
+    {
+        private static void Prefix(PolyNavAgent __instance,ref Vector2 goal,out bool? __state)
+        {
+            __state=null;if(!KamuiNavigation.PrivateMap(__instance.map))return;
+            if(KamuiNavigation.TryPoint(__instance.map,goal,out var corrected)){goal=corrected;return;}
+            // Let native OnInvalid finish the request and callbacks once, without recursive projection.
+            __state=__instance.closerPointOnInvalid;__instance.closerPointOnInvalid=false;
+        }
+        private static Exception Finalizer(PolyNavAgent __instance,bool? __state,Exception __exception)
+        {if(__state.HasValue)__instance.closerPointOnInvalid=__state.Value;return __exception;}
     }
     [HarmonyPatch(typeof(PolyNavMap),"MonitorObstacle")]
     internal static class KamuiObstacleIsolation

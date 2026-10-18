@@ -1,0 +1,19 @@
+PASS native outside-edge projection returns a valid private-room point
+PASS dash stops before an intervening building within its original distance
+PASS native failed-path callback reports false
+PASS fully blocked map finishes once and restores native projection setting
+PASS failed transfer preserves source position and realm membership
+PASS actual queued 100ms right-click stays a tap after 350ms main-thread stall
+INPUT phased=True
+NAV062 COMPLETE
+VFX062 COMPLETE E:\AI\Claude code\project\.tmp\otherworld-runtime\proof062-visual-075817
+PASS supplied Kamui clip decoded and registered in native audio group
+PASS main-world phase activation requests one sound
+PASS blocked destination-room validation preserves original position and realm
+PASS audio return probe enters existing room
+PASS space return and gifted phase do not request sound
+PASS overload stores three sequential charges
+PASS base overload strike uses double multiplier and spends one of three charges
+PASS orbital damage waits for falling block impact
+PASS ultimate lands at double multiplier and retains remaining charge
+FLOW062 COMPLETE

@@ -135,7 +135,7 @@ namespace CluckmechCoop
             }
             else if(message.Kind==11)
             {
-                if(message.Value==1)actor.ApplyPhase(message.Duration);
+                if(message.Value==1){actor.ApplyPhase(message.Duration);if(message.Amount>0)OtherworldAudio.Play(new Vector2(message.X,message.Y));}
                 else if(message.Value==7)actor.EndPhase(false);
                 else if(message.Value==6)actor.ClientDash(new Vector2(message.X,message.Y),message.Duration);
                 else OtherworldActions.Visual(actor,message.Value,new Vector2(message.X,message.Y),message.Duration,message.Amount);

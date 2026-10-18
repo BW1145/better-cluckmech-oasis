@@ -115,6 +115,7 @@ namespace CluckmechCoop
             OtherworldProgress.ReadNative(Plugin.Role);
             if(Plugin.Role==1)OtherworldProgress.ReadNative(2);
             if(!Active)return;
+            OtherworldAudio.Begin();
             foreach(var health in 世界事件系统.场上所有单位.ToArray())if(health!=null)Add(health);
         }
         internal static void Refresh(int role)
@@ -123,7 +124,7 @@ namespace CluckmechCoop
             var actor=OtherworldActions.Player(role);if(actor!=null)OtherworldDeployment.SpaceChanged(actor);
         }
         internal static void Remove(OtherworldUnit unit){KamuiWorld.Removed(unit);Units.Remove(unit.gameObject);}
-        internal static void Clear(){Units.Clear();}
+        internal static void Clear(){Units.Clear();OtherworldAudio.Clear();}
         internal static List<OtherworldUnit> Near(GameObject source,Vector2 point,float radius)
         {
             int space=Space(source);var result=new List<OtherworldUnit>();

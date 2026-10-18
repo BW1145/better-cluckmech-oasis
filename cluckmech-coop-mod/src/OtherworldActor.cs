@@ -39,7 +39,8 @@ namespace CluckmechCoop
         private Vector3 previous;
         private float castUntil,rechargeAt;
         private bool held,dashStarted,inputArmed,qualified;
-        private float inputStarted;
+        private double inputStarted;
+        private InputAction rightAction;
         private uint sequence;
         private Coroutine clientDash;
         private Text chargeLabel;
@@ -58,7 +59,7 @@ namespace CluckmechCoop
             Death=GetComponent<模块_玩家_死亡>();Movement=GetComponent<模块_移动属性>();
             playerMovement=GetComponent<模块_玩家_移动>();
             OtherworldProgress.ReadNative(Role);Run=OtherworldProgress.For(Role)??new OtherworldRun{Hero=Hero};
-            Charges=Run.Initial==26004?2:1;
+            Charges=MaximumCharges;
             OtherworldWorld.Add(Health);
             if(Run.Initial==26005)
             {
@@ -108,12 +109,13 @@ namespace CluckmechCoop
             {
                 if(inputArmed)
                 {
-                    QualifyHold();OtherworldNetwork.Command(this,Hero==12&&allowed&&Application.isFocused?0:2,++sequence,Aim);
+                    if(allowed&&Application.isFocused)QualifyHold(context.time);
+                    OtherworldNetwork.Command(this,Hero==12&&allowed&&Application.isFocused?0:2,++sequence,Aim);
                 }
-                inputArmed=false;return;
+                inputArmed=false;rightAction=null;return;
             }
             if(context.started&&allowed&&(Time.timeScale>0||Space!=0))
-            {inputArmed=true;qualified=false;inputStarted=Time.realtimeSinceStartup;if(Hero==13)OtherworldNetwork.Command(this,1,++sequence,Aim);}
+            {inputArmed=true;qualified=false;inputStarted=context.time;rightAction=context.action;if(Hero==13)OtherworldNetwork.Command(this,1,++sequence,Aim);}
         }
         internal void Execute(int action,Vector2 aim)
         {
@@ -145,12 +147,14 @@ namespace CluckmechCoop
         {Charges=charges;rechargeAt=Time.time+remaining;}
         internal float Remaining=>Charges>0?0:Mathf.Max(0,rechargeAt-Time.time);
         internal float RechargeRemaining=>Mathf.Max(0,rechargeAt-Time.time);
+        internal int MaximumCharges=>Run.Initial==26004?3:1;
         internal void BeginPhase(bool continueAction=false)
         {
             float seconds=1.5f*(Run.Initial==26008?2:1);
             PhaseUntil=Time.time+seconds;if(!continueAction){StoredDamage=0;Avoided.Clear();}
             Movement.运算移动速度();Health.运算无敌();
-            OtherworldNetwork.Effect(this,1,transform.position,seconds);
+            if(!continueAction)OtherworldAudio.Play(transform.position);
+            OtherworldNetwork.Effect(this,1,transform.position,seconds,continueAction?0:1);
         }
         internal void ApplyPhase(float seconds){PhaseUntil=Time.time+seconds;Movement.运算移动速度();Health.运算无敌();}
         internal void EndPhase(bool finish)
@@ -180,10 +184,11 @@ namespace CluckmechCoop
         {
             if(Health==null)return;
             var current=OtherworldProgress.For(Role);if(current!=null)Run=current;
-            if(inputArmed)QualifyHold();
+            if(inputArmed&&Time.timeScale<=0){inputArmed=false;rightAction=null;OtherworldNetwork.Command(this,2,++sequence,Aim);}
+            if(inputArmed&&rightAction!=null&&rightAction.IsPressed())QualifyHold(UnityEngine.InputSystem.LowLevel.InputState.currentTime);
             if(Plugin.Role!=2)
             {
-                int maximum=Run.Initial==26004?2:1;
+                int maximum=MaximumCharges;
                 if(Charges<maximum&&Time.time>=rechargeAt){Charges++;rechargeAt=Charges<maximum?Time.time+Cooldown:0;OtherworldNetwork.State(this);}
             }
             if(PhaseUntil>0&&Time.time>=PhaseUntil)
@@ -196,11 +201,11 @@ namespace CluckmechCoop
             {
                 bool visible=!Death.是否玩家死亡&&Health.当前生命值>0;
                 if(chargeLabel.enabled!=visible)chargeLabel.enabled=visible;
-                int seconds=Charges<2?Mathf.CeilToInt(RechargeRemaining):0;
+                int seconds=Charges<MaximumCharges?Mathf.CeilToInt(RechargeRemaining):0;
                 if(shownCharges!=Charges||shownRecharge!=seconds)
                 {
                     shownCharges=Charges;shownRecharge=seconds;
-                    chargeLabel.text=seconds>0?Charges+"/2  "+seconds+"s":Charges+"/2";
+                    chargeLabel.text=Charges+"/"+MaximumCharges+(seconds>0?"  "+seconds+"s":"");
                     chargeLabel.color=Charges>0?new Color(1,.85f,.3f):Color.gray;
                 }
             }
@@ -243,9 +248,9 @@ namespace CluckmechCoop
             if(Plugin.Role!=2)OtherworldActions.Normal(this,damage);
         }
         internal void CastPose()=>castUntil=Time.time+.4f;
-        private void QualifyHold()
+        private void QualifyHold(double now)
         {
-            if(Hero!=13||qualified||!Application.isFocused||Time.realtimeSinceStartup-inputStarted<.25f||Time.timeScale<=0)return;
+            if(Hero!=13||qualified||!Application.isFocused||!OtherworldMotion.LongPress(inputStarted,now)||Time.timeScale<=0)return;
             qualified=true;OtherworldNetwork.Command(this,4,++sequence,DashDirection);
         }
         internal void ClientDash(Vector2 end,float seconds)
@@ -259,8 +264,8 @@ namespace CluckmechCoop
         internal void CancelClientDash(){if(clientDash!=null)StopCoroutine(clientDash);clientDash=null;Dashing=false;}
         private void FixedUpdate(){if(Dashing&&TryGetComponent<Rigidbody2D>(out var body))body.velocity=Vector2.zero;}
         private void OnApplicationFocus(bool focused)
-        {if(!focused&&(held||inputArmed)){held=inputArmed=false;OtherworldNetwork.Command(this,2,++sequence,Aim);}}
-        private void OnDisable(){held=false;Avoided.Clear();if(PhaseUntil>0)EndPhase(false);}
+        {if(!focused&&(held||inputArmed)){held=inputArmed=false;rightAction=null;OtherworldNetwork.Command(this,2,++sequence,Aim);}}
+        private void OnDisable(){held=inputArmed=false;rightAction=null;CancelClientDash();Avoided.Clear();if(PhaseUntil>0)EndPhase(false);}
     }
 
     [HarmonyPatch(typeof(模块_玩家_技能),"按键触发_技能")]

@@ -43,7 +43,7 @@ namespace CluckmechCoop
         internal static PolyNavMap MapFor(OtherworldUnit unit,KamuiRoom room)
         {
             bool flying=unit.Health.单位类型==模块_基本属性.单位类型枚举.飞行单位;
-            return unit.Space==0?(flying?navigation.空中导航地图:navigation.地面导航地图):(flying?room.AirMap:room.Map);
+            return room==main?(flying?navigation.空中导航地图:navigation.地面导航地图):(flying?room.AirMap:room.Map);
         }
         internal static KamuiRoom Room(int space)=>space==0?main:Rooms.TryGetValue(space,out var room)?room:null;
         internal static KamuiRoom Ensure(int role)
@@ -61,7 +61,7 @@ namespace CluckmechCoop
             var renderer=ground.AddComponent<SpriteRenderer>();renderer.sprite=OtherworldAssets.Ground;renderer.sortingOrder=-20;
             ground.transform.localScale=new Vector3(.6f,1,1);
             room.Map=root.AddComponent<PolyNavMap>();room.Map.obstaclesMask=0;room.Map.autoRegenerateInterval=0;
-            room.Floor=new[]{center+new Vector2(-17.7f,-11.8f),center+new Vector2(-14.45f,11.6f),center+new Vector2(14.45f,11.6f),center+new Vector2(17.7f,-11.8f)};
+            room.Floor=new[]{center+new Vector2(-17.7f,-11.8f),center+new Vector2(17.7f,-11.8f),center+new Vector2(14.45f,11.6f),center+new Vector2(-14.45f,11.6f)};
             room.Map.SetCustomMap(new PolyNavMap.PolyMap(new PolyNavMap.Polygon(room.Floor)));
             var air=new GameObject("AirNavigation");air.transform.SetParent(root.transform,false);
             room.AirMap=air.AddComponent<PolyNavMap>();room.AirMap.obstaclesMask=0;room.AirMap.autoRegenerateInterval=0;
@@ -133,10 +133,12 @@ namespace CluckmechCoop
         {if(actor.Space==0&&Plugin.Spawner!=null&&Plugin.Spawner.关卡状态!=刷怪器.关卡状态枚举.结束&&Plugin.Spawner.关卡状态!=刷怪器.关卡状态枚举.无)actor.StartCoroutine(DashRoutine(actor,direction));}
         private static IEnumerator DashRoutine(OtherworldActor actor,Vector2 direction)
         {
-            direction=actor.BeginDash(direction);var start=(Vector2)actor.transform.position;
-            var end=start+direction*(actor.Run.Has(26114)?5:3);
+            var start=(Vector2)actor.transform.position;
             if(navigation==null)navigation=Object.FindObjectOfType<导航管理器>();
-            if(!navigation.地面导航地图.PointIsValid(end))end=navigation.地面导航地图.GetCloserEdgePoint(end);
+            if(navigation==null||!KamuiNavigation.TryDash(navigation.地面导航地图,start,direction,actor.Run.Has(26114)?5:3,out var end))yield break;
+            actor.BeginDash(direction);
+            try
+            {
             var captured=new HashSet<OtherworldUnit>();Vector2 previous=start;
             OtherworldNetwork.Effect(actor,6,end,.35f);
             for(float elapsed=0;elapsed<.35f;elapsed+=Time.deltaTime)
@@ -148,6 +150,7 @@ namespace CluckmechCoop
             }
             actor.transform.position=end;Sweep(actor,previous,end,captured);actor.ReturnPoint=end;
             var room=Ensure(actor.Role);Vector2 destination=room.Center;
+            if(!Transfer(OtherworldWorld.Unit(actor.gameObject),actor.Role+1,destination))yield break;
             foreach(var unit in captured.ToArray())
             {
                 if(unit==null||unit.Health.当前生命值<=0)continue;
@@ -157,13 +160,15 @@ namespace CluckmechCoop
                     if(member.Space!=0)continue;
                     var origin=origins[member];var position=destination+Vector2.ClampMagnitude(origin-end,8);
                     bool permanent=actor.Run.Has(26113)&&Ordinary(member);
-                    Transfer(member,actor.Role+1,position,false);
+                    if(!Transfer(member,actor.Role+1,position,false))continue;
                     if(permanent){member.Permanent=true;RemoveFromEncounter(member);}
                     else room.Temporary.Add(new KamuiCapture{Unit=member,Origin=origin,Until=Time.time+(actor.Run.Has(26114)?8:5)});
                 }
             }
-            Transfer(OtherworldWorld.Unit(actor.gameObject),actor.Role+1,destination);
-            actor.Dashing=false;OtherworldDeployment.SpaceChanged(actor);
+            KamuiVisibility.Refresh();
+            OtherworldDeployment.SpaceChanged(actor);
+            }
+            finally {if(actor!=null)actor.Dashing=false;}
         }
         private static void Sweep(OtherworldActor actor,Vector2 from,Vector2 to,HashSet<OtherworldUnit> captured)
         {
@@ -208,20 +213,22 @@ namespace CluckmechCoop
         }
         internal static void Return(OtherworldActor actor)
         {
-            Transfer(OtherworldWorld.Unit(actor.gameObject),0,actor.ReturnPoint);OtherworldDeployment.SpaceChanged(actor);
+            if(!Transfer(OtherworldWorld.Unit(actor.gameObject),0,actor.ReturnPoint))return;
+            OtherworldDeployment.SpaceChanged(actor);
             actor.EndPhase(false);
             if(actor.Run.Has(26115))actor.BeginPhase(true);else actor.EndAction();
         }
-        internal static void Transfer(OtherworldUnit unit,int space,Vector2 point,bool refresh=true)
+        internal static bool Transfer(OtherworldUnit unit,int space,Vector2 point,bool refresh=true)
         {
-            if(unit==null)return;
+            if(unit==null)return false;
+            var next=Room(space);if(next==null)return false;
+            var map=MapFor(unit,next);
+            if(!KamuiNavigation.TryPoint(map,point,out point,4)||space!=0&&!next.Bounds.Contains(point))return false;
             int originalSpace=unit.Space;
             var body=unit.GetComponent<OtherworldActor>()?.Body??unit.GetComponentInChildren<SpriteRenderer>();
             if(body!=null)OtherworldWarpVisual.Play(body,false,.55f,false);
             var old=Room(unit.Space);old?.Units.Remove(unit);if(old!=null)old.Dirty=true;
-            unit.Space=space;var next=Room(space);next.Units.Add(unit);next.Dirty=true;
-            var map=MapFor(unit,next);
-            if(map!=null&&!map.PointIsValid(point))point=map.GetCloserEdgePoint(point);
+            unit.Space=space;next.Units.Add(unit);next.Dirty=true;
             unit.transform.position=point;Navigate(unit,next);ClearTargets(unit);unit.Refresh();
             if(unit.IsPlayer&&(int)unit.Health.所属玩家==Plugin.Role)
             {
@@ -244,6 +251,7 @@ namespace CluckmechCoop
                 var identity=unit.GetComponent<NetworkIdentity>();if(identity!=null)NetworkServer.RebuildObservers(identity,false);
             }
             if(refresh)KamuiVisibility.Refresh();
+            return true;
         }
         private static void Navigate(OtherworldUnit unit,KamuiRoom room)
         {
@@ -263,7 +271,7 @@ namespace CluckmechCoop
             var health=obj.GetComponent<模块_基本属性>();OtherworldWorld.Add(health);
             if(message.Value!=0)Ensure(message.Value-1);
             var unit=OtherworldWorld.Unit(obj);if(unit==null)return;
-            Transfer(unit,message.Value,new Vector2(message.X,message.Y));
+            if(!Transfer(unit,message.Value,new Vector2(message.X,message.Y)))return;
             var actor=obj.GetComponent<OtherworldActor>();if(actor!=null){actor.CancelClientDash();if(message.Value==0)actor.EndPhase(false);OtherworldDeployment.SpaceChanged(actor);}
         }
         internal static void Tick()
@@ -278,7 +286,7 @@ namespace CluckmechCoop
                     var capture=room.Temporary[i];
                     if(capture.Unit==null||capture.Unit.Health.当前生命值<=0){room.Temporary.RemoveAt(i);continue;}
                     if(Time.time<capture.Until)continue;
-                    Transfer(capture.Unit,0,capture.Origin);room.Temporary.RemoveAt(i);
+                    if(Transfer(capture.Unit,0,capture.Origin))room.Temporary.RemoveAt(i);else capture.Until=Time.time+.25f;
                 }
             }
         }
@@ -289,16 +297,17 @@ namespace CluckmechCoop
             {
                 if(unit==null||unit.Health.单位类型!=模块_基本属性.单位类型枚举.建筑||!unit.Health.启用建筑体积)continue;
                 Vector2 point=unit.transform.position,size=unit.Health.建筑体积*.5f;
-                obstacles.Add(new PolyNavMap.Polygon(new[]{point+new Vector2(-size.x,-size.y),point+new Vector2(size.x,-size.y),point+new Vector2(size.x,size.y),point+new Vector2(-size.x,size.y)}));
+                obstacles.Add(new PolyNavMap.Polygon(new[]{point+new Vector2(-size.x,-size.y),point+new Vector2(-size.x,size.y),point+new Vector2(size.x,size.y),point+new Vector2(size.x,-size.y)}));
             }
             room.Map.SetCustomMap(new PolyNavMap.PolyMap(new PolyNavMap.Polygon(room.Floor),obstacles.ToArray()));
-            foreach(var unit in room.Units){var agent=unit.GetComponent<PolyNavAgent>();if(agent!=null)agent.地图障碍物改变();}
+            foreach(var unit in room.Units){var agent=unit.GetComponent<PolyNavAgent>();if(agent!=null&&agent.map==room.Map)agent.地图障碍物改变();}
         }
         internal static void Clear()
         {
             Rooms.Clear();main.Units.Clear();main.Candidates.Clear();main.Tags.Clear();main.Dirty=true;navigation=null;
             if(clock!=null)Object.Destroy(clock);clock=null;KamuiVisibility.Clear();KamuiNavigation.Clear();
             OtherworldFx.Clear();KamuiDrop.Live.Clear();
+            OtherworldVfx.Clear();
         }
     }
     internal sealed class KamuiClock:MonoBehaviour {private void Update()=>KamuiWorld.Tick();}

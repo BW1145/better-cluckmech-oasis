@@ -6,6 +6,7 @@ namespace CluckmechCoop
     internal sealed class OtherworldMotion
     {
         internal const int DashProtocol=1;
+        internal static bool LongPress(double started,double eventTime)=>eventTime-started>=.25;
         internal static bool TryDashCommand(int protocol,float x,float y,out float dx,out float dy)
         {
             dx=dy=0;

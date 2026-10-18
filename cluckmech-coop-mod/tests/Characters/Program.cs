@@ -53,6 +53,7 @@ namespace UnityEngine
 }
 namespace UnityEngine.InputSystem
 {
+    public class InputAction { public bool Pressed; public bool IsPressed()=>Pressed; }
     public class Position { public Vector2 Value=new Vector2(25,30); public Vector2 ReadValue()=>Value; }
     public class Mouse { public static Mouse current=new Mouse(); public Position position=new Position(); }
 }
@@ -107,7 +108,7 @@ public class 模块_基本属性 : MonoBehaviour
 public class 词条_100072_霰弹专家 : MonoBehaviour { }
 public static class 阵营数据库 { public enum 阵营 {友方,敌方} }
 public class 模块_单位跟随圈:MonoBehaviour {public GameObject 跟随圈目标;public List<Collider2D> 单位列表=new();}
-public class 词条_100014_工程狮 : MonoBehaviour {public GameObject 吸引光环;private void 光环(bool value) {Program.Rally(this,value);} }
+public class 词条_100014_工程狮 : Mirror.NetworkBehaviour {public GameObject 吸引光环;public int ReleaseRequests;private void 光环(bool value) {Program.Rally(this,value);} private void 光环实现(bool value){ReleaseRequests++;Program.Rally(this,value);} }
 public class 词条_100033_肌肉鼠 : MonoBehaviour
 {
     public GameObject 治疗光环; public float 治疗圈大小=1; public 模块_移动属性 移动属性;
@@ -148,6 +149,7 @@ namespace CluckmechCoop
     internal class SessionMessage { public string Type,Token; public uint Unit; public float X,Y; }
     internal class NetworkService { public SessionMessage Last; public void Send(SessionMessage value){Last=value;} }
     internal class CombatFeatures { public string Token="battle"; }
+    internal sealed class OtherworldActor : MonoBehaviour {}
     internal static class Plugin
     {
         public static int Role; public static 刷怪器 Spawner; public static CombatFeatures Combat=new CombatFeatures(); public static NetworkService Network=new NetworkService();
@@ -193,8 +195,14 @@ static class Program
         Call(typeof(ShotgunExpertReady),"Prefix",talent);expert.技能cd/=2;Call(typeof(ChickenReady),"Postfix",expert);Check(expert.技能cd==2,"shotgun expert halves four-second base regardless of Start order");
         var interrupted=Unit().AddComponent<模块_玩家_技能>();interrupted.技能实现();interrupted.GetComponent<模块_玩家_死亡>().是否玩家死亡=true;Scheduler.Advance(.5f);Check(interrupted.Shots==1,"death stops queued burst");
         var lion=Unit().AddComponent<词条_100014_工程狮>();var speed=lion.GetComponent<模块_移动属性>();speed.变化百分比移动速度=.5f;
-        Rally(lion,true);Check(Math.Abs(speed.当前移动速度-9.75f)<.001,"rally multiplies movement including original buffs");
+        Rally(lion,true);Check(Math.Abs(speed.当前移动速度-15f)<.001,"held rally doubles movement including original buffs");
         Rally(lion,false);Check(speed.当前移动速度==7.5f,"rally release preserves original movement buffs");
+        var input=new UnityEngine.InputSystem.InputAction{Pressed=true};Rally(lion,true);Call(typeof(LionRelease),"Postfix",lion,input);
+        Check(speed.当前移动速度==15&&lion.ReleaseRequests==0,"held input retains rally during building mode");
+        input.Pressed=false;Call(typeof(LionRelease),"Postfix",lion,input);Call(typeof(LionRelease),"Postfix",lion,input);
+        Check(speed.当前移动速度==7.5f&&lion.ReleaseRequests==1,"release ignored by native building branch closes rally through native broadcast once");
+        Plugin.Role=2;lion.isOwned=false;Rally(lion,true);Call(typeof(LionRelease),"Postfix",lion,input);
+        Check(UnitModifiers.For(lion.gameObject).LionHeld&&lion.ReleaseRequests==1,"remote lion state is not canceled by local input");Plugin.Role=0;lion.isOwned=true;Rally(lion,false);
         lion.吸引光环=new GameObject();var circle=lion.吸引光环.AddComponent<模块_单位跟随圈>();circle.跟随圈目标=new GameObject();
         var warrior=Unit();var collider=warrior.AddComponent<Collider2D>();circle.单位列表.Add(collider);circle.单位列表.Add(collider);warrior.GetComponent<模块_移动属性>().前进副目标=circle.跟随圈目标.transform;
         var left=Unit();circle.单位列表.Add(left.AddComponent<Collider2D>());
@@ -237,8 +245,8 @@ static class Program
         var summon=Unit();Call(typeof(RabbitSpawned),"Postfix",summon);Check(summon.GetComponent<模块_攻击属性>().当前攻击力==15&&summon.GetComponent<模块_移动属性>().当前移动速度==6.5f,"rabbit receives initial damage and speed multipliers");
         summon.GetComponent<模块_攻击属性>().百分比攻击力加成=.2f;Scheduler.Advance(5);Check(summon.GetComponent<模块_攻击属性>().当前攻击力==12&&summon.GetComponent<模块_移动属性>().当前移动速度==5,"five-second boost expires while preserving new native buffs");
         var world=new GameObject();Plugin.Spawner=world.AddComponent<刷怪器>();world.AddComponent<效果物体引用器>();var dog=Unit().AddComponent<词条_100115_阿法狗>();
-        Call(typeof(DogReady),"Postfix",dog);Check(dog.技能cd==30&&dog.召唤物数量==2,"dog cooldown increases ten seconds while preserving native two summons");
-        var brothers=Unit().AddComponent<词条_100115_阿法狗>();brothers.召唤物数量++;Call(typeof(DogReady),"Postfix",brothers);Check(brothers.技能cd==30&&brothers.召唤物数量==3,"three brothers talent retains three summons");
+        Check(dog.技能cd==20&&dog.召唤物数量==2,"dog keeps native cooldown and summon count");
+        var brothers=Unit().AddComponent<词条_100115_阿法狗>();brothers.召唤物数量++;Check(brothers.技能cd==20&&brothers.召唤物数量==3,"three brothers talent retains three summons");
         var support=Unit();var supportHp=support.GetComponent<模块_基本属性>();supportHp.当前生命值=200;Call(typeof(DogSpawned),"Postfix",support);
         Check(supportHp.当前生命值==400&&supportHp.当前生命值上限==400&&supportHp.当前格挡值==10&&supportHp.生命值倍率==1,"dog support starts with doubled health and block without changing native multiplier");
         supportHp.当前生命值=300;supportHp.运算生命值上限();supportHp.运算格挡值();supportHp.运算生命值上限();supportHp.运算格挡值();
@@ -255,7 +263,7 @@ static class Program
         Plugin.Role=2;dog.GetComponent<模块_基本属性>().当前生命值=100;CharacterFeatures.Nuclear(dog);
         Check(dog.GetComponent<模块_基本属性>().当前生命值==100&&!函数库.词条函数.召唤.Last.GetComponent<模块_范围伤害精灵>().enabled&&!函数库.词条函数.召唤.Last.GetComponent<Collider2D>().enabled&&Math.Abs(UnityEngine.Object.DestroyDelay-1.2f)<.001,"guest nuclear effect is visual only and has native lifetime");
         ModuleSettings.Extra.Characters=false;var vanilla=Unit().AddComponent<模块_玩家_技能>();Call(typeof(ChickenReady),"Postfix",vanilla);vanilla.技能实现();Scheduler.Advance(1);Check(vanilla.技能cd==5&&vanilla.Shots==1,"disabled character module preserves native shotgun");
-        var nativeDog=Unit().AddComponent<词条_100115_阿法狗>();Call(typeof(DogReady),"Postfix",nativeDog);Call(typeof(DogSpawned),"Postfix",nativeDog.gameObject);Check(nativeDog.技能cd==20&&nativeDog.GetComponent<模块_基本属性>().当前生命值上限==200,"disabled module preserves native dog cooldown and defense");
+        var nativeDog=Unit().AddComponent<词条_100115_阿法狗>();Call(typeof(DogSpawned),"Postfix",nativeDog.gameObject);Check(nativeDog.技能cd==20&&nativeDog.GetComponent<模块_基本属性>().当前生命值上限==200,"disabled module preserves native dog cooldown and defense");
         Console.WriteLine($"PASS: {checks} production character timing, movement, healing, targeting and nuclear behavior checks");
     }
 }

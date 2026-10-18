@@ -22,7 +22,7 @@ namespace CluckmechCoop
         internal float MovementFactor = 1, AttackFactor = 1, NextHeal;
         internal float DefenseFactor = 1;
         internal float RallyAttackFactor = 1, RallySpeedFactor = 1, RallyUntil, NextRally;
-        internal bool LionHeld;
+        internal bool LionHeld, LionReleasePending;
         private 模块_单位跟随圈 rallyCircle;
         private Coroutine rallyRoutine;
         internal bool Burst, RatHeld, RequestedRat, AuraStarted, ChickenCooldownSet;
@@ -72,9 +72,10 @@ namespace CluckmechCoop
         {
             if (LionHeld == held) return;
             LionHeld = held;
+            LionReleasePending = false;
             float factor = held ? .75f : 1 / .75f;
             if (PlayerAttack != null) { PlayerAttack.蓄力蓄满时间 *= factor; PlayerAttack.蓄力时间 *= factor; }
-            SetMovement(held ? 1.3f : 1);
+            SetMovement(held ? 2f : 1);
             if (held || Plugin.Role == 2 || Death != null && Death.是否玩家死亡 || Time.time < NextRally || party.Length == 0) return;
             NextRally = Time.time + 8;
             foreach (var unit in party) if (unit != null) For(unit).RallyBoost();
@@ -248,6 +249,19 @@ namespace CluckmechCoop
         private static void Postfix(词条_100014_工程狮 __instance, bool 值, GameObject[] __state)
         {
             if (ModuleSettings.Extra.Characters) UnitModifiers.For(__instance.gameObject).LionRally(值, __state);
+        }
+    }
+    [HarmonyPatch(typeof(词条_100014_工程狮), "Update")]
+    internal static class LionRelease
+    {
+        private static readonly System.Reflection.MethodInfo close = AccessTools.Method(typeof(词条_100014_工程狮), "光环实现");
+        private static void Postfix(词条_100014_工程狮 __instance, InputAction ___技能)
+        {
+            if (!ModuleSettings.Extra.Characters || Plugin.Role != 0 && !__instance.isOwned || ___技能 == null || ___技能.IsPressed()) return;
+            var modifier = __instance.GetComponent<UnitModifiers>();
+            if (modifier == null || !modifier.LionHeld || modifier.LionReleasePending) return;
+            modifier.LionReleasePending = true;
+            close.Invoke(__instance, new object[] { false });
         }
     }
     [HarmonyPatch(typeof(模块_攻击属性), "运算攻击速度")]
