@@ -12,6 +12,7 @@
 **/obj/
 **/__pycache__/
 **/release/
+/cluckmech-coop-mod/artifacts/
 **/backups/
 *.pdb
 *.zip
