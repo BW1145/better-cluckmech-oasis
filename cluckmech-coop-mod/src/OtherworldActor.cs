@@ -22,6 +22,7 @@ namespace CluckmechCoop
         private readonly OtherworldActorInputState inputState=new OtherworldActorInputState();
         private readonly OtherworldActorSkillState skillState=new OtherworldActorSkillState();
         private Vector2 dashDirection;
+        private Vector2 requestedDashDirection, sentDashDirection;
         internal OtherworldRun Run;
         internal SpriteRenderer Body;
         internal Sprite CurrentFrame;
@@ -46,10 +47,10 @@ namespace CluckmechCoop
         private Coroutine clientDash;
         private Text chargeLabel;
         private int shownCharges=-1,shownRecharge=-1;
-        internal bool Phased=>Time.time<PhaseUntil;
+        internal bool Phased=>Dashing||Time.time<PhaseUntil;
         internal int Space=>OtherworldWorld.Space(gameObject);
         internal Vector2 Aim=>Gun.目标;
-        internal float Cooldown=>(Hero==12?8f:10f)*(Run.Initial==26003?2:1)*(Run.Has(26102)?.75f:1);
+        internal float Cooldown=>Hero==13?(skillState.Cooldown>0?skillState.Cooldown:5):8f*(Run.Initial==26003?2:1)*(Run.Has(26102)?.75f:1);
         internal float NormalFactor=>(Run.Initial==26002?1+Run.Upgrades*.05f:1)*(Time.time<NormalUntil?3:1);
         internal Vector2 Muzzle=>(Vector2)transform.position+Vector2.up*.45f+((Vector2)Gun.目标-(Vector2)transform.position).normalized*.6f;
 
@@ -154,8 +155,12 @@ namespace CluckmechCoop
 
             if (action == OtherworldMessageKind.Dash)
             {
-                if (Hero == 13 && skillState.Dash())
-                    KamuiWorld.Dash(this, aim);
+                if (Hero == 13)
+                {
+                    requestedDashDirection=aim;
+                    if (!Dashing && skillState.Dash() && !KamuiWorld.Dash(this))
+                        skillState.FinishDash();
+                }
                 return;
             }
             if (action == OtherworldMessageKind.ReservedCommand || Charges <= 0 || Dashing)
@@ -176,7 +181,7 @@ namespace CluckmechCoop
 
         private void Spend(bool hold = false)
         {
-            if (skillState.Spend(Time.time, Cooldown, hold))
+            if (skillState.Spend(Time.time, Hero==13?5:Cooldown, hold))
                 OtherworldNetwork.State(this);
         }
 
@@ -186,10 +191,10 @@ namespace CluckmechCoop
                 OtherworldNetwork.State(this);
         }
 
-        internal void ReceiveState(int charges, float remaining)
+        internal void ReceiveState(int charges, float remaining, float cooldown)
         {
             if (Run != null)
-                skillState.Receive(charges, remaining, MaximumCharges, Time.time);
+                skillState.Receive(charges, remaining, MaximumCharges, Time.time, cooldown);
         }
 
         internal float Remaining => skillState.Remaining(Time.time);
@@ -197,7 +202,7 @@ namespace CluckmechCoop
         internal int MaximumCharges=>Run.Initial==26004?3:1;
         internal void BeginPhase(bool continueAction=false)
         {
-            float seconds=1.5f*(Run.Initial==26008?2:1);
+            float seconds=Run.Initial==26008?2:1;
             PhaseUntil=Time.time+seconds;if(!continueAction){StoredDamage=0;Avoided.Clear();}
             Movement.运算移动速度();Health.运算无敌();
             if(!continueAction)OtherworldAudio.Play(transform.position);
@@ -238,14 +243,22 @@ namespace CluckmechCoop
             if (inputState.Armed && Time.timeScale <= 0)
                 CancelInput(true);
             if (inputState.Armed && rightAction != null && rightAction.IsPressed())
+            {
                 QualifyHold(UnityEngine.InputSystem.LowLevel.InputState.currentTime);
+                if(Hero==13&&inputState.Qualified&&Space==0)
+                {
+                    var direction=DashDirection;
+                    if((direction-sentDashDirection).sqrMagnitude>.001f)
+                    {sentDashDirection=direction;OtherworldNetwork.Command(this,OtherworldMessageKind.Dash,++sequence,direction);}
+                }
+            }
 
             if (Plugin.Role != 2)
             {
                 if (skillState.Recharge(Time.time, Cooldown, MaximumCharges))
                     OtherworldNetwork.State(this);
             }
-            if(PhaseUntil>0&&Time.time>=PhaseUntil)
+            if(PhaseUntil>0&&Time.time>=PhaseUntil&&!Dashing)
             {
                 EndPhase(Plugin.Role!=2&&!Dashing);
             }
@@ -290,7 +303,15 @@ namespace CluckmechCoop
             Body.color=nativeBody.color;Body.sortingOrder=nativeBody.sortingOrder;
         }
         private Vector2 Locomotion=>playerMovement!=null?new Vector2(-playerMovement.左右程度,playerMovement.上下程度):Vector2.zero;
-        private Vector2 MovementIntent=>playerMovement!=null&&playerMovement.是否移动?new Vector2(-playerMovement.目标左右程度,playerMovement.目标上下程度):Vector2.zero;
+        private Vector2 MovementIntent
+        {
+            get
+            {
+                if(playerMovement==null||!playerMovement.是否移动)return Vector2.zero;
+                return Plugin.Role==0||Role==Plugin.Role?输入管理器.输入脚本.战斗模式.移动.ReadValue<Vector2>():
+                    new Vector2(-playerMovement.目标左右程度,playerMovement.目标上下程度);
+            }
+        }
         private Vector2 DashDirection
         {
             get {var intent=MovementIntent;motionState.Dash(intent.x,intent.y,out float x,out float y);return new Vector2(x,y);}
@@ -299,6 +320,21 @@ namespace CluckmechCoop
         {
             motionState.Dash(direction.x,direction.y,out float x,out float y);
             dashDirection=new Vector2(x,y);Dashing=true;return dashDirection;
+        }
+        internal Vector2 NextDashDirection=>requestedDashDirection;
+        internal bool CanContinueDash=>skillState.CanContinueDash;
+        internal bool StartDashSegment()
+        {
+            if(!skillState.StartDashSegment())return false;
+            BeginDash(requestedDashDirection);Movement.运算移动速度();Health.运算无敌();
+            OtherworldNetwork.State(this);return true;
+        }
+        internal void FinishDash(bool finish)
+        {
+            skillState.FinishDash();Dashing=false;
+            OtherworldDashNetwork.ClearHistory(this);
+            if(finish)EndPhase(true);
+            else {Movement?.运算移动速度();Health?.运算无敌();}
         }
         internal void Fired(float damage)
         {
@@ -311,7 +347,7 @@ namespace CluckmechCoop
         private void QualifyHold(double now)
         {
             if (Hero == 13 && inputState.Qualify(now, Application.isFocused && Time.timeScale > 0))
-                OtherworldNetwork.Command(this, OtherworldMessageKind.Dash, ++sequence, DashDirection);
+            {sentDashDirection=DashDirection;OtherworldNetwork.Command(this, OtherworldMessageKind.Dash, ++sequence, sentDashDirection);}
         }
         internal void ClientDash(Vector2 end,float seconds)
         {CancelClientDash();clientDash=StartCoroutine(DashLocally(end,seconds));}
@@ -319,9 +355,9 @@ namespace CluckmechCoop
         {
             Vector2 start=transform.position;BeginDash(end-start);
             for(float elapsed=0;elapsed<seconds;elapsed+=Time.deltaTime){transform.position=Vector2.Lerp(start,end,elapsed/seconds);yield return null;}
-            transform.position=end;Dashing=false;clientDash=null;
+            transform.position=end;Dashing=false;clientDash=null;OtherworldDashNetwork.ClearHistory(this);
         }
-        internal void CancelClientDash(){if(clientDash!=null)StopCoroutine(clientDash);clientDash=null;Dashing=false;}
+        internal void CancelClientDash(){if(clientDash!=null)StopCoroutine(clientDash);clientDash=null;Dashing=false;OtherworldDashNetwork.ClearHistory(this);}
         private void FixedUpdate(){if(Dashing&&TryGetComponent<Rigidbody2D>(out var body))body.velocity=Vector2.zero;}
         private void CancelInput(bool notify)
         {
@@ -340,6 +376,7 @@ namespace CluckmechCoop
         private void OnDisable()
         {
             CancelInput(false);
+            skillState.FinishDash();
             CancelClientDash();
             Avoided.Clear();
             if (PhaseUntil > 0)

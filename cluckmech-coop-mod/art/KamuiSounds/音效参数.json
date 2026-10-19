@@ -1,0 +1,24 @@
+[
+  {
+    "source": "01-神威吸入-85速度.wav",
+    "runtime": "kamui-in.ogg",
+    "tempo": 0.85,
+    "pitchPreserved": true,
+    "duration": 0.899854,
+    "sampleRate": 48000,
+    "channels": 2,
+    "encoding": "Vorbis quality 5",
+    "sha256": "f7ba986d6f3589faae732ddfc968d15a9fc1891a3dbe6afc1f5c81b26c94e8d9"
+  },
+  {
+    "source": "02-神威放出-85速度.wav",
+    "runtime": "kamui-out.ogg",
+    "tempo": 0.85,
+    "pitchPreserved": true,
+    "duration": 0.834792,
+    "sampleRate": 48000,
+    "channels": 2,
+    "encoding": "Vorbis quality 5",
+    "sha256": "4c4c6f68c69b07e8d84d6b4f64cdb8bb15ddac85e65b3c0c1ebed6822868f10c"
+  }
+]

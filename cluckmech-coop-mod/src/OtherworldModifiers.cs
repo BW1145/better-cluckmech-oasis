@@ -27,7 +27,7 @@ namespace CluckmechCoop
             var unit=OtherworldWorld.Unit(stats.gameObject);if(unit==null||!unit.IsMachine)return value;
             var run=OtherworldProgress.For((int)unit.Health.所属玩家);if(run==null)return value;
             if(unit.WarmUntil>Time.time)value+=.5f;if(unit.RallyUntil>Time.time)value+=.5f;
-            if(unit.Space!=0&&run.Initial==26006&&run.Has(26120))value+=KamuiWorld.Categories(unit.Space,(int)unit.Health.所属玩家)*.15f;
+            if(unit.Space!=0&&run.Initial==26006&&run.Has(26120))value+=KamuiWorld.Categories(unit.Space,(int)unit.Health.所属玩家)*.25f;
             return value;
         }
         internal static void Attack(模块_攻击属性 stats)
@@ -87,7 +87,7 @@ namespace CluckmechCoop
         {
             var unit=OtherworldWorld.Unit(__instance.gameObject);if(unit==null||!unit.IsMachine||unit.Space==0)return;
             var run=OtherworldProgress.For((int)__instance.所属玩家);
-            if(run?.Initial==26006&&run.Has(26120))__instance.当前格挡值+=KamuiWorld.Categories(unit.Space,(int)__instance.所属玩家)*5;
+            if(run?.Initial==26006&&run.Has(26120))__instance.当前格挡值+=KamuiWorld.Categories(unit.Space,(int)__instance.所属玩家)*10;
         }
     }
     [HarmonyPatch(typeof(模块_移动属性),"运算移动速度")]

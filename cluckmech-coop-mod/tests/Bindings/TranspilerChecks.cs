@@ -29,6 +29,61 @@ internal static class TranspilerChecks
         Require(PatchProcessor.GetOriginalInstructions(AccessTools.Method(mod.GetType("CluckmechCoop.KamuiWorld",true),"Load")).Any(c=>c.Calls(restore)),"load rebinds native talent references before later UI reads");
         Console.WriteLine("PASS: shop null-talent fallback, retained draw helpers, IL stack, missing/duplicate seams and load rebind wiring");
     }
+    internal static void DashChain(Assembly mod)
+    {
+        var actor=mod.GetType("CluckmechCoop.OtherworldActor",true);
+        var world=mod.GetType("CluckmechCoop.KamuiWorld",true);
+        List<CodeInstruction> Body(Type type,string name)=>PatchProcessor.GetOriginalInstructions(AccessTools.DeclaredMethod(type,name));
+        bool IsCall(CodeInstruction instruction,string type,string name)=>instruction.operand is MethodInfo method&&method.DeclaringType.Name==type&&method.Name==name;
+        var iterator=world.GetNestedTypes(BindingFlags.NonPublic).Single(t=>t.Name.StartsWith("<DashRoutine>"));
+        var move=Body(iterator,"MoveNext");
+        int capture=move.FindIndex(c=>IsCall(c,"KamuiWorld","CaptureDashSegment"));
+        int transfer=move.FindIndex(c=>IsCall(c,"KamuiWorld","Transfer"));
+        Require(capture>=0&&transfer>capture,"segment enemies are captured before final player transfer");
+        Require(move.Any(c=>IsCall(c,"OtherworldActor","get_CanContinueDash"))&&move.Any(c=>IsCall(c,"OtherworldActor","StartDashSegment")),"authoritative chain gates every segment");
+        Require(Body(actor,"get_MovementIntent").Any(c=>IsCall(c,"InputAction","ReadValue")),"local direction samples live action while native translation is suspended");
+        foreach(string method in new[]{"FinishDash","CancelClientDash"})
+            Require(Body(actor,method).Any(c=>IsCall(c,"OtherworldDashNetwork","ClearHistory")),"dash exit clears interpolation history: "+method);
+        var localDash=actor.GetNestedTypes(BindingFlags.NonPublic).Single(t=>t.Name.StartsWith("<DashLocally>"));
+        Require(Body(localDash,"MoveNext").Any(c=>IsCall(c,"OtherworldDashNetwork","ClearHistory")),"client segment end clears interpolation history");
+        var captureBody=Body(world,"CaptureDashSegment");
+        foreach(string field in new[]{"Origin","Until"})
+            Require(captureBody.Any(c=>c.opcode==OpCodes.Stfld&&c.operand is FieldInfo f&&f.DeclaringType.Name=="KamuiCapture"&&f.Name==field),"each enemy retains own "+field);
+        var begin=Body(actor,"BeginPhase");
+        Require(begin.Count(c=>IsCall(c,"OtherworldAudio","Play"))==1,"successful activation has one voice entry");
+        foreach(var body in new[]{move,captureBody,Body(actor,"StartDashSegment"),Body(world,"Return")})
+            Require(!body.Any(c=>IsCall(c,"OtherworldAudio","Play")),"segments, capture and return do not replay voice");
+        var counter=Body(mod.GetType("CluckmechCoop.OtherworldActions",true),"Counter");
+        Require(counter.Count(c=>IsCall(c,"OtherworldActor","ReduceCooldown"))==1&&counter.FindIndex(c=>IsCall(c,"OtherworldActor","ReduceCooldown"))>counter.FindIndex(c=>IsCall(c,"OtherworldActions","Hit")),"counter cooldown reward has one post-hit entry");
+        var state=Body(mod.GetType("CluckmechCoop.OtherworldNetwork",true),"State");
+        Require(state.Any(c=>c.opcode==OpCodes.Stfld&&c.operand is FieldInfo f&&f.Name=="Amount")&&state.Any(c=>IsCall(c,"OtherworldActor","get_Cooldown")),"state transmits actual cooldown total");
+        Console.WriteLine("PASS: compiled segmented capture/player order, live input, per-enemy timers, single voice entry, counter reward and network cooldown wiring");
+    }
+    internal static void EnergyAudio(Assembly original,Assembly mod)
+    {
+        List<CodeInstruction> Body(Type type,string name)=>PatchProcessor.GetOriginalInstructions(AccessTools.DeclaredMethod(type,name));
+        bool Call(CodeInstruction c,string type,string name)=>c.operand is MethodInfo m&&m.DeclaringType.Name==type&&m.Name==name;
+        var combat=mod.GetType("CluckmechCoop.CombatFeatures",true);
+        var start=Body(combat,"StartEnergy");
+        int paid=start.FindIndex(c=>Call(c,"RunProgress","UseEnergy"));
+        int healed=start.FindIndex(c=>c.opcode==OpCodes.Stfld&&c.operand is FieldInfo f&&f.Name=="当前生命值");
+        Require(paid>=0&&healed>paid&&start.Take(healed).Any(c=>c.opcode==OpCodes.Ldfld&&c.operand is FieldInfo f&&f.Name=="当前生命值上限"),"activation consumes one use before restoring current maximum health");
+        Require(!Body(combat,"ApplyEnergy").Any(c=>c.opcode==OpCodes.Stfld&&c.operand is FieldInfo f&&f.Name=="当前生命值"),"re-sync and expiration do not heal again");
+        var attack=Body(mod.GetType("CluckmechCoop.ExtraAttack",true),"Postfix");
+        Require(attack.Any(c=>c.opcode==OpCodes.Ldc_R4&&Equals(c.operand,1000f)),"active base attack bonus is 1000");
+        var nativeSync=Body(original.GetType("联机_单位属性同步",true),"周期同步");
+        Require(nativeSync.Any(c=>Call(c,"联机_单位属性同步","set_Network当前生命值")),"native host health replication retains base restoration");
+        var world=mod.GetType("CluckmechCoop.KamuiWorld",true);
+        foreach(string name in new[]{"CaptureDashSegment","Return","Tick"})
+            Require(Body(world,name).Count(c=>Call(c,"OtherworldAudio","Transfer"))==1,"one sound event per transfer batch: "+name);
+        Require(!Body(world,"Transfer").Any(c=>Call(c,"OtherworldAudio","Transfer")),"individual unit and replicated transfers do not duplicate sounds");
+        var receive=Body(mod.GetType("CluckmechCoop.OtherworldNetwork",true),"Receive");
+        int sound=receive.FindIndex(c=>Call(c,"OtherworldAudio","ReceiveTransfer"));
+        int identity=receive.FindIndex(c=>Call(c,"NetworkClient","get_spawned"));
+        if(identity<0)identity=receive.FindIndex(c=>c.opcode==OpCodes.Ldsfld&&c.operand is FieldInfo f&&f.DeclaringType.Name=="NetworkClient"&&f.Name=="spawned");
+        Require(sound>=0&&identity>sound,"batch sound reception is independent of hidden unit identities");
+        Console.WriteLine("PASS: compiled one-time energy restoration, +1000 attack, native health replication and batched transfer sound reception");
+    }
     private sealed class Binding
     {
         internal string Type, Target, Patch, SourceType, Source, Helper;

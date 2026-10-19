@@ -34,8 +34,8 @@ static class Program
         Check(skill.Spend(10,8,true)&&skill.Charges==2&&skill.Held,"phase spends one charge and owns its hold");
         Check(skill.Remaining(10)==0&&skill.RechargeRemaining(10)==8,"usable charges coexist with recharge display");
         Check(skill.Spend(11,8,false)&&skill.RechargeRemaining(11)==7,"additional spend preserves first recharge deadline");
-        Check(skill.Dash()&&!skill.Held&&!skill.Dash(),"hold grants exactly one dash");
-        Check(!skill.Release()&&!skill.Release(),"repeat release is harmless");
+        Check(skill.Dash()&&skill.Held&&!skill.Dash(),"hold starts one chain and retains held input");
+        Check(skill.Release()&&!skill.Release(),"repeat release is harmless");
         Check(skill.Spend(12,8,false)&&skill.Charges==0&&!skill.Spend(12,8,true),"empty charges cannot spend or rearm hold");
         Check(skill.Remaining(12)==6&&!skill.Recharge(17.9f,8,3),"empty cooldown remains until deadline");
         Check(skill.Reduce(13,99)&&skill.RechargeRemaining(13)==0,"cooldown reduction caps at current time");
@@ -53,5 +53,31 @@ static class Program
         Check(!skill.Reduce(60,float.NaN)&&!skill.Reduce(60,-1),"invalid reduction cannot increase or poison cooldown");
         skill.Initialize(3);Check(skill.Charges==3&&!skill.Held&&skill.RechargeRemaining(0)==0,"new lifetime clears all prior skill state");
     }
-    static void Main(){Input();Skills();Console.WriteLine($"PASS {checks} actor input and skill state checks");}
+    static void DashChains()
+    {
+        for(int segments=1;segments<=3;segments++)
+        {
+            var skill=new OtherworldActorSkillState();skill.Initialize(1);
+            Check(skill.Spend(100,5,true)&&skill.Cooldown==5&&skill.Remaining(100)==5,"short press starts five-second cooldown");
+            Check(skill.Dash()&&!skill.Dash(),"one hold starts one authoritative chain");
+            for(int step=1;step<=segments;step++)
+                Check(skill.StartDashSegment()&&skill.DashSegments==step&&skill.Cooldown==8+step*2&&skill.Remaining(101)==7+step*2,"segment extends original deadline: "+step);
+            if(segments<3)Check(skill.Release()&&!skill.StartDashSegment(),"release stops next segment without changing completed count");
+            else Check(!skill.CanContinueDash&&!skill.StartDashSegment(),"third segment exhausts chain while held");
+            float ready=100+8+segments*2;
+            Check(!skill.Recharge(ready-.01f,skill.Cooldown,1)&&skill.Recharge(ready,skill.Cooldown,1),"only performed segments determine recharge deadline");
+            skill.FinishDash();Check(!skill.Held&&!skill.CanContinueDash&&!skill.Dash(),"finished chain cannot restart from direction messages");
+            Check(skill.Spend(ready,5,true)&&skill.Cooldown==5&&skill.DashSegments==0,"next short press resets long cooldown to five seconds");
+        }
+        var reduced=new OtherworldActorSkillState();reduced.Initialize(1);reduced.Spend(0,5,true);reduced.Dash();
+        Check(reduced.StartDashSegment()&&reduced.Reduce(1,2)&&reduced.StartDashSegment()&&reduced.Remaining(1)==9,"later segment preserves earned cooldown reduction");
+        Check(reduced.Release()&&!reduced.StartDashSegment()&&reduced.DashSegments==2,"cancel retains completed segment count");
+        Check(reduced.Reduce(2,4)&&reduced.Remaining(2)==4,"return talent subtracts four seconds from remaining deadline");
+        var remote=new OtherworldActorSkillState();remote.Initialize(1);
+        Check(remote.Receive(0,11,1,20,14)&&remote.Cooldown==14&&remote.Remaining(20)==11,"remote state retains fourteen-second display total and remaining time");
+        Check(!remote.Receive(0,2,1,20,float.NaN)&&remote.Cooldown==14&&remote.Remaining(20)==11,"invalid remote total cannot corrupt state");
+        reduced.Initialize(1);reduced.Spend(0,5,true);reduced.Release();
+        Check(!reduced.Dash()&&!reduced.StartDashSegment()&&reduced.Cooldown==5,"quick release remains short press");
+    }
+    static void Main(){Input();Skills();DashChains();Console.WriteLine($"PASS {checks} actor input and skill state checks");}
 }

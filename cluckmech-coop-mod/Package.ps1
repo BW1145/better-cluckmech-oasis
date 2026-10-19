@@ -27,7 +27,7 @@ foreach ($sound in @('barrage.ogg','eagle.ogg','laser-start.ogg','laser-loop.ogg
 $configDir = Join-Path $packageDir 'BepInEx\config'
 $otherworldSoundDir = Join-Path $pluginDir 'OtherworldSounds'
 New-Item -ItemType Directory -Path $otherworldSoundDir -Force | Out-Null
-foreach ($name in @('kamui','perlica-shot','perlica-thunder','perlica-orbital','obito-throw','obito-fire')) {
+foreach ($name in @('kamui','kamui-in','kamui-out','perlica-shot','perlica-thunder','perlica-orbital','obito-throw','obito-fire')) {
     Copy-Item -LiteralPath (Join-Path $modRoot "src/OtherworldSounds/$name.ogg") -Destination $otherworldSoundDir -Force
 }
 New-Item -ItemType Directory -Path $configDir -Force | Out-Null
@@ -58,7 +58,7 @@ try {
     if ($audioEntries.Count -ne 10) { throw 'Expected ten OGG music tracks' }
     $soundEntries = @($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -match '^BepInEx/plugins/CluckmechCoop/StratagemSounds/.+\.ogg$' })
     if ($soundEntries.Count -ne 4) { throw 'Expected four stratagem sound effects' }
-    foreach ($name in @('kamui','perlica-shot','perlica-thunder','perlica-orbital','obito-throw','obito-fire')) {
+    foreach ($name in @('kamui','kamui-in','kamui-out','perlica-shot','perlica-thunder','perlica-orbital','obito-throw','obito-fire')) {
         if (-not ($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq "BepInEx/plugins/CluckmechCoop/OtherworldSounds/$name.ogg" })) { throw "Otherworld sound effect missing: $name" }
     }
     if (-not ($archive.Entries | Where-Object { $_.FullName.Replace('\', '/') -eq 'BepInEx/plugins/CluckmechCoop/Music/mix.json' })) { throw 'Music calibration missing' }

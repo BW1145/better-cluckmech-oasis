@@ -12,7 +12,7 @@ namespace CluckmechCoop
 {
     internal static class OtherworldAudio
     {
-        private static readonly string[] names={"kamui","perlica-shot","perlica-thunder","perlica-orbital","obito-throw","obito-fire"};
+        private static readonly string[] names={"kamui","kamui-in","kamui-out","perlica-shot","perlica-thunder","perlica-orbital","obito-throw","obito-fire"};
         private static readonly Dictionary<string,AudioClip> clips=new Dictionary<string,AudioClip>();
         private static readonly Dictionary<string,Transform> groups=new Dictionary<string,Transform>();
         private static Coroutine loading;
@@ -52,6 +52,20 @@ namespace CluckmechCoop
         {Play("kamui",point);}
         internal static void Play(string name,Vector2 point)
         {if(groups.TryGetValue(name,out var group)&&group!=null)MasterAudio.PlaySound3DAtVector3AndForget(GroupName(name),new Vector3(point.x,point.y,0),StratagemAudio.Gain(point));}
+        internal static void Transfer(bool inward,int space,Vector2 mainPoint,Vector2 roomPoint)
+        {
+            ReceiveTransfer(inward,space,mainPoint,roomPoint);
+            if(Plugin.Role==1)OtherworldNetwork.Send(new OtherworldMessage
+            {
+                Kind=OtherworldMessageKind.Effect,Value=inward?8:9,Amount=space,
+                X=mainPoint.x,Y=mainPoint.y,EndX=roomPoint.x,EndY=roomPoint.y
+            });
+        }
+        internal static void ReceiveTransfer(bool inward,int space,Vector2 mainPoint,Vector2 roomPoint)
+        {
+            int localSpace=OtherworldWorld.Space(OtherworldActions.Player(Plugin.Role)?.gameObject);
+            if(localSpace==0||localSpace==space)Play(inward?"kamui-in":"kamui-out",localSpace==0?mainPoint:roomPoint);
+        }
         private static string GroupName(string name)=>"BCO.Otherworld."+(name=="kamui"?"Kamui":name);
         internal static void Normal(OtherworldActor actor)
         {

@@ -157,14 +157,17 @@ namespace CluckmechCoop
             Vector2 direction = (actor.Aim-(Vector2)actor.transform.position).normalized;
             var targets = new List<OtherworldUnit>();
             OtherworldWorld.CollectNearby(actor.gameObject, actor.transform.position, 6, targets);
+            bool hit=false;
             foreach (var target in targets)
             {
                 if (target == null || target.Space != actor.Space || target.Health.当前生命值 <= 0) continue;
                 if (Vector2.Dot(((Vector2)target.transform.position-(Vector2)actor.transform.position).normalized, direction) >= .35f)
                 {
+                    hit=true;
                     Hit(actor, target, actor.Attack.当前攻击力*30+stored, actor.Run.Has(26123));
                 }
             }
+            if(hit&&actor.Run.Has(26124))actor.ReduceCooldown(2);
             Visual(actor, 5, actor.transform.position, .35f, 1);
             OtherworldNetwork.Effect(actor, 5, actor.transform.position, .35f, 1);
         }

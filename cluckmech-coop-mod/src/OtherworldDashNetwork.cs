@@ -10,6 +10,11 @@ namespace CluckmechCoop
         {
             if(actor==null||actor.Hero!=13||from==to)return;
             actor.FilterKamuiSnapshots=true;
+            ClearHistory(actor);
+        }
+        internal static void ClearHistory(OtherworldActor actor)
+        {
+            if(actor==null||actor.Hero!=13)return;
             var sync=actor.GetComponent<NetworkTransformBase>();
             if(sync==null)return;
             // Discard interpolation history on BOTH peers, never the delta codec

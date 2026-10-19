@@ -45,6 +45,17 @@ static class Program
         Writer<OtherworldMessage>.write(writer,new OtherworldMessage{Kind=OtherworldMessageKind.AddGold,Value=15,Token="gold"});
         var gold=Reader<OtherworldMessage>.read(new NetworkReader(writer.ToArray()));
         Check(gold.Kind==23&&gold.Value==15&&gold.Token=="gold"&&!OtherworldMessageKind.IsCommand(gold.Kind),"gold reward retains player-scoped server message payload");
+        writer.Reset();
+        Writer<OtherworldMessage>.write(writer,new OtherworldMessage{Kind=OtherworldMessageKind.State,Value=0,Duration=11.5f,Amount=14});
+        var cooldown=Reader<OtherworldMessage>.read(new NetworkReader(writer.ToArray()));
+        Check(cooldown.Kind==10&&cooldown.Value==0&&cooldown.Duration==11.5f&&cooldown.Amount==14,"three-segment cooldown total and remaining time round trip without wire changes");
+        foreach(int effect in new[]{8,9})
+        {
+            writer.Reset();
+            Writer<OtherworldMessage>.write(writer,new OtherworldMessage{Kind=OtherworldMessageKind.Effect,Value=effect,Amount=3,X=2,Y=-4,EndX=150,EndY=10});
+            var sound=Reader<OtherworldMessage>.read(new NetworkReader(writer.ToArray()));
+            Check(sound.Kind==11&&sound.Value==effect&&sound.Amount==3&&sound.X==2&&sound.Y==-4&&sound.EndX==150&&sound.EndY==10,"transfer sound retains room and both portal positions: "+effect);
+        }
         var run = new OtherworldRun { Hero = 12, Initial = 26001, Talents = new HashSet<int> { 26104, 26105 }, BaseInfluence = -.1f };
         Check(OtherworldDataValidation.Run(run) && OtherworldDataValidation.NetworkRun(run), "valid player data accepted at both boundaries");
         run.Initial = 0;

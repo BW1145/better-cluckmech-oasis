@@ -58,6 +58,12 @@ static class Program
         Check(!(bool)prefix.Invoke(null,new object[]{sync}),"dash exclusively owns transform application");sync.Linked=null;
         Check((bool)prefix.Invoke(null,new object[]{sync}),"ordinary actor interpolation unchanged");
         Check(OtherworldDashNetwork.Accept(sync,new UnityEngine.Vector3{x=120}),"ordinary actor snapshot unaffected");
+        actor.Linked=sync;sync.Linked=actor;actor.Hero=13;actor.FilterKamuiSnapshots=false;
+        sync.serverSnapshots.Add(1);sync.clientSnapshots.Add(2);OtherworldDashNetwork.ClearHistory(actor);
+        Check(sync.serverSnapshots.Count==0&&sync.clientSnapshots.Count==0,"dash end clears history even without a space transfer");
+        Check(sync.CodecBaseline==123&&!actor.FilterKamuiSnapshots,"dash end preserves delta baseline and current filtering mode");
+        actor.Hero=12;sync.serverSnapshots.Add(1);OtherworldDashNetwork.ClearHistory(actor);
+        Check(sync.serverSnapshots.Count==1,"ordinary hero history is unaffected");
         Console.WriteLine($"PASS {checks} dash-network ownership checks");
     }
 }

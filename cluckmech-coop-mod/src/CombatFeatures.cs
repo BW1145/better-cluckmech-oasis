@@ -116,8 +116,9 @@ namespace CluckmechCoop
         {
             if (!ModuleSettings.Extra.Energy || !Plugin.InCombat || EnergyActive || baseStats == null || baseStats.当前生命值 <= 0 || !ModuleSettings.Progress.UseEnergy()) return false;
             ModuleSettings.SaveProgress(); ApplyEnergy(10);
+            if (baseStats.当前生命值 < baseStats.当前生命值上限) baseStats.当前生命值 = baseStats.当前生命值上限;
             Plugin.Network.Broadcast(new SessionMessage { Type = "energy", Token = Token, Delay = 10, EnergyBonusUsed = ModuleSettings.Progress.EnergyBonusUsed });
-            Plugin.Log("[Energy] Activated; remaining "+ModuleSettings.Progress.EnergyRemaining+"; duration 10, attack +500, resistance 100%");
+            Plugin.Log("[Energy] Activated; remaining "+ModuleSettings.Progress.EnergyRemaining+"; duration 10, attack +1000, resistance 100%, base health restored");
             return true;
         }
         internal void ApplyEnergy(float seconds)
@@ -226,7 +227,7 @@ namespace CluckmechCoop
         private static void Postfix(模块_攻击属性 __instance)
         {
             var combat = Plugin.Combat;
-            if (combat != null && combat.EnergyActive && combat.IsBase(__instance)) __instance.当前攻击力 += 500;
+            if (combat != null && combat.EnergyActive && combat.IsBase(__instance)) __instance.当前攻击力 += 1000;
             UnitModifiers.Attack(__instance);
         }
     }

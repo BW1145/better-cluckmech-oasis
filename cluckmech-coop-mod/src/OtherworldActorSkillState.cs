@@ -7,6 +7,9 @@ namespace CluckmechCoop
     {
         internal int Charges { get; private set; }
         internal bool Held { get; private set; }
+        internal int DashSegments { get; private set; }
+        internal float Cooldown { get; private set; }
+        internal bool CanContinueDash => dashStarted && Held && DashSegments < 3;
         private bool dashStarted;
         private float rechargeAt;
 
@@ -14,7 +17,10 @@ namespace CluckmechCoop
         {
             Charges = maximum;
             rechargeAt = 0;
+            Cooldown = 0;
+            DashSegments = 0;
             Release();
+            FinishDash();
         }
 
         internal bool Spend(float now, float cooldown, bool hold)
@@ -23,6 +29,7 @@ namespace CluckmechCoop
                 return false;
 
             Charges--;
+            Cooldown = cooldown;
             if (rechargeAt <= now)
                 rechargeAt = now + cooldown;
 
@@ -30,6 +37,7 @@ namespace CluckmechCoop
             {
                 Held = true;
                 dashStarted = false;
+                DashSegments = 0;
             }
             return true;
         }
@@ -40,15 +48,26 @@ namespace CluckmechCoop
                 return false;
 
             dashStarted = true;
-            Held = false;
             return true;
         }
+
+        internal bool StartDashSegment()
+        {
+            if (!CanContinueDash) return false;
+            DashSegments++;
+            float next = 10 + (DashSegments - 1) * 2;
+            rechargeAt += next - Cooldown;
+            Cooldown = next;
+            return true;
+        }
+
+        internal void FinishDash()
+        { Held = false; dashStarted = false; }
 
         internal bool Release()
         {
             bool held = Held;
             Held = false;
-            dashStarted = false;
             return held;
         }
 
@@ -71,14 +90,16 @@ namespace CluckmechCoop
             return true;
         }
 
-        internal bool Receive(int charges, float remaining, int maximum, float now)
+        internal bool Receive(int charges, float remaining, int maximum, float now, float cooldown = 0)
         {
             if (charges < 0 || charges > maximum || remaining < 0 || float.IsNaN(remaining) ||
-                float.IsInfinity(remaining) || (double)now + remaining > float.MaxValue)
+                float.IsInfinity(remaining) || (double)now + remaining > float.MaxValue ||
+                cooldown < 0 || float.IsNaN(cooldown) || float.IsInfinity(cooldown))
                 return false;
 
             Charges = charges;
             rechargeAt = now + remaining;
+            if (cooldown > 0) Cooldown = cooldown;
             return true;
         }
 

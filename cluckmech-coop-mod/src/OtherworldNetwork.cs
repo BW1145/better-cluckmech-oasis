@@ -100,7 +100,8 @@ namespace CluckmechCoop
                 Kind = OtherworldMessageKind.State,
                 Player = StratagemWorld.Id(actor.gameObject),
                 Value = actor.Charges,
-                Duration = actor.RechargeRemaining
+                Duration = actor.RechargeRemaining,
+                Amount = actor.Cooldown
             });
         }
 
@@ -265,10 +266,16 @@ namespace CluckmechCoop
                 if (message.Value > 0 && Plugin.InCombat) Plugin.Summary.获得金钱(message.Value);
                 return;
             }
+            if (message.Kind == OtherworldMessageKind.Effect && (message.Value == 8 || message.Value == 9))
+            {
+                OtherworldAudio.ReceiveTransfer(message.Value == 8, (int)message.Amount,
+                    new Vector2(message.X, message.Y), new Vector2(message.EndX, message.EndY));
+                return;
+            }
             if (!NetworkClient.spawned.TryGetValue(message.Player, out var identity)) return;
             var actor = identity.GetComponent<OtherworldActor>();
             if (actor == null) return;
-            if (message.Kind == OtherworldMessageKind.State) actor.ReceiveState(message.Value, message.Duration);
+            if (message.Kind == OtherworldMessageKind.State) actor.ReceiveState(message.Value, message.Duration, message.Amount);
             else if (message.Kind == OtherworldMessageKind.Beam)
             {
                 if (actor.Space == OtherworldWorld.Space(OtherworldActions.Player(Plugin.Role)?.gameObject)) OtherworldFx.Beam(new Vector2(message.X, message.Y), new Vector2(message.EndX, message.EndY), message.Duration);

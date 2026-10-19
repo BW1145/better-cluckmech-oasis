@@ -129,35 +129,57 @@ namespace CluckmechCoop
             return units;
         }
         internal static List<模块_基本属性> LocalUnits(Component owner)=>Rooms.Count==0?世界事件系统.场上所有单位:Candidates(owner);
-        internal static void Dash(OtherworldActor actor,Vector2 direction)
+        internal static bool Dash(OtherworldActor actor)
         {
-            if(actor.Space!=0||Plugin.Spawner==null)return;
+            if(actor.Space!=0||Plugin.Spawner==null)return false;
             var phase=Difficulty.PlaybackPhase(Plugin.Spawner);
-            if(phase!=刷怪器.关卡状态枚举.结束&&phase!=刷怪器.关卡状态枚举.无)actor.StartCoroutine(DashRoutine(actor,direction));
+            if(phase==刷怪器.关卡状态枚举.结束||phase==刷怪器.关卡状态枚举.无)return false;
+            actor.StartCoroutine(DashRoutine(actor));return true;
         }
-        private static IEnumerator DashRoutine(OtherworldActor actor,Vector2 direction)
+        private static IEnumerator DashRoutine(OtherworldActor actor)
         {
-            var owner=OtherworldWorld.Unit(actor.gameObject);if(owner==null)yield break;
+            var owner=OtherworldWorld.Unit(actor.gameObject);
+            if(owner==null){actor.FinishDash(false);yield break;}
             ulong lease=owner.Actions.Capture();
-            var start=(Vector2)actor.transform.position;
-            if(navigation==null)navigation=Object.FindObjectOfType<导航管理器>();
-            if(navigation==null||!KamuiNavigation.TryDash(navigation.地面导航地图,start,direction,actor.Run.Has(26114)?5:3,out var end))yield break;
-            actor.BeginDash(direction);
+            bool finish=false;
             try
             {
-            var captured=new HashSet<OtherworldUnit>();Vector2 previous=start;
-            OtherworldNetwork.Effect(actor,6,end,.35f);
-            for(float elapsed=0;elapsed<.35f;elapsed+=Time.deltaTime)
-            {
-                if(actor==null||!owner.Actions.Current(lease))yield break;
-                if(actor.Death.是否玩家死亡){actor.Dashing=false;yield break;}
-                var point=Vector2.Lerp(start,end,elapsed/.35f);actor.transform.position=point;
-                Sweep(actor,previous,point,captured);previous=point;yield return null;
+                var room=Ensure(actor.Role);var captured=new HashSet<OtherworldUnit>();bool sounded=false;
+                while(actor.CanContinueDash&&Plugin.InCombat)
+                {
+                    if(actor.Death.是否玩家死亡||!owner.Actions.Current(lease))yield break;
+                    var start=(Vector2)actor.transform.position;
+                    if(navigation==null)navigation=Object.FindObjectOfType<导航管理器>();
+                    if(navigation==null||!KamuiNavigation.TryDash(navigation.地面导航地图,start,actor.NextDashDirection,actor.Run.Has(26114)?5:3,out var end))break;
+                    if(!actor.StartDashSegment())break;
+                    captured.Clear();Vector2 previous=start;
+                    OtherworldNetwork.Effect(actor,6,end,.35f);
+                    for(float elapsed=0;elapsed<.35f;elapsed+=Time.deltaTime)
+                    {
+                        if(actor==null||!owner.Actions.Current(lease)||actor.Death.是否玩家死亡)yield break;
+                        var point=Vector2.Lerp(start,end,elapsed/.35f);actor.transform.position=point;
+                        Sweep(actor,previous,point,captured);previous=point;yield return null;
+                    }
+                    if(actor==null||!owner.Actions.Current(lease)||actor.Death.是否玩家死亡)yield break;
+                    actor.transform.position=end;Sweep(actor,previous,end,captured);actor.ReturnPoint=end;
+                    sounded=CaptureDashSegment(actor,room,end,captured);
+                    KamuiVisibility.Refresh();
+                }
+                if(actor!=null&&owner.Actions.Current(lease)&&!actor.Death.是否玩家死亡&&Plugin.InCombat&&actor.Dashing)
+                {
+                    finish=true;
+                    if(Transfer(owner,actor.Role+1,room.Center))
+                    {
+                        if(!sounded)OtherworldAudio.Transfer(true,actor.Role+1,actor.ReturnPoint,actor.transform.position);
+                        OtherworldDeployment.SpaceChanged(actor);
+                    }
+                }
             }
-            if(actor==null||!owner.Actions.Current(lease))yield break;
-            actor.transform.position=end;Sweep(actor,previous,end,captured);actor.ReturnPoint=end;
-            var room=Ensure(actor.Role);Vector2 destination=room.Center;
-            if(!Transfer(OtherworldWorld.Unit(actor.gameObject),actor.Role+1,destination))yield break;
+            finally {if(actor!=null)actor.FinishDash(finish);}
+        }
+        private static bool CaptureDashSegment(OtherworldActor actor,KamuiRoom room,Vector2 end,HashSet<OtherworldUnit> captured)
+        {
+            bool transferred=false;
             foreach(var unit in captured.ToArray())
             {
                 if(unit==null||unit.Health.当前生命值<=0)continue;
@@ -165,17 +187,16 @@ namespace CluckmechCoop
                 foreach(var member in group)
                 {
                     if(member.Space!=0)continue;
-                    var origin=origins[member];var position=destination+Vector2.ClampMagnitude(origin-end,8);
+                    var origin=origins[member];var position=room.Center+Vector2.ClampMagnitude(origin-end,8);
                     bool permanent=actor.Run.Has(26113)&&Ordinary(member);
                     if(!Transfer(member,actor.Role+1,position,false))continue;
+                    transferred=true;
                     if(permanent){member.Permanent=true;RemoveFromEncounter(member);}
-                    else room.Temporary.Add(new KamuiCapture{Unit=member,Origin=origin,Until=Time.time+(actor.Run.Has(26114)?8:5)});
+                    else room.Temporary.Add(new KamuiCapture{Unit=member,Origin=origin,Until=Time.time+(actor.Run.Has(26114)?10:5)});
                 }
             }
-            KamuiVisibility.Refresh();
-            OtherworldDeployment.SpaceChanged(actor);
-            }
-            finally {if(actor!=null)actor.Dashing=false;}
+            if(transferred)OtherworldAudio.Transfer(true,actor.Role+1,end,room.Center);
+            return transferred;
         }
         private static void Sweep(OtherworldActor actor,Vector2 from,Vector2 to,HashSet<OtherworldUnit> captured)
         {
@@ -220,10 +241,12 @@ namespace CluckmechCoop
         }
         internal static void Return(OtherworldActor actor)
         {
+            int space=actor.Space;Vector2 roomPoint=actor.transform.position;
             if(!Transfer(OtherworldWorld.Unit(actor.gameObject),0,actor.ReturnPoint))return;
+            OtherworldAudio.Transfer(false,space,actor.transform.position,roomPoint);
             OtherworldDeployment.SpaceChanged(actor);
             actor.EndPhase(false);
-            if(actor.Run.Has(26115))actor.BeginPhase(true);else actor.EndAction();
+            if(actor.Run.Has(26115)){actor.ReduceCooldown(4);actor.BeginPhase(true);}else actor.EndAction();
         }
         internal static bool Transfer(OtherworldUnit unit,int space,Vector2 point,bool refresh=true)
         {
@@ -312,13 +335,21 @@ namespace CluckmechCoop
             foreach(var room in Rooms.Values)
             {
                 if(room.NavigationDirty)RebuildNavigation(room);
+                bool released=false;Vector2 mainPoint=default,roomPoint=default;
                 for(int i=room.Temporary.Count-1;i>=0;i--)
                 {
                     var capture=room.Temporary[i];
                     if(capture.Unit==null||capture.Unit.Health.当前生命值<=0){room.Temporary.RemoveAt(i);continue;}
                     if(Time.time<capture.Until)continue;
-                    if(Transfer(capture.Unit,0,capture.Origin))room.Temporary.RemoveAt(i);else capture.Until=Time.time+.25f;
+                    Vector2 origin=capture.Unit.transform.position;
+                    if(Transfer(capture.Unit,0,capture.Origin))
+                    {
+                        released=true;mainPoint=capture.Unit.transform.position;roomPoint=origin;
+                        room.Temporary.RemoveAt(i);
+                    }
+                    else capture.Until=Time.time+.25f;
                 }
+                if(released)OtherworldAudio.Transfer(false,room.Owner+1,mainPoint,roomPoint);
             }
         }
         private static void RebuildNavigation(KamuiRoom room)

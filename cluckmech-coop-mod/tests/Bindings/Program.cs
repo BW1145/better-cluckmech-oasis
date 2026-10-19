@@ -20,6 +20,16 @@ var original=Assembly.LoadFrom(Path.Combine(managed,"Assembly-CSharp.dll"));
 var mod=Assembly.LoadFrom(Path.Combine(root,"src/bin/Release/net472/CluckmechCoop.dll"));
 int checks=0;
 try{
+if(args.Length>2 && args[2]=="--energy-audio")
+{
+    TranspilerChecks.EnergyAudio(original,mod);
+    return;
+}
+if(args.Length>2 && args[2]=="--dash-chain")
+{
+    TranspilerChecks.DashChain(mod);
+    return;
+}
 if(args.Length>2 && args[2]=="--shop")
 {
     TranspilerChecks.Shop(original,mod,ValidateStack);
