@@ -194,22 +194,25 @@ namespace CluckmechCoop
                 {
                     if (target == null || target.Space != actor.Space || target.Health.当前生命值 <= 0) continue;
                     if (Vector2.Dot(((Vector2)target.transform.position-(Vector2)actor.transform.position).normalized, direction) < .5f) continue;
-                    float bonus = 0;
-                    if (settled.Add(target))
+                    if (!target.Health.当前是否无敌 && settled.Add(target))
                     {
                         var states = target.GetComponent<模块_状态属性>();
                         if (states != null)
                         {
-                            foreach (var state in states.当前状态列表)
+                            float bonus=OtherworldBurnSettlement.Consume(states.当前状态列表);
+                            if(bonus>0)
                             {
-                                if (state.状态类型 == 攻击类型与状态数据库.状态枚举.灼烧)
-                                {
-                                    bonus += state.加成属性.当前属性效果.x*Mathf.Max(0, state.剩余时间)*2;
-                                }
+                                float health=target.Health.当前生命值;
+                                target.GetComponent<模块_受伤>()?.受到伤害(new 模块_状态持续效果.状态伤害类
+                                    {状态=攻击类型与状态数据库.状态枚举.灼烧,数值=bonus});
+                                float dealt=health-target.Health.当前生命值;
+                                if(dealt>0)
+                                {target.Health.最近攻击者=actor.gameObject;target.Health.最近受到伤害=dealt;}
                             }
                         }
                     }
-                    Hit(actor, target, actor.Attack.当前攻击力*2+bonus);
+                    if(target.Health.当前生命值<=0)continue;
+                    Hit(actor, target, actor.Attack.当前攻击力*2);
                     var burn = actor.GetComponent<模块_攻击详细属性>().状态加成列表[(int)攻击类型与状态数据库.状态枚举.灼烧];
                     Status(target, actor.gameObject, 攻击类型与状态数据库.状态枚举.灼烧, burn.当前持续时间, burn.当前属性效果);
                 }

@@ -21,6 +21,21 @@ namespace CluckmechCoop
             return false;
         }
     }
+    [HarmonyPatch(typeof(UI_结算场景信息显示),"更新角色")]
+    internal static class OtherworldSettlementCharacter
+    {
+        private static bool Prefix(UI_结算场景信息显示 __instance,总结脚本 ___总结)
+        {
+            int id=___总结?.单局统计数据.使用角色??-1;
+            var hero=OtherworldCatalog.Hero(id);
+            if(__instance.角色!=null)
+                for(int i=0;i<__instance.角色.Length;i++)
+                    if(__instance.角色[i]!=null)__instance.角色[i].SetActive(i==id);
+            if(hero==null)return true;
+            if(__instance.角色名字UI!=null)__instance.角色名字UI.text=hero.Name;
+            return false;
+        }
+    }
     [HarmonyPatch]
     internal static class MapBoonsPauseVisibility
     {

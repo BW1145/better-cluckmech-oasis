@@ -41,6 +41,29 @@ static class Program
     private static void BadRuntime(string name,Action<StratagemSaved> mutate)=>BadUnit(name,u=>mutate(u.Stratagem));
     static void Main(string[] args)
     {
+        if(args.Length>0&&args[0]=="coupons-burn")
+        {
+            var progress=new PlayerProgress{Coupons=12};
+            Check(!progress.BuyCoupons("shop",29)&&progress.Coupons==12&&!progress.ShopAt("shop").TicketBought,"insufficient gold preserves coupons and purchase opportunity");
+            Check(progress.BuyCoupons("shop",30)&&progress.Coupons==13,"shop grants one reroll");
+            Check(!progress.BuyCoupons("shop",300)&&progress.Coupons==13,"shop reward remains once per node");
+            Check(progress.ClaimRepair("repair")&&progress.Coupons==15,"repair grants two rerolls");
+            var restored=JsonConvert.DeserializeObject<PlayerProgress>(JsonConvert.SerializeObject(progress));
+            Check(restored.Coupons==15&&!restored.ClaimRepair("repair")&&!restored.BuyCoupons("shop",30),"saved balances and consumed node rewards survive reload");
+            Check(restored.ClaimRepair("next")&&restored.Coupons==17,"next repair remains eligible");
+            Check(!restored.SpendCoupon(1)&&restored.Coupons==17&&restored.SpendCoupon(0)&&restored.Coupons==16,"native free refresh is consumed before retained coupons");
+            var burn=new 模块_状态属性.状态类{状态类型=攻击类型与状态数据库.状态枚举.灼烧,剩余时间=4};
+            burn.加成属性.当前属性效果.x=25;
+            var poison=new 模块_状态属性.状态类{状态类型=攻击类型与状态数据库.状态枚举.中毒,剩余时间=3};
+            var expired=new 模块_状态属性.状态类{状态类型=攻击类型与状态数据库.状态枚举.灼烧,剩余时间=-1};
+            expired.加成属性.当前属性效果.x=100;
+            var states=new List<模块_状态属性.状态类>{burn,poison,expired,burn};
+            Check(OtherworldBurnSettlement.Consume(states)==400,"settlement totals remaining time across all burn stacks");
+            Check(states.Count==1&&ReferenceEquals(states[0],poison)&&poison.剩余时间==3,"settlement removes consumed burns while preserving other statuses");
+            Check(OtherworldBurnSettlement.Consume(states)==0,"consumed burns cannot settle twice");
+            states.Add(burn);Check(OtherworldBurnSettlement.Consume(states)==200,"newly applied burn remains available for a later activation");
+            Console.WriteLine($"PASS: {checks} coupon grant, payment, one-time/reload and burn consumption checks");return;
+        }
         if(args.Length>0&&args[0].TrimStart('-')=="lifecycle"){LifecycleHarness.Run();return;}
         if(args.Length>0&&args[0]=="storage"){ModuleSettings.Initialize(new BepInEx.Configuration.ConfigFile());StorageHarness.Run();return;}
         if(args.Length>0&&args[0]=="modules"){ModuleStateHarness.Run();return;}

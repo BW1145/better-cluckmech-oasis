@@ -24,6 +24,13 @@ internal static class Program
         ui.角色[2]=null;Check(Refresh(ui,2),"missing native portrait is tolerated");
         ui.角色=null;ui.角色名字UI=null;Check(!Refresh(ui,12),"missing display references are tolerated");
         Check(Refresh(ui,null),"missing summary falls through to native handling");
+        var settlement=new UI_结算场景信息显示{角色=Enumerable.Range(0,14).Select(_=>new Portrait{active=true}).ToArray(),角色名字UI=new Label()};
+        var settlementRefresh=typeof(OtherworldSettlementCharacter).GetMethod("Prefix",BindingFlags.NonPublic|BindingFlags.Static);
+        bool Settlement(int id)=>(bool)settlementRefresh.Invoke(null,new object[]{settlement,new 总结脚本{单局统计数据=new Run{使用角色=id}}});
+        Check(!Settlement(13)&&settlement.角色名字UI.text=="宇智波带土","settlement uses catalog name rather than missing localization key");
+        Check(settlement.角色.Where((p,i)=>p.active!=(i==13)).Count()==0,"settlement activates only Obito");
+        Check(!Settlement(12)&&settlement.角色名字UI.text=="佩丽卡","settlement refresh switches custom character");
+        Check(Settlement(0)&&settlement.角色[0].active&&!settlement.角色[12].active&&!settlement.角色[13].active,"settlement preserves native character handling and clears reused portraits");
         var visibility=typeof(MapBoonsPauseVisibility).GetMethod("Postfix",BindingFlags.NonPublic|BindingFlags.Static);
         visibility.Invoke(null,new object[]{new 暂停菜单{是否开启=true}});
         Check(MapBoonsUi.Paused,"open event hides map card, including co-op where time continues");
@@ -39,6 +46,7 @@ public sealed class Label {public string text;}
 public sealed class Run {public int 使用角色;}
 public sealed class 总结脚本 {public Run 单局统计数据;}
 public sealed class UI_暂停菜单信息显示 {public Portrait[] 角色;public Label 角色名字UI;}
+public sealed class UI_结算场景信息显示 {public Portrait[] 角色;public Label 角色名字UI;}
 public sealed class 暂停菜单 {public bool 是否开启;public void 开启菜单(){}public void 关闭菜单(){}}
 namespace CluckmechCoop
 {

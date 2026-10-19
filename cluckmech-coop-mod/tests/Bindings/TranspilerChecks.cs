@@ -7,6 +7,54 @@ using HarmonyLib;
 
 internal static class TranspilerChecks
 {
+    internal static void SettlementRepairs(Assembly original,Assembly mod,Action<List<CodeInstruction>> validateStack)
+    {
+        List<CodeInstruction> Body(Type type,string name)=>PatchProcessor.GetOriginalInstructions(AccessTools.DeclaredMethod(type,name));
+        bool Call(CodeInstruction c,string type,string name)=>c.operand is MethodInfo m&&m.DeclaringType.Name==type&&m.Name==name;
+        var target=AccessTools.DeclaredMethod(original.GetType("模块_玩家_死亡",true),"玩家死亡");
+        var repair=mod.GetType("CluckmechCoop.RepairPlayerKillNotification",true);
+        var patch=AccessTools.DeclaredMethod(repair,"Transpiler");
+        var before=PatchProcessor.GetOriginalInstructions(target);var after=Apply(patch,before,target);validateStack(after);
+        var send=AccessTools.DeclaredMethod(repair,"Send");
+        Require(after.Count(c=>c.Calls(send))==1&&after.Count==before.Count,"player death replaces exactly one notification, retaining the full native body");
+        Require(before.Any(c=>c.opcode==OpCodes.Ldstr&&Equals(c.operand,"击杀判断")),"native notification message is present");
+        var nativeSend=AccessTools.Method(AccessTools.TypeByName("UnityEngine.GameObject"),"SendMessage",new[]{typeof(string),typeof(object)});
+        ExpectInvalid(()=>Apply(patch,before.Where(c=>!c.Calls(nativeSend)),target),"Player kill notification");
+        var duplicate=before.Select(c=>new CodeInstruction(c)).ToList();duplicate.Add(new CodeInstruction(OpCodes.Callvirt,nativeSend));
+        ExpectInvalid(()=>Apply(patch,duplicate,target),"Player kill notification");
+        Require(Body(repair,"Send").Any(c=>Call(c,"Transform","get_position")),"kill notification passes the victim position expected by native receivers");
+        var fox=mod.GetType("CluckmechCoop.RepairFoxFriendsInitialization",true);
+        foreach(var binding in new[]{("___攻击属性","模块_攻击属性"),("___光环","模块_光环")})
+        {
+            var native=AccessTools.Field(original.GetType("词条_342_狐朋狗友",true),binding.Item1.Substring(3));
+            var parameter=AccessTools.DeclaredMethod(fox,"Prefix").GetParameters().Single(p=>p.Name==binding.Item1);
+            Require(native.FieldType.MakeByRefType()==parameter.ParameterType,"fox initialization field binding: "+binding.Item1);
+            Require(Body(fox,"Prefix").Any(c=>c.operand is MethodInfo m&&m.Name=="GetComponent"&&m.IsGenericMethod&&m.GetGenericArguments()[0].Name==binding.Item2),"fox retrieves existing "+binding.Item2);
+        }
+        var foxBody=Body(fox,"Prefix");
+        int initialize=foxBody.FindIndex(c=>Call(c,"模块_光环","初始化"));
+        int range=foxBody.FindIndex(c=>Call(c,"模块_光环","光环优化"));
+        int refresh=foxBody.FindIndex(c=>Call(c,"模块_光环","检索光环内友方"));
+        Require(initialize>=0&&range>initialize&&refresh>range,"fox initializes and refreshes current allies before its one-time native bonus calculation");
+        var screen=original.GetType("UI_结算场景信息显示",true);
+        Require(AccessTools.DeclaredMethod(screen,"更新角色")!=null&&AccessTools.Field(screen,"总结")!=null&&AccessTools.Field(screen,"角色名字UI")!=null,"settlement patch binds actual native refresh and name fields");
+        var portraits=mod.GetType("CluckmechCoop.OtherworldScenePortraits",true);
+        Require(Body(portraits,"Prefix").Any(c=>c.opcode==OpCodes.Isinst&&Equals(c.operand,screen)),"settlement selects the same layered portrait path as pause");
+        var portrait=Body(portraits,"Portrait");
+        foreach(string child in new[]{"角色","手"})Require(portrait.Any(c=>c.opcode==OpCodes.Ldstr&&Equals(c.operand,child)),"layered portrait addresses native child "+child);
+        Require(portrait.Any(c=>Call(c,"Behaviour","set_enabled"))&&portrait.Any(c=>Call(c,"Image","set_overrideSprite")),"portrait disables animation writers and replaces overridden image");
+        var actions=mod.GetType("CluckmechCoop.OtherworldActions",true);
+        var flame=actions.GetNestedTypes(BindingFlags.NonPublic).Single(t=>t.Name.StartsWith("<Flame>"));
+        var flameBody=Body(flame,"MoveNext");
+        int consume=flameBody.FindIndex(c=>Call(c,"OtherworldBurnSettlement","Consume"));
+        var statusDamage=original.GetType("模块_状态持续效果+状态伤害类",true);
+        Require(consume>=0&&flameBody.Skip(consume).Any(c=>c.operand is MethodInfo m&&m.Name=="受到伤害"&&m.GetParameters().SingleOrDefault()?.ParameterType==statusDamage),"consumed burn uses native noncritical status damage overload");
+        foreach(string field in new[]{"最近攻击者","最近受到伤害"})
+            Require(flameBody.Skip(consume).Any(c=>c.opcode==OpCodes.Stfld&&c.operand is FieldInfo f&&f.Name==field),"burn settlement retains native kill attribution: "+field);
+        Require(flameBody.Any(c=>Call(c,"HashSet`1","Add")),"settlement remains once per enemy per flame activation");
+        Require(Body(mod.GetType("CluckmechCoop.OtherworldStatusDamage",true),"Prefix").All(c=>c.operand is not FieldInfo f||!f.Name.Contains("暴击")),"status damage modifier adds no critical multiplier");
+        Console.WriteLine("PASS: native death IL/stack and contract, fox field bindings, settlement layered portrait/name and single noncritical burn-settlement wiring");
+    }
     internal static void Shop(Assembly original,Assembly mod,Action<List<CodeInstruction>> validateStack)
     {
         var method=AccessTools.DeclaredMethod(original.GetType("商店脚本",true),"商店商品运算");

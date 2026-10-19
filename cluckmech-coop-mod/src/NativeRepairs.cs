@@ -31,6 +31,36 @@ namespace CluckmechCoop
         }
     }
 
+    [HarmonyPatch(typeof(词条_342_狐朋狗友), "Start")]
+    internal static class RepairFoxFriendsInitialization
+    {
+        private static void Prefix(词条_342_狐朋狗友 __instance,ref 模块_攻击属性 ___攻击属性,ref 模块_光环 ___光环)
+        {
+            if(!NativeRepairs.Enabled)return;
+            ___攻击属性=__instance.GetComponent<模块_攻击属性>();
+            ___光环=__instance.GetComponent<模块_光环>();
+            ___光环.初始化();
+            ___光环.光环优化(___攻击属性.攻击范围);
+            ___光环.检索光环内友方();
+        }
+    }
+
+    [HarmonyPatch(typeof(模块_玩家_死亡), "玩家死亡")]
+    internal static class RepairPlayerKillNotification
+    {
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var send=AccessTools.Method(typeof(GameObject),"SendMessage",new[]{typeof(string),typeof(object)});
+            var code=TranspilerContract.Exact(instructions,"Player kill notification",1,c=>c.Calls(send));
+            foreach(var instruction in code)
+                if(instruction.Calls(send))
+                {instruction.opcode=OpCodes.Call;instruction.operand=AccessTools.Method(typeof(RepairPlayerKillNotification),nameof(Send));}
+            return code;
+        }
+        private static void Send(GameObject killer,string message,object victim)
+            =>killer.SendMessage(message,NativeRepairs.Enabled?(object)((GameObject)victim).transform.position:victim);
+    }
+
     [HarmonyPatch(typeof(模块_炮塔状态机), "Start")]
     internal static class RepairTurretAnimator
     {

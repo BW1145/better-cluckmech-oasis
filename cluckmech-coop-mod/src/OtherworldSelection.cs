@@ -192,13 +192,13 @@ namespace CluckmechCoop
             foreach(var type in screens)foreach(string name in new[]{"Start","OnEnable"})
             {var method=type.GetMethod(name,BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance|BindingFlags.DeclaredOnly);if(method!=null)yield return method;}
         }
-        internal static GameObject Portrait(GameObject template,OtherworldHero hero,bool pause=false)
+        internal static GameObject Portrait(GameObject template,OtherworldHero hero,bool layered=false)
         {
             var clone=Object.Instantiate(template,template.transform.parent);clone.name=hero.Name;clone.SetActive(false);
-            if(pause)
+            if(layered)
             {
-                // The pause prefab is a layered animated portrait, not a single
-                // image. Its first Image is not the body, and the chicken Animator
+                // Pause and settlement share a layered animated portrait.
+                // Its first Image is not the body, and the chicken Animator
                 // otherwise writes native sprites back over our replacement.
                 foreach(var animator in clone.GetComponentsInChildren<Animator>(true))animator.enabled=false;
                 var body=clone.transform.Find("角色")?.GetComponent<Image>();
@@ -251,10 +251,10 @@ namespace CluckmechCoop
             else if(field.GetValue(__instance) is GameObject[] objects&&objects.Length>0&&objects.Length<14)
             {
                 var expanded=new GameObject[14];System.Array.Copy(objects,expanded,objects.Length);
-                foreach(var hero in OtherworldCatalog.Heroes)expanded[hero.Id]=Portrait(objects[0],hero,__instance is UI_暂停菜单信息显示);
+                foreach(var hero in OtherworldCatalog.Heroes)expanded[hero.Id]=Portrait(objects[0],hero,__instance is UI_暂停菜单信息显示||__instance is UI_结算场景信息显示);
                 field.SetValue(__instance,expanded);
             }
-            var names=AccessTools.Field(__instance.GetType(),"角色名字");
+            var names=__instance.GetType().GetField("角色名字",BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic);
             if(names?.GetValue(__instance) is string[] labels&&labels.Length<14)
             {var expanded=new string[14];System.Array.Copy(labels,expanded,labels.Length);expanded[12]="佩丽卡";expanded[13]="宇智波带土";names.SetValue(__instance,expanded);}
         }
