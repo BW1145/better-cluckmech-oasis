@@ -28,14 +28,12 @@ namespace CluckmechCoop
         {
             end=start;if(map==null||!Finite(start)||!Finite(direction)||!map.PointIsValid(start))return false;
             var desired=start+direction.normalized*distance;
-            if(map.PointIsValid(desired)&&map.CheckLOS(start,desired)){end=desired;return true;}
-            float low=0,high=1;
-            for(int i=0;i<9;i++)
+            float fraction=KamuiDashPath.ReachableFraction(value=>
             {
-                float middle=(low+high)*.5f;var candidate=Vector2.Lerp(start,desired,middle);
-                if(map.PointIsValid(candidate)&&map.CheckLOS(start,candidate))low=middle;else high=middle;
-            }
-            end=Vector2.Lerp(start,desired,low);return (end-start).sqrMagnitude>.0001f;
+                var candidate=Vector2.Lerp(start,desired,value);
+                return map.PointIsValid(candidate)&&map.CheckLOS(start,candidate);
+            });
+            end=Vector2.Lerp(start,desired,fraction);return true;
         }
         internal static void Transfer(OtherworldUnit unit,int from,int to)
         {

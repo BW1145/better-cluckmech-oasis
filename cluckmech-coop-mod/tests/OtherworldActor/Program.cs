@@ -79,5 +79,18 @@ static class Program
         reduced.Initialize(1);reduced.Spend(0,5,true);reduced.Release();
         Check(!reduced.Dash()&&!reduced.StartDashSegment()&&reduced.Cooldown==5,"quick release remains short press");
     }
-    static void Main(){Input();Skills();DashChains();Console.WriteLine($"PASS {checks} actor input and skill state checks");}
+    static void Walls()
+    {
+        Check(KamuiDashPath.ReachableFraction(_=>true)==1,"open path reaches full segment");
+        Check(KamuiDashPath.ReachableFraction(_=>false)==0,"wall contact keeps current position");
+        float clipped=KamuiDashPath.ReachableFraction(t=>t<=.4f);
+        Check(clipped<=.4f&&clipped>.398f,"partial segment stops before wall");
+        var skill=new OtherworldActorSkillState();skill.Initialize(1);skill.Spend(0,5,true);skill.Dash();
+        Check(skill.StartDashSegment()&&KamuiDashPath.ReachableFraction(_=>false)==0&&skill.CanContinueDash,"blocked segment retains held chain");
+        Check(skill.StartDashSegment()&&KamuiDashPath.ReachableFraction(_=>true)==1&&skill.CanContinueDash,"turning away starts second segment");
+        Check(skill.StartDashSegment()&&!skill.CanContinueDash&&skill.Cooldown==14,"third segment still finishes normally after wall contact");
+        skill.Initialize(1);skill.Spend(0,5,true);skill.Dash();skill.StartDashSegment();
+        Check(skill.Release()&&!skill.CanContinueDash&&skill.Cooldown==10,"release during interval finishes with one-segment cooldown");
+    }
+    static void Main(){Input();Skills();DashChains();Walls();Console.WriteLine($"PASS {checks} actor input and skill state checks");}
 }

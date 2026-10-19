@@ -153,17 +153,22 @@ namespace CluckmechCoop
                     if(navigation==null||!KamuiNavigation.TryDash(navigation.地面导航地图,start,actor.NextDashDirection,actor.Run.Has(26114)?5:3,out var end))break;
                     if(!actor.StartDashSegment())break;
                     captured.Clear();Vector2 previous=start;
-                    OtherworldNetwork.Effect(actor,6,end,.35f);
-                    for(float elapsed=0;elapsed<.35f;elapsed+=Time.deltaTime)
+                    OtherworldNetwork.Effect(actor,6,end,OtherworldMotion.DashSeconds);
+                    for(float elapsed=0;elapsed<OtherworldMotion.DashSeconds;elapsed+=Time.deltaTime)
                     {
                         if(actor==null||!owner.Actions.Current(lease)||actor.Death.是否玩家死亡)yield break;
-                        var point=Vector2.Lerp(start,end,elapsed/.35f);actor.transform.position=point;
+                        var point=Vector2.Lerp(start,end,OtherworldMotion.DashTravel(elapsed/OtherworldMotion.DashSeconds));actor.transform.position=point;
                         Sweep(actor,previous,point,captured);previous=point;yield return null;
                     }
                     if(actor==null||!owner.Actions.Current(lease)||actor.Death.是否玩家死亡)yield break;
-                    actor.transform.position=end;Sweep(actor,previous,end,captured);actor.ReturnPoint=end;
+                    actor.AnchorDash(end);Sweep(actor,previous,end,captured);actor.ReturnPoint=end;
                     sounded=CaptureDashSegment(actor,room,end,captured);
                     KamuiVisibility.Refresh();
+                    for(float pause=0;pause<OtherworldMotion.DashPauseSeconds&&actor.CanContinueDash;pause+=Time.deltaTime)
+                    {
+                        if(!Plugin.InCombat||!owner.Actions.Current(lease)||actor.Death.是否玩家死亡)yield break;
+                        actor.AnchorDash(end);yield return null;
+                    }
                 }
                 if(actor!=null&&owner.Actions.Current(lease)&&!actor.Death.是否玩家死亡&&Plugin.InCombat&&actor.Dashing)
                 {

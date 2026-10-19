@@ -31,6 +31,31 @@ def review(hero):
  for row,f in enumerate((12,30,50,72,96)):contact.alpha_composite(frames[f].convert('RGBA').resize((1536,192)),(0,row*192))
  path=ROOT/f'{("perlica","obito")[hero]}-production-motion.gif';frames[0].save(path,save_all=True,append_images=frames[1:],duration=42,loop=0)
  contact.convert('RGB').save(ROOT/f'{("perlica","obito")[hero]}-production-motion-contact.png');print(path)
+def review_dash():
+ atlas=Image.open(OUT/'faithful-1.png').convert('RGBA');regions=json.loads((OUT/'faithful-1.json').read_text())
+ frames=[];shots=[];fps=40;duration=.35;pause=.2
+ for tick in range(96):
+  time=tick/fps-.25;canvas=Image.new('RGBA',(720,224),'#555e64');draw=ImageDraw.Draw(canvas)
+  for x in range(0,720,24):draw.line((x,30,x,224),fill='#687279')
+  for y in range(30,224,24):draw.line((0,y,720,y),fill='#687279')
+  segment=min(2,max(0,int(max(0,time)/(duration+pause))))
+  age=max(0,time)-segment*(duration+pause);p=min(1,max(0,age/duration));travel=p*p*(3-2*p)
+  x=70+(segment+travel)*155;key=f'dash.1.6.{min(7,int(age/duration*8))}' if 0<=time<1.45 else 'pose.1.6.idle'
+  if time>=1.45:x=535
+  if time<0:x=70
+  r=regions[key];sprite=atlas.crop((r[0],r[1],r[0]+64,r[1]+64)).resize((128,128),Image.Resampling.NEAREST)
+  canvas.alpha_composite(sprite,(round(x)-64,55))
+  text='START' if time<0 else 'END' if time>=1.45 else f'SEGMENT {segment+1} | '+('DASH' if age<duration else '0.2s INTERVAL')
+  draw.text((12,8),'OBITO | source atlas | 1x game time | offline motion preview',fill='white')
+  draw.text((12,205),text,fill='#f8d37b');frames.append(canvas.convert('RGB'))
+  if tick in (13,17,21,25,29,33,39,43,47,51,55,61):shots.append(canvas.convert('RGB'))
+ path=ROOT/'obito-dash-motion.gif';frames[0].save(path,save_all=True,append_images=frames[1:],duration=25,loop=0)
+ contact=Image.new('RGB',(720*2,224*6))
+ for i,shot in enumerate(shots):contact.paste(shot,((i%2)*720,(i//2)*224))
+ contact.save(ROOT/'obito-dash-motion-contact.png');print(path)
+
 if __name__=='__main__':
  import sys
- for h in map(int,sys.argv[1:] or [0,1]):review(h)
+ if '--dash' in sys.argv:review_dash()
+ else:
+  for h in map(int,sys.argv[1:] or [0,1]):review(h)

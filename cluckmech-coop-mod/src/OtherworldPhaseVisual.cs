@@ -16,12 +16,26 @@ namespace CluckmechCoop
         private Vector2[] uv;
         private Color[] colors;
         private readonly Sprite[] frames=new Sprite[16];
+        private readonly SpriteRenderer[] trails=new SpriteRenderer[2];
+        private readonly Vector3[] trailPositions=new Vector3[2];
+        private readonly float[] trailBorn={-1,-1};
+        private Vector3 lastTrailPosition;
+        private float nextTrail;
+        private int trailIndex;
         private bool playing,wasPhased,leased;
         private float started,finish;
         private int previous=-1;
         internal void Initialize(OtherworldActor owner)
         {
             actor=owner;
+            for(int i=0;i<trails.Length;i++)
+            {
+                var trail=new GameObject("KamuiDashTrail");trail.transform.SetParent(transform,false);
+                trail.transform.localScale=actor.Body.transform.localScale;
+                trails[i]=trail.AddComponent<SpriteRenderer>();trails[i].sharedMaterial=actor.Body.sharedMaterial;
+                trails[i].sortingLayerID=actor.Body.sortingLayerID;trails[i].enabled=false;
+            }
+            lastTrailPosition=actor.Body.transform.position;
             var root=new GameObject("KamuiPhase");root.transform.SetParent(transform,false);
             root.transform.localPosition=actor.VisualOrigin;root.transform.localScale=Vector3.one*actor.VisualScale;
             drawing=root.AddComponent<MeshRenderer>();drawing.sharedMaterial=actor.Body.sharedMaterial;
@@ -45,6 +59,7 @@ namespace CluckmechCoop
         private void LateUpdate()
         {
             if(actor==null||drawing==null)return;
+            DashTrails();
             bool phased=(actor.Phased||actor.Dashing)&&!actor.Death.是否玩家死亡;
             if(phased&&!wasPhased)
             {
@@ -81,13 +96,34 @@ namespace CluckmechCoop
             if(frame!=previous){opening.sprite=frames[frame];previous=frame;}
             opening.color=new Color(1,1,1,.8f*weight);
         }
+        private void DashTrails()
+        {
+            Vector3 point=actor.Body.transform.position;
+            float distance=(point-lastTrailPosition).sqrMagnitude;
+            if(actor.DashTravelling&&Time.time>=nextTrail&&distance>.025f&&distance<4)
+            {
+                int index=trailIndex++%trails.Length;
+                trails[index].sprite=actor.CurrentFrame;trailPositions[index]=point;trailBorn[index]=Time.time;
+                lastTrailPosition=point;nextTrail=Time.time+.06f;
+            }
+            if(!actor.DashTravelling||distance>=4)lastTrailPosition=point;
+            bool visible=actor.Space==OtherworldWorld.Space(OtherworldActions.Player(Plugin.Role)?.gameObject)&&!actor.Death.是否玩家死亡;
+            for(int i=0;i<trails.Length;i++)
+            {
+                float age=Time.time-trailBorn[i];var trail=trails[i];
+                trail.enabled=visible&&trailBorn[i]>=0&&age<.16f;
+                if(!trail.enabled)continue;
+                trail.transform.position=trailPositions[i];trail.sortingOrder=actor.Body.sortingOrder-2;
+                trail.color=new Color(.65f,.58f,.78f,.28f*(1-age/.16f));
+            }
+        }
         private void Stop()
         {
             if(drawing!=null)drawing.enabled=false;if(opening!=null)opening.enabled=false;
             if(leased){OtherworldWarpVisual.Reveal(actor.Body);leased=false;}
             playing=false;
         }
-        private void OnDisable(){Stop();wasPhased=false;}
+        private void OnDisable(){Stop();wasPhased=false;foreach(var trail in trails)if(trail!=null)trail.enabled=false;for(int i=0;i<trailBorn.Length;i++)trailBorn[i]=-1;}
         private void OnDestroy(){Stop();if(mesh!=null)Destroy(mesh);}
     }
 }

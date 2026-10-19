@@ -8,14 +8,14 @@ silhouette. It does not rescale the whole character per animation frame.
 
 - 16 gait phases, eight held aim directions, eight relative travel sectors.
 - Four arm/recoil phases independently selected from gait phase.
-- Same-source standing poses and a frozen dash bank.
+- Same-source standing poses; Obito has eight dash stages per direction.
 - Fixed 64×64 tile, sole anchor `(32,60)`, Unity pivot `(.5,.0625)`, 32 PPU.
 - Full-frame compositions are deduplicated into one texture per character.
   Phase and warp shaders therefore always see the entire visible character.
 - Runtime public hero IDs are 12 (Perlica), 13 (Obito); file bank IDs are 0, 1.
 
 `BuildProductionAtlas.py` writes `src/OtherworldAssets/faithful-{0,1}.{png,json}`.
-`ValidateProductionAtlas.py` verifies all 5,168 addresses per hero, bounds,
+`ValidateProductionAtlas.py` verifies 5,168 Perlica and 5,232 Obito addresses, bounds,
 transparent gutters, visible-bound metadata, and actual packed phase diversity.
 `ReviewProductionMotion.py` plays the packed atlas against a moving world grid.
 
@@ -37,9 +37,13 @@ Consequently the normal-speed motion is stylized running/backpedaling rather
 than a claim of physically exact planted-foot contact. Slow calibrated playback
 can verify the geometric stance separately.
 
-Obito's dash adds a bounded 12-degree torso/hip lean to his original dash-row
-art in side views. Feet/pivot remain fixed and the head, trailing arm and robe
-move together. Front/back use the authored depth pose.
+Obito's dash animates his source dash-row art through eight stages. Torso and
+robe lean up to 25 degrees in side views; lower limbs counter-swing from their
+hip anchors, with a bounded crouch and rise. All tiles retain the same canvas
+and sole pivot. Runtime uses a 0.35-second eased movement, holds the recovery
+pose during the 0.2-second interval, and caches two short-lived trail renderers.
+`ReviewProductionMotion.py --dash` renders the shipped pose bank and timing as
+an offline three-segment GIF and contact sheet.
 
 ## Source and review files
 

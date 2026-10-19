@@ -13,14 +13,14 @@
     },
     {
       "hero": 1,
-      "keys": 5168,
+      "keys": 5232,
       "minimumDistinctGaitPhases": 16,
       "minimumDistinctRecoilPhases": 4,
       "atlas": [
         4096,
-        2368
+        2432
       ],
-      "textureMiB": 37.0
+      "textureMiB": 38.0
     }
   ],
   "perlicaBackpedalAttackCombinations": 512,

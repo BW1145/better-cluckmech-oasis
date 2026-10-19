@@ -6,6 +6,12 @@ namespace CluckmechCoop
     internal sealed class OtherworldMotion
     {
         internal const int DashProtocol=1;
+        internal const float DashSeconds=.35f,DashPauseSeconds=.2f;
+        internal const int DashFrames=8;
+        internal static float DashTravel(float progress)
+        {float value=Math.Max(0,Math.Min(1,progress));return value*value*(3-2*value);}
+        internal static int DashFrame(float age,float seconds)
+        {return Math.Max(0,Math.Min(DashFrames-1,(int)(age/Math.Max(.001f,seconds)*DashFrames)));}
         internal static bool TryDashCommand(int protocol,float x,float y,out float dx,out float dy)
         {
             dx=dy=0;

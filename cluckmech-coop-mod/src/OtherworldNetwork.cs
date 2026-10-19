@@ -129,7 +129,9 @@ namespace CluckmechCoop
                 X = point.x,
                 Y = point.y,
                 Duration = duration,
-                Amount = amount
+                Amount = amount,
+                EndX = effect == 6 ? actor.NextDashDirection.x : 0,
+                EndY = effect == 6 ? actor.NextDashDirection.y : 0
             });
         }
 
@@ -287,8 +289,8 @@ namespace CluckmechCoop
                     actor.ApplyPhase(message.Duration);
                     if (message.Amount > 0) OtherworldAudio.Play(new Vector2(message.X, message.Y));
                 }
-                else if (message.Value == 7) actor.EndPhase(false);
-                else if (message.Value == 6) actor.ClientDash(new Vector2(message.X, message.Y), message.Duration);
+                else if (message.Value == 7) { actor.CancelClientDash(); actor.EndPhase(false); }
+                else if (message.Value == 6) actor.ClientDash(new Vector2(message.X, message.Y), message.Duration, new Vector2(message.EndX, message.EndY));
                 else OtherworldActions.Visual(actor, message.Value, new Vector2(message.X, message.Y), message.Duration, message.Amount);
             }
         }

@@ -115,6 +115,11 @@ static class Program
         Check(remoteRun.GaitCycles>5.7f&&remoteRun.GaitCycles<=6.001f,"remote snapshot gaps preserve capped cadence at 240Hz rendering");
         var slowRun=new OtherworldMotion();slowRun.Sample(1,0,.01f,.02f,true,1,3);
         Check(Math.Abs(slowRun.GaitCycles-.01f)<.00001f,"slow locomotion keeps calibrated distance cadence below cap");
+        Check(OtherworldMotion.DashTravel(0)==0&&OtherworldMotion.DashTravel(1)==1,"dash starts and stops at exact segment anchors");
+        Check(OtherworldMotion.DashTravel(.1f)<.1f&&OtherworldMotion.DashTravel(.9f)>.9f,"dash accelerates out of startup and decelerates into recovery");
+        for(int frame=0;frame<8;frame++)
+            Check(OtherworldMotion.DashFrame((frame+.25f)*OtherworldMotion.DashSeconds/8,OtherworldMotion.DashSeconds)==frame,"eight dash poses follow movement clock");
+        Check(OtherworldMotion.DashFrame(OtherworldMotion.DashSeconds+OtherworldMotion.DashPauseSeconds,OtherworldMotion.DashSeconds)==7,"interval holds recovery pose instead of looping dash");
         Console.WriteLine($"PASS {checks} motion policy checks");
     }
 }

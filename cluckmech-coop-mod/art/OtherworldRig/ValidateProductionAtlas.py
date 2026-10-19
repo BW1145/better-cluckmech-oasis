@@ -11,6 +11,8 @@ def validate(hero):
   return hashlib.sha256(tile.tobytes()).digest()
  for aim in range(8):
   get(f'dash.{hero}.{aim}');get(f'pose.{hero}.{aim}.idle')
+  if hero==1:
+   assert len({get(f'dash.{hero}.{aim}.{phase}') for phase in range(8)})>=6
   for p in range(4):get(f'pose.{hero}.{aim}.attack.{p}')
   for rel in range(8):
    gait=[]
@@ -18,7 +20,7 @@ def validate(hero):
     gait.append(get(f'gait.{hero}.walk.{aim}.{rel}.{f}'))
     recoil={get(f'gait.{hero}.attack.{aim}.{rel}.{f}.{p}') for p in range(4)};recoilmin=min(recoilmin,len(recoil))
    minimum=min(minimum,len(set(gait)))
- assert len(regions)==5168
+ assert len(regions)==5168+(64 if hero==1 else 0)
  return dict(hero=hero,keys=len(regions),minimumDistinctGaitPhases=minimum,minimumDistinctRecoilPhases=recoilmin,atlas=list(im.size),textureMiB=im.width*im.height*4/1048576)
 if __name__=='__main__':
  import sys

@@ -22,6 +22,7 @@ namespace CluckmechCoop
         private readonly OtherworldActorInputState inputState=new OtherworldActorInputState();
         private readonly OtherworldActorSkillState skillState=new OtherworldActorSkillState();
         private Vector2 dashDirection;
+        private float dashStartedAt,dashSeconds=OtherworldMotion.DashSeconds;
         private Vector2 requestedDashDirection, sentDashDirection;
         internal OtherworldRun Run;
         internal SpriteRenderer Body;
@@ -298,7 +299,7 @@ namespace CluckmechCoop
             int walk=motionState.GaitFrame(OtherworldAssets.MovementFrameCount(Hero));
             int attackCount=OtherworldAssets.AttackFrameCount(Hero);
             int attackFrame=casting?Mathf.Min(attackCount-1,(int)((1-(castUntil-Time.time)/.4f)*attackCount)):motionState.AttackFrame(Time.time,attackCount);
-            CurrentFrame=Death.是否玩家死亡?OtherworldAssets.Hero(Hero,3,5):Dashing?OtherworldAssets.Dash(Hero,facing):moving?OtherworldAssets.Movement(Hero,walk,motionState.MovementFacing,facing,attacking||casting,attackFrame):OtherworldAssets.Pose(Hero,facing,attacking||casting,attackFrame);
+            CurrentFrame=Death.是否玩家死亡?OtherworldAssets.Hero(Hero,3,5):Dashing?OtherworldAssets.Dash(Hero,facing,OtherworldMotion.DashFrame(Time.time-dashStartedAt,dashSeconds)):moving?OtherworldAssets.Movement(Hero,walk,motionState.MovementFacing,facing,attacking||casting,attackFrame):OtherworldAssets.Pose(Hero,facing,attacking||casting,attackFrame);
             Body.sprite=CurrentFrame;
             Body.color=nativeBody.color;Body.sortingOrder=nativeBody.sortingOrder;
         }
@@ -319,7 +320,13 @@ namespace CluckmechCoop
         internal Vector2 BeginDash(Vector2 direction)
         {
             motionState.Dash(direction.x,direction.y,out float x,out float y);
-            dashDirection=new Vector2(x,y);Dashing=true;return dashDirection;
+            dashDirection=new Vector2(x,y);dashStartedAt=Time.time;dashSeconds=OtherworldMotion.DashSeconds;Dashing=true;return dashDirection;
+        }
+        internal bool DashTravelling=>Dashing&&Time.time-dashStartedAt<dashSeconds;
+        internal void AnchorDash(Vector2 point)
+        {
+            transform.position=point;
+            if(TryGetComponent<Rigidbody2D>(out var body)){body.position=point;body.MovePosition(point);body.velocity=Vector2.zero;}
         }
         internal Vector2 NextDashDirection=>requestedDashDirection;
         internal bool CanContinueDash=>skillState.CanContinueDash;
@@ -349,13 +356,16 @@ namespace CluckmechCoop
             if (Hero == 13 && inputState.Qualify(now, Application.isFocused && Time.timeScale > 0))
             {sentDashDirection=DashDirection;OtherworldNetwork.Command(this, OtherworldMessageKind.Dash, ++sequence, sentDashDirection);}
         }
-        internal void ClientDash(Vector2 end,float seconds)
-        {CancelClientDash();clientDash=StartCoroutine(DashLocally(end,seconds));}
-        private IEnumerator DashLocally(Vector2 end,float seconds)
+        internal void ClientDash(Vector2 end,float seconds,Vector2 direction)
+        {CancelClientDash();clientDash=StartCoroutine(DashLocally(end,seconds,direction));}
+        private IEnumerator DashLocally(Vector2 end,float seconds,Vector2 direction)
         {
-            Vector2 start=transform.position;BeginDash(end-start);
-            for(float elapsed=0;elapsed<seconds;elapsed+=Time.deltaTime){transform.position=Vector2.Lerp(start,end,elapsed/seconds);yield return null;}
-            transform.position=end;Dashing=false;clientDash=null;OtherworldDashNetwork.ClearHistory(this);
+            Vector2 start=transform.position;BeginDash(direction);dashSeconds=seconds;
+            for(float elapsed=0;elapsed<seconds;elapsed+=Time.deltaTime){transform.position=Vector2.Lerp(start,end,OtherworldMotion.DashTravel(elapsed/seconds));yield return null;}
+            AnchorDash(end);OtherworldDashNetwork.ClearHistory(this);
+            // The next segment, transfer or end-phase message releases this hold.
+            while(Dashing){AnchorDash(end);yield return null;}
+            clientDash=null;
         }
         internal void CancelClientDash(){if(clientDash!=null)StopCoroutine(clientDash);clientDash=null;Dashing=false;OtherworldDashNetwork.ClearHistory(this);}
         private void FixedUpdate(){if(Dashing&&TryGetComponent<Rigidbody2D>(out var body))body.velocity=Vector2.zero;}

@@ -91,9 +91,9 @@ namespace CluckmechCoop
             hero=FaithfulHero(hero);
             return Faithful(hero,"pose."+hero+"."+(aimFacing&7)+"."+(attacking?"attack."+((attackFrame%4+4)%4):"idle"));
         }
-        internal static Sprite Dash(int hero,int direction)
+        internal static Sprite Dash(int hero,int direction,int frame=0)
         {
-            hero=FaithfulHero(hero);return Faithful(hero,"dash."+hero+"."+(direction&7));
+            hero=FaithfulHero(hero);return Faithful(hero,"dash."+hero+"."+(direction&7)+(hero==1?"."+Mathf.Clamp(frame,0,OtherworldMotion.DashFrames-1):""));
         }
         internal static Sprite Hero(int hero,int row=0,int direction=0)=>Named("hero."+hero+"."+row+"."+direction);
         internal static Sprite Animation(int hero,string action,int frame,int direction)=>Named("anim."+hero+"."+action+"."+frame+"."+direction);

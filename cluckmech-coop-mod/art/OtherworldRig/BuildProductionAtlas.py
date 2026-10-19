@@ -8,16 +8,30 @@ ROOT=Path(__file__).resolve().parent
 OUT=ROOT.parents[1]/'src/OtherworldAssets'
 FRAMES=16
 
-def dash(hero,direction):
+def dash(hero,direction,frame=None):
  bounds=[[(28,271,215,476),(241,271,438,473),(442,271,619,472),(633,271,812,473),(838,271,1003,476),(1062,271,1240,474),(1260,271,1437,474),(1456,271,1650,476)],[(75,276,212,502),(299,276,425,499),(489,278,631,499),(684,277,821,499),(865,276,982,502),(1036,277,1192,502),(1248,277,1382,499),(1456,277,1588,502)]][hero][direction]
  name=('perlica','obito')[hero];source=Image.open(ROOT.parent/f'Otherworld/{name}-source.png').convert('RGBA')
  l,t,r,b=bounds;crop=source.crop((l-4,t-4,r+4,b+4));im=Image.new('RGBA',(320,320));im.alpha_composite(crop,(round(160-crop.width/2),300-(b-t+4)))
  if hero==1:
-  pivot=(160,229);mask=Image.new('L',im.size);ImageDraw.Draw(mask).rectangle((0,0,320,pivot[1]+4),fill=255)
+  pivot=(160,229);mask=Image.new('L',im.size);ImageDraw.Draw(mask).rectangle((0,0,320,pivot[1]+10),fill=255)
   upper=im.copy();upper.putalpha(ImageChops.multiply(im.getchannel('A'),mask))
   lower=im.copy();lower.putalpha(ImageChops.subtract(im.getchannel('A'),mask))
-  upper=upper.rotate(12*math.sin(direction*math.pi/4),resample=Image.Resampling.NEAREST,center=pivot)
+  lean=12 if frame is None else (0,8,18,25,22,13,4,0)[frame]
+  upper=upper.rotate(lean*math.sin(direction*math.pi/4),resample=Image.Resampling.NEAREST,center=pivot)
+  if frame is not None:
+   legs=Image.new('RGBA',im.size)
+   swing=(0,-10,16,25,20,3,-10,0)[frame]
+   for side in range(2):
+    half=Image.new('L',im.size);ImageDraw.Draw(half).rectangle((side*160,0,(side+1)*160-1,320),fill=255)
+    leg=lower.copy();leg.putalpha(ImageChops.multiply(lower.getchannel('A'),half))
+    angle=swing*(1 if side==0 else -1)*(math.sin(direction*math.pi/4) or .65)
+    leg=leg.rotate(angle,resample=Image.Resampling.NEAREST,center=(152+side*16,229))
+    legs.alpha_composite(leg)
+   lower=legs
   lower.alpha_composite(upper);im=lower
+  if frame is not None:
+   drop=(1,5,1,-2,-2,0,4,2)[frame]
+   shifted=Image.new('RGBA',im.size);shifted.alpha_composite(im,(0,drop));im=shifted
  return im
 
 def build(hero):
@@ -35,6 +49,8 @@ def build(hero):
   keys[key]=(hashes[digest],bbox)
  for aim in range(8):
   add(f'dash.{hero}.{aim}',dash(hero,aim))
+  if hero==1:
+   for phase in range(8):add(f'dash.{hero}.{aim}.{phase}',dash(hero,aim,phase))
   add(f'pose.{hero}.{aim}.idle',render(aim,aim,0,False,False,0))
   for recoil in range(4):add(f'pose.{hero}.{aim}.attack.{recoil}',render(aim,aim,0,False,True,recoil))
   for relative in range(8):

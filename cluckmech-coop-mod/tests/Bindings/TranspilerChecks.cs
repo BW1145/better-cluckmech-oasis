@@ -46,6 +46,13 @@ internal static class TranspilerChecks
             Require(Body(actor,method).Any(c=>IsCall(c,"OtherworldDashNetwork","ClearHistory")),"dash exit clears interpolation history: "+method);
         var localDash=actor.GetNestedTypes(BindingFlags.NonPublic).Single(t=>t.Name.StartsWith("<DashLocally>"));
         Require(Body(localDash,"MoveNext").Any(c=>IsCall(c,"OtherworldDashNetwork","ClearHistory")),"client segment end clears interpolation history");
+        Require(move.Any(c=>c.opcode==OpCodes.Ldc_R4&&Equals(c.operand,.2f)),"server interval contains the requested 0.2 game seconds");
+        Require(move.Any(c=>IsCall(c,"OtherworldMotion","DashTravel"))&&Body(localDash,"MoveNext").Any(c=>IsCall(c,"OtherworldMotion","DashTravel")),"both peers use the same acceleration curve");
+        Require(!Body(localDash,"MoveNext").Any(c=>c.opcode==OpCodes.Stfld&&c.operand is FieldInfo f&&f.Name=="Dashing"),"client keeps transform ownership through the segment interval");
+        var receive=Body(mod.GetType("CluckmechCoop.OtherworldNetwork",true),"Receive");
+        Require(receive.Any(c=>IsCall(c,"OtherworldActor","CancelClientDash")),"authoritative end message releases client interval ownership");
+        var path=Body(mod.GetType("CluckmechCoop.KamuiNavigation",true),"TryDash");
+        Require(path.Any(c=>IsCall(c,"KamuiDashPath","ReachableFraction")),"navigation uses wall clipping rather than movement-distance cancellation");
         var captureBody=Body(world,"CaptureDashSegment");
         foreach(string field in new[]{"Origin","Until"})
             Require(captureBody.Any(c=>c.opcode==OpCodes.Stfld&&c.operand is FieldInfo f&&f.DeclaringType.Name=="KamuiCapture"&&f.Name==field),"each enemy retains own "+field);
