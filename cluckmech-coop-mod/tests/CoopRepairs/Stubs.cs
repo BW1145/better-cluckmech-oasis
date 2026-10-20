@@ -29,11 +29,12 @@ namespace UnityEngine {
     }
     public class GameObject {
         readonly Dictionary<Type,object> components=new(); public Transform transform=new();public string name="unit";public bool activeInHierarchy=true;
-        public Component GetComponent(Type t)=>components.TryGetValue(t,out var c)?c as Component:null;
+        public static int ComponentReads;
+        public Component GetComponent(Type t){ComponentReads++;return components.TryGetValue(t,out var c)?c as Component:null;}
         public bool TryGetComponent<T>(out T c) where T:class {c=GetComponent<T>();return c!=null;}
         public int StatisticMessages;
         public T Add<T>(T value) where T:Component {components[typeof(T)]=value;value.gameObject=this;return value;}
-        public T GetComponent<T>() where T:class => components.TryGetValue(typeof(T),out var o)?o as T:null;
+        public T GetComponent<T>() where T:class {ComponentReads++;return components.TryGetValue(typeof(T),out var o)?o as T:null;}
         public void SendMessage(string name,object value,SendMessageOptions options=SendMessageOptions.DontRequireReceiver) {
             if(name=="伤害统计")StatisticMessages++;
             if(name=="受到伤害"){
@@ -85,7 +86,7 @@ namespace CluckmechCoop {
 }
 
 namespace UnityEngine {
- public static class Time {public static float deltaTime=1f/60;}
+ public static class Time {public static float deltaTime=1f/60,realtimeSinceStartup;}
  public static class Random {public static float Range(float a,float b)=>0;}
  public static class Object {public static int Instantiations;public static GameObject Instantiate(GameObject p,Vector3 pos,Quaternion q){Instantiations++;var g=new GameObject();if(p.GetComponent<模块_基本属性>() is {} hp)g.Add(new 模块_基本属性{ID=hp.ID});return g;}}
 }

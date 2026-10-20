@@ -6,17 +6,40 @@ using UnityEngine;
 
 namespace CluckmechCoop
 {
-    // Built only at snapshot boundaries. Gameplay IDs intentionally are not prefab keys.
+    // One index per restore snapshot; never cache across changing prefab registries.
     internal sealed class KamuiPrefabs
     {
-        private readonly List<GameObject> prefabs=new List<GameObject>();
+        private sealed class Template
+        {
+            internal GameObject Prefab;
+            internal int Id;
+            internal bool Temporary;
+        }
+        // Buckets retain collisions so ambiguous identities still fail closed.
+        private readonly Dictionary<uint,List<Template>> byAsset=new Dictionary<uint,List<Template>>();
+        private readonly Dictionary<string,List<Template>> byName=new Dictionary<string,List<Template>>(StringComparer.Ordinal);
+        private readonly Dictionary<int,List<Template>> byId=new Dictionary<int,List<Template>>();
         internal KamuiPrefabs()
         {
             var known=new HashSet<GameObject>();
             if(NetworkManager.singleton!=null)foreach(var prefab in NetworkManager.singleton.spawnPrefabs)known.Add(prefab);
             foreach(var prefab in NetworkClient.prefabs.Values)known.Add(prefab);
             if(Plugin.Units!=null)foreach(var entry in Plugin.Units.单位列表)known.Add(entry.单位预制体);
-            foreach(var prefab in known)if(prefab!=null&&prefab.GetComponent<模块_基本属性>()!=null)prefabs.Add(prefab);
+            foreach(var prefab in known)
+            {
+                if(prefab==null)continue;
+                var health=prefab.GetComponent<模块_基本属性>();if(health==null)continue;
+                var entry=new Template{Prefab=prefab,Id=health.ID,Temporary=Temporary(prefab)};
+                uint asset=Asset(prefab);
+                if(asset!=0)Add(byAsset,asset,entry);
+                Add(byName,Name(prefab),entry);
+                Add(byId,entry.Id,entry);
+            }
+        }
+        private static void Add<TKey>(Dictionary<TKey,List<Template>> index,TKey key,Template entry)
+        {
+            if(!index.TryGetValue(key,out var bucket))index.Add(key,bucket=new List<Template>());
+            bucket.Add(entry);
         }
         internal static bool Temporary(GameObject obj)
         {
@@ -45,13 +68,22 @@ namespace CluckmechCoop
         }
         internal GameObject Resolve(KamuiSavedUnit saved,out bool temporary)
         {
-            IEnumerable<GameObject> candidates=prefabs.Where(p=>p.GetComponent<模块_基本属性>().ID==saved.Id);
-            if(saved.AssetId!=0)candidates=candidates.Where(p=>Asset(p)==saved.AssetId);
-            else if(!string.IsNullOrEmpty(saved.PrefabName))candidates=candidates.Where(p=>Name(p)==saved.PrefabName);
-            else candidates=candidates.Where(p=>LegacyMatches(saved,p));
-            var matches=candidates.ToList();
-            temporary=matches.Count>0&&matches.All(Temporary);
-            return !temporary&&matches.Count==1?matches[0]:null;
+            temporary=false;
+            List<Template> candidates;
+            bool legacy=saved.AssetId==0&&string.IsNullOrEmpty(saved.PrefabName);
+            if(saved.AssetId!=0)
+            {if(!byAsset.TryGetValue(saved.AssetId,out candidates))return null;}
+            else if(!legacy)
+            {if(!byName.TryGetValue(saved.PrefabName,out candidates))return null;}
+            else if(!byId.TryGetValue(saved.Id,out candidates))return null;
+            int count=0;bool allTemporary=true;GameObject match=null;
+            foreach(var entry in candidates)
+            {
+                if(entry.Prefab==null||entry.Id!=saved.Id||legacy&&!LegacyMatches(saved,entry.Prefab))continue;
+                count++;match=entry.Prefab;allTemporary&=entry.Temporary;
+            }
+            temporary=count>0&&allTemporary;
+            return !temporary&&count==1?match:null;
         }
         private static bool LegacyMatches(KamuiSavedUnit saved,GameObject prefab)
         {

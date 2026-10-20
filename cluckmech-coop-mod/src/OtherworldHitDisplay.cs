@@ -22,6 +22,20 @@ namespace CluckmechCoop
         private static readonly Action<模块_受伤,float,Vector4> colored=AccessTools.MethodDelegate<Action<模块_受伤,float,Vector4>>(AccessTools.Method(typeof(模块_受伤),"伤害出现",new[]{typeof(float),typeof(Vector4)}));
         private static readonly AccessTools.FieldRef<模块_受伤,效果物体引用器> references=AccessTools.FieldRefAccess<模块_受伤,效果物体引用器>("引用器");
         [ThreadStatic] private static Batch current;
+        internal const int MaxPendingHits=512;
+        internal const float PendingTimeoutSeconds=1;
+        private static PendingReplay pendingReplay;
+        private struct PendingHit
+        {
+            internal OtherworldDisplayHit Hit;
+            internal float ExpiresAt;
+        }
+        private sealed class PendingReplay
+        {
+            internal SceneLifetime Scene;
+            internal string Token;
+            internal readonly List<PendingHit> Hits=new List<PendingHit>();
+        }
         internal sealed class Batch:IDisposable
         {
             private readonly Batch previous;
@@ -56,9 +70,25 @@ namespace CluckmechCoop
             List<OtherworldDisplayHit> hits;
             try{hits=JsonConvert.DeserializeObject<List<OtherworldDisplayHit>>(data);}catch(JsonException){return;}
             if(hits==null)return;
-            List<OtherworldDisplayHit> pending=null;
-            foreach(var hit in hits)if(!Replay(hit)){if(pending==null)pending=new List<OtherworldDisplayHit>();pending.Add(hit);}
-            if(pending!=null&&SceneLifecycle.Current!=null)Plugin.Instance.StartCoroutine(ReplayPending(SceneLifecycle.Current,Plugin.Combat.Token,pending));
+            foreach(var hit in hits)if(!Replay(hit))Queue(hit);
+        }
+        private static void Queue(OtherworldDisplayHit hit)
+        {
+            var scene=SceneLifecycle.Current;
+            if(scene==null||!SceneLifecycle.IsCurrent(scene)||!OtherworldWorld.Active)return;
+            string token=Plugin.Combat.Token;
+            var pending=pendingReplay;
+            if(pending==null||!ReferenceEquals(pending.Scene,scene)||pending.Token!=token)
+            {
+                // Retire the previous scope without letting its coroutine clear a new one.
+                if(pending!=null)pending.Hits.Clear();
+                pendingReplay=pending=new PendingReplay{Scene=scene,Token=token};
+                pending.Hits.Add(new PendingHit{Hit=hit,ExpiresAt=Time.realtimeSinceStartup+PendingTimeoutSeconds});
+                Plugin.Instance.StartCoroutine(ReplayPending(pending));
+            }
+            else if(pending.Hits.Count<MaxPendingHits)
+                pending.Hits.Add(new PendingHit{Hit=hit,ExpiresAt=Time.realtimeSinceStartup+PendingTimeoutSeconds});
+            // Overflow drops only delayed visuals; ready results above still display normally.
         }
         private static bool Replay(OtherworldDisplayHit hit)
         {
@@ -72,14 +102,31 @@ namespace CluckmechCoop
             if(unit.Space==hit.Space)Show(target,hit.Amount,hit.Critical,hit.Burn);
             return true;
         }
-        private static IEnumerator ReplayPending(SceneLifetime scene,string token,List<OtherworldDisplayHit> pending)
+        private static IEnumerator ReplayPending(PendingReplay pending)
         {
-            yield return null;
-            while(SceneLifecycle.IsCurrent(scene)&&token==Plugin.Combat.Token&&OtherworldWorld.Active)
+            try
             {
-                for(int i=0;i<pending.Count;)if(Replay(pending[i]))pending.RemoveAt(i);else i++;
-                if(pending.Count==0)yield break;
                 yield return null;
+                while(ReferenceEquals(pendingReplay,pending)&&SceneLifecycle.IsCurrent(pending.Scene)&&pending.Token==Plugin.Combat.Token&&OtherworldWorld.Active)
+                {
+                    float now=Time.realtimeSinceStartup;
+                    int count=pending.Hits.Count,keep=0;
+                    // Compact in order once, rather than shifting the list after every ready hit.
+                    for(int i=0;i<count;i++)
+                    {
+                        var entry=pending.Hits[i];
+                        if(now>=entry.ExpiresAt||Replay(entry.Hit))continue;
+                        pending.Hits[keep++]=entry;
+                    }
+                    if(keep<count)pending.Hits.RemoveRange(keep,count-keep);
+                    if(pending.Hits.Count==0)yield break;
+                    yield return null;
+                }
+            }
+            finally
+            {
+                pending.Hits.Clear();
+                if(ReferenceEquals(pendingReplay,pending))pendingReplay=null;
             }
         }
     }
