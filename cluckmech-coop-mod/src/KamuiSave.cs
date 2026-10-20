@@ -15,15 +15,17 @@ namespace CluckmechCoop
         internal static List<KamuiSavedRoom> SavedRooms=new List<KamuiSavedRoom>();
         private static readonly Dictionary<string,GameObject> dropPrefabs=new Dictionary<string,GameObject>();
         private static int restoredScene=-1;
+        private static readonly HashSet<string> unresolved=new HashSet<string>();
         internal static OtherworldSave Save()
         {OtherworldProgress.ReadNative(Plugin.Role);Capture();OtherworldDeployment.RefreshLocal();return new OtherworldSave{Players=OtherworldProgress.Players,Rooms=SavedRooms};}
         internal static void Load(OtherworldSave save)
         {
-            OtherworldProgress.Players=save.Players;SavedRooms=save.Rooms;
+            OtherworldProgress.Players=save.Players;SavedRooms=save.Rooms;unresolved.Clear();
+            foreach(var room in SavedRooms)foreach(var unit in room.Units)unresolved.Add(unit.Key);
             OtherworldDeployment.Rebind();restoredScene=-1;
             OtherworldProgress.RestoreNative();
         }
-        internal static void NewRun(){SavedRooms.Clear();restoredScene=-1;OtherworldDeployment.Rebind();}
+        internal static void NewRun(){SavedRooms.Clear();unresolved.Clear();restoredScene=-1;OtherworldDeployment.Rebind();}
         private static Dictionary<string,float[]> ReadScalars(Component component)
         {
             var values=new Dictionary<string,float[]>();
@@ -56,6 +58,7 @@ namespace CluckmechCoop
         internal static void Capture()
         {
             if(Plugin.Role==2||Rooms.Count==0||Restoring)return;
+            if(SavedRooms.Count>0&&restoredScene!=UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle)return;
             var saved=new List<KamuiSavedRoom>();
             foreach(var room in Rooms.Values)
             {
@@ -64,15 +67,19 @@ namespace CluckmechCoop
                 {
                     var stratagem=unit==null?null:unit.GetComponent<StratagemUnit>();
                     if(unit==null||unit.IsPlayer||unit.Health.当前生命值<=0&&stratagem?.HasDependents!=true||unit.Health.ID<=0||!unit.IsMachine&&!unit.Permanent||unit.Health.ID==20102)continue;
+                    if(KamuiPrefabs.Temporary(unit.gameObject))continue;
                     var entry=new KamuiSavedUnit{Key=unit.PersistentId,Id=unit.Health.ID,Owner=(int)unit.Health.所属玩家,Faction=(int)unit.Health.当前阵营,
                         Permanent=unit.Permanent,X=unit.transform.position.x-room.Center.x,Y=unit.transform.position.y-room.Center.y,
                         Health=unit.Health.当前生命值,Cooldown=unit.Attack?.当前攻击倒计时??0,Warm=Mathf.Max(0,unit.WarmUntil-Time.time),Rally=Mathf.Max(0,unit.RallyUntil-Time.time),Affixes=new List<int>(unit.Health.强化词条列表)};
+                    KamuiPrefabs.Identify(unit.gameObject,entry);
                     entry.Stratagem=stratagem?.SaveRuntime(room.Center);
                     entry.Bronze=unit.GetComponent<BronzeDragon>()?.State;
                     var nest=unit.GetComponent<词条_100009_巢穴类召唤>();
                     if(nest!=null){entry.Hatch=nest.当前孵化时间;foreach(var child in nest.当前存在召唤物){var tag=OtherworldWorld.Unit(child);if(tag!=null)entry.Summons.Add(tag.PersistentId);}}
                     var level=unit.GetComponent<模块_难度等级>();if(level!=null)entry.Difficulty=level.设定等级;
                     var lifetime=unit.GetComponent<词条_100098_限时自杀>();if(lifetime!=null)entry.Lifetime=lifetime.自杀倒计时;
+                    var timed=unit.GetComponent<词条_100144_单位定时销毁>();if(timed!=null)entry.TimedLifetime=timed.当前计时器;
+                    var destroy=unit.GetComponent<词条_100034_定时销毁>();if(destroy!=null)entry.DestroyLifetime=destroy.当前计时器;
                     foreach(var type in statTypes){var component=unit.GetComponent(type);if(component!=null)entry.Components[type.Name]=ReadScalars(component);}
                     if(unit.Detailed!=null)entry.Elements=unit.Detailed.状态加成列表.Select(Pack).ToList();
                     var states=unit.GetComponent<模块_状态属性>();
@@ -94,7 +101,9 @@ namespace CluckmechCoop
                     {KamuiDrop.Attach(drop.gameObject);var tracked=drop.GetComponent<KamuiDrop>();if(!tracked.Collected)record.Drops.Add(tracked.Save(room));}
                 saved.Add(record);
             }
+            KamuiPrefabs.RetainPending(saved,SavedRooms,unresolved);
             SavedRooms=saved;
+            restoredScene=UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
         }
         internal static void Restore()
         {
@@ -106,6 +115,9 @@ namespace CluckmechCoop
         {
             if(!SceneLifecycle.IsCurrent(scene))yield break;
             Restoring=true;var objects=new Dictionary<string,OtherworldUnit>();var pending=new List<KeyValuePair<KamuiSavedUnit,OtherworldUnit>>();
+            var prefabs=new KamuiPrefabs();
+            foreach(var room in SavedRooms)foreach(var unit in room.Units)unresolved.Add(unit.Key);
+            foreach(var unit in OtherworldWorld.Units.Values)if(unit!=null)objects[unit.PersistentId]=unit;
             var affixes=Object.FindObjectOfType<cz词缀库>();
             try
             {
@@ -115,7 +127,10 @@ namespace CluckmechCoop
                     var room=Ensure(owner);
                     foreach(var saved in record.Units)
                     {
-                        var prefab=Plugin.Units.获取单位(saved.Id);if(prefab==null)continue;
+                        if(objects.ContainsKey(saved.Key)){unresolved.Remove(saved.Key);continue;}
+                        var prefab=prefabs.Resolve(saved,out bool temporary);
+                        if(prefab==null){if(temporary)unresolved.Remove(saved.Key);continue;}
+                        if(Plugin.Role==1&&(prefab.GetComponent<NetworkIdentity>()==null||prefab.GetComponent<联机_单位属性同步>()==null))continue;
                         var obj=Object.Instantiate(prefab,room.Center+new Vector2(saved.X,saved.Y),Quaternion.identity);
                         var hp=obj.GetComponent<模块_基本属性>();hp.所属玩家=(Steam联机管理器.联机状态)(saved.Faction==(int)阵营数据库.阵营.友方&&saved.Owner==record.Owner?owner:saved.Owner);
                         hp.强化词条列表.AddRange(saved.Affixes);
@@ -128,7 +143,7 @@ namespace CluckmechCoop
                         OtherworldWorld.Add(hp);var unit=OtherworldWorld.Unit(obj);unit.Permanent=saved.Permanent;unit.PersistentId=saved.Key;unit.Restoring=true;
                         var stratagem=obj.GetComponent<StratagemUnit>();if(stratagem!=null)stratagem.Resume=saved.Stratagem;
                         var bronze=obj.GetComponent<BronzeDragon>();if(bronze!=null)bronze.Resume=saved.Bronze;
-                        objects[saved.Key]=unit;pending.Add(new KeyValuePair<KamuiSavedUnit,OtherworldUnit>(saved,unit));
+                        objects[saved.Key]=unit;pending.Add(new KeyValuePair<KamuiSavedUnit,OtherworldUnit>(saved,unit));unresolved.Remove(saved.Key);
                         var level=obj.GetComponent<模块_难度等级>();if(level!=null)level.设定等级=saved.Difficulty;
                     }
                 }
@@ -170,6 +185,8 @@ namespace CluckmechCoop
                             if(buff.持续时间>0)manager.临时加成(buff.加成名称,buff.加成列表,buff.持续时间);else manager.增加加成(buff.加成名称,buff.加成列表);
                     }
                     var lifetime=unit.GetComponent<词条_100098_限时自杀>();if(lifetime!=null&&saved.Lifetime>=0)lifetime.自杀倒计时=saved.Lifetime;
+                    var timed=unit.GetComponent<词条_100144_单位定时销毁>();if(timed!=null&&saved.TimedLifetime>=0)timed.当前计时器=saved.TimedLifetime;
+                    var destroy=unit.GetComponent<词条_100034_定时销毁>();if(destroy!=null&&saved.DestroyLifetime>=0)destroy.当前计时器=saved.DestroyLifetime;
                     unit.WarmUntil=Time.time+saved.Warm;unit.RallyUntil=Time.time+saved.Rally;
                     unit.Health.运算生命值上限();unit.Health.运算抗性();unit.Health.运算格挡值();unit.Health.运算无敌();
                     unit.Health.当前生命值=Mathf.Min(unit.Health.当前生命值上限,saved.Health);
@@ -187,6 +204,7 @@ namespace CluckmechCoop
                 }
                 foreach(var pair in pending)if(pair.Value!=null)pair.Value.Restoring=false;
                 KamuiVisibility.Refresh();
+                if(unresolved.Count>0)Plugin.Warn($"神威保留了 {unresolved.Count} 条待识别单位记录；本次未生成。记录示例：{string.Join(", ",unresolved.Take(8))}");
             }
             finally
             {

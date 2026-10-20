@@ -90,6 +90,10 @@ static class Program
         if(args.Length>0&&args[0]=="modules"){ModuleStateHarness.Run();return;}
         Check(KamuiWorld.Valid(Healthy()),"native state models, negative modifiers, permanent buffs and elapsed native timers accepted");
         Check(KamuiWorld.Valid(JsonConvert.DeserializeObject<OtherworldSave>(JsonConvert.SerializeObject(Healthy()))),"real JSON nested snapshot round trip");
+        var identified=Healthy();var exact=identified.Rooms[0].Units[0];exact.AssetId=845050560;exact.PrefabName="ant";exact.TimedLifetime=3;exact.DestroyLifetime=4;
+        var identityRoundTrip=JsonConvert.DeserializeObject<OtherworldSave>(JsonConvert.SerializeObject(identified));var exactRead=identityRoundTrip.Rooms[0].Units[0];
+        Check(KamuiWorld.Valid(identityRoundTrip)&&exactRead.AssetId==exact.AssetId&&exactRead.PrefabName=="ant"&&exactRead.TimedLifetime==3&&exactRead.DestroyLifetime==4,"identity and remaining lifetimes survive real schema JSON");
+        exact.AssetId=uint.MaxValue;Check(KamuiWorld.Valid(identified),"unresolved prefab identity does not invalidate the whole save");
         var propagated=Healthy();propagated.Rooms[0].Units[0].States[0].BurnSpread=true;
         Check(JsonConvert.DeserializeObject<OtherworldSave>(JsonConvert.SerializeObject(propagated)).Rooms[0].Units[0].States[0].BurnSpread,"propagated burn marker survives snapshot JSON round trip");
         Check(!JsonConvert.DeserializeObject<KamuiSavedStatus>("{}").BurnSpread,"earlier snapshots default to directly applied status");

@@ -20,6 +20,8 @@ namespace CluckmechCoop
     internal sealed class KamuiSavedUnit
     {
         public string Key;
+        public uint AssetId;
+        public string PrefabName;
         public int Id,Owner,Faction,Difficulty;
         public bool Permanent;
         public StratagemSaved Stratagem;
@@ -27,6 +29,7 @@ namespace CluckmechCoop
         public List<string> Summons=new List<string>();
         public float Hatch=-1;
         public float X,Y,Health,Cooldown,Lifetime=-1,Warm,Rally;
+        public float TimedLifetime=-1,DestroyLifetime=-1;
         public List<int> Affixes=new List<int>();
         public Dictionary<string,Dictionary<string,float[]>> Components=new Dictionary<string,Dictionary<string,float[]>>();
         public List<float[]> Elements=new List<float[]>();
@@ -84,7 +87,7 @@ namespace CluckmechCoop
         private static bool ValidUnit(KamuiSavedUnit unit)
         {
             if(unit==null||unit.Id<=0||string.IsNullOrWhiteSpace(unit.Key)||!Enum.IsDefined(typeof(Steam联机管理器.联机状态),unit.Owner)||!Enum.IsDefined(typeof(阵营数据库.阵营),unit.Faction)||unit.Difficulty<0||
-                !Finite(unit.X)||!Finite(unit.Y)||!Nonnegative(unit.Health)||!Finite(unit.Cooldown)||!Finite(unit.Hatch)||!Finite(unit.Lifetime)||!Nonnegative(unit.Warm)||!Nonnegative(unit.Rally)||
+                !Finite(unit.X)||!Finite(unit.Y)||!Nonnegative(unit.Health)||!Finite(unit.Cooldown)||!Finite(unit.Hatch)||!Finite(unit.Lifetime)||!Finite(unit.TimedLifetime)||!Finite(unit.DestroyLifetime)||!Nonnegative(unit.Warm)||!Nonnegative(unit.Rally)||
                 unit.Components==null||unit.States==null||unit.Elements==null||unit.Underlying==null||unit.Buffs==null||unit.Affixes==null||unit.Summons==null)return false;
             if(unit.Affixes.Any(id=>id<=0)||unit.Summons.Any(string.IsNullOrWhiteSpace))return false;
             if(unit.Elements.Any(v=>!Values(v,20)))return false;
