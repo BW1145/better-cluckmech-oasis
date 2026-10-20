@@ -7,6 +7,31 @@ using HarmonyLib;
 
 internal static class TranspilerChecks
 {
+    internal static void FlameTrigger(Assembly mod,Action<List<CodeInstruction>> validateStack)
+    {
+        var actor=mod.GetType("CluckmechCoop.OtherworldActor",true);
+        List<CodeInstruction> Body(Type type,string name)=>PatchProcessor.GetOriginalInstructions(AccessTools.DeclaredMethod(type,name));
+        bool Call(CodeInstruction c,string name)=>c.operand is MethodInfo m&&m.DeclaringType==actor&&m.Name==name;
+        var phase=AccessTools.Field(actor,"phaseFromReturn");
+        var begin=Body(actor,"BeginPhase");
+        int mark=begin.FindIndex(c=>c.opcode==OpCodes.Stfld&&Equals(c.operand,phase));
+        Require(mark>0&&begin[mark-1].opcode==OpCodes.Ldarg_1,"each phase replaces the return marker; normal short presses reset it");
+        var end=Body(actor,"EndPhase");
+        Require(end.Any(c=>c.opcode==OpCodes.Ldarg_2)&&end.Any(c=>c.opcode==OpCodes.Ldfld&&Equals(c.operand,phase))&&end.Count(c=>Call(c,"EndAction"))==1,"phase completion forwards the flame permission and return marker to one action completion");
+        var finish=Body(actor,"FinishDash");
+        int space=finish.FindIndex(c=>Call(c,"get_Space"));
+        Require(space>=0&&finish.Skip(space).Any(c=>Call(c,"EndPhase")),"dash completion uses successful space entry to permit the flame");
+        var back=Body(mod.GetType("CluckmechCoop.KamuiWorld",true),"Return");
+        int action=back.FindIndex(c=>Call(c,"EndAction"));
+        Require(action>0&&back[action-1].opcode==OpCodes.Ldc_I4_0,"immediate return preserves action completion without emitting a flame");
+        int continued=back.FindIndex(c=>Call(c,"BeginPhase"));
+        Require(continued>0&&back[continued-1].opcode==OpCodes.Ldc_I4_1,"return protection is marked for its delayed completion");
+        var complete=Body(actor,"EndAction");
+        int permission=complete.FindIndex(c=>c.opcode==OpCodes.Ldarg_1);
+        Require(permission>complete.FindIndex(c=>c.operand is MethodInfo m&&m.Name=="Counter")&&complete.Skip(permission).Any(c=>c.operand is MethodInfo m&&m.Name=="Flame"),"the flame gate preserves counter and rally processing");
+        foreach(var code in new[]{begin,end,finish,back,complete})validateStack(code);
+        Console.WriteLine("PASS: compiled short-press reset, successful-entry flame, immediate/delayed return suppression and retained counter action paths");
+    }
     internal static void SettlementRepairs(Assembly original,Assembly mod,Action<List<CodeInstruction>> validateStack)
     {
         List<CodeInstruction> Body(Type type,string name)=>PatchProcessor.GetOriginalInstructions(AccessTools.DeclaredMethod(type,name));

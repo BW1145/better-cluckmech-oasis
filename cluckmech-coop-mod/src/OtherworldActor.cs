@@ -43,6 +43,7 @@ namespace CluckmechCoop
         private SpriteRenderer nativeBody;
         private Vector3 previous;
         private float castUntil;
+        private bool phaseFromReturn;
         private InputAction rightAction;
         private uint sequence;
         private Coroutine clientDash;
@@ -203,6 +204,7 @@ namespace CluckmechCoop
         internal int MaximumCharges=>Run.Initial==26004?3:1;
         internal void BeginPhase(bool continueAction=false)
         {
+            phaseFromReturn=continueAction;
             float seconds=Run.Initial==26008?2:1;
             PhaseUntil=Time.time+seconds;if(!continueAction){StoredDamage=0;Avoided.Clear();}
             Movement.运算移动速度();Health.运算无敌();
@@ -210,15 +212,15 @@ namespace CluckmechCoop
             OtherworldNetwork.Effect(this,1,transform.position,seconds,continueAction?0:1);
         }
         internal void ApplyPhase(float seconds){PhaseUntil=Time.time+seconds;Movement.运算移动速度();Health.运算无敌();}
-        internal void EndPhase(bool finish)
+        internal void EndPhase(bool finish,bool emitFlame=true)
         {
             bool active=PhaseUntil>0;
             PhaseUntil=0;
             if(Movement!=null)Movement.运算移动速度();if(Health!=null)Health.运算无敌();
             if(active)OtherworldNetwork.Effect(this,7,transform.position);
-            if(finish)EndAction();
+            if(finish)EndAction(emitFlame&&!phaseFromReturn);
         }
-        internal void EndAction()
+        internal void EndAction(bool emitFlame=true)
         {
             if(Run.Initial==26008)
             {
@@ -226,7 +228,7 @@ namespace CluckmechCoop
                 OtherworldActions.Counter(this,StoredDamage);StoredDamage=0;Avoided.Clear();
                 if(Run.Has(26124))OtherworldActions.Rally(this);
             }
-            if(Run.Has(26117))StartCoroutine(OtherworldActions.Flame(this));
+            if(emitFlame&&Run.Has(26117))StartCoroutine(OtherworldActions.Flame(this));
         }
         internal void Avoid(世界类.伤害数据包 packet)
         {
@@ -340,7 +342,7 @@ namespace CluckmechCoop
         {
             skillState.FinishDash();Dashing=false;
             OtherworldDashNetwork.ClearHistory(this);
-            if(finish)EndPhase(true);
+            if(finish)EndPhase(true,Space!=0);
             else {Movement?.运算移动速度();Health?.运算无敌();}
         }
         internal void Fired(float damage)

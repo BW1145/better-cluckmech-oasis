@@ -251,7 +251,7 @@ namespace CluckmechCoop
             OtherworldAudio.Transfer(false,space,actor.transform.position,roomPoint);
             OtherworldDeployment.SpaceChanged(actor);
             actor.EndPhase(false);
-            if(actor.Run.Has(26115)){actor.ReduceCooldown(4);actor.BeginPhase(true);}else actor.EndAction();
+            if(actor.Run.Has(26115)){actor.ReduceCooldown(4);actor.BeginPhase(true);}else actor.EndAction(false);
         }
         internal static bool Transfer(OtherworldUnit unit,int space,Vector2 point,bool refresh=true)
         {
