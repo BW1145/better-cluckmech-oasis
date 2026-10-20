@@ -145,9 +145,10 @@ namespace CluckmechCoop
             if (critical) Source.SendMessage("暴击触发",SendMessageOptions.DontRequireReceiver);
             return critical;
         }
-        internal void Hit(模块_基本属性 target, float damage, bool critical, bool knockback = false)
+        internal void Hit(模块_基本属性 target, float damage, bool critical, bool knockback = false, bool mineral = false)
         {
-            if (!StratagemWorld.Living(target)) return;
+            if (!StratagemWorld.Living(target) && !(mineral && target!=null && target.当前生命值>0 && !target.当前是否无敌 &&
+                target.单位定位列表.Contains(模块_基本属性.单位定位枚举.矿山))) return;
             var packet = new 世界类.伤害数据包 {
                 攻击者 = Source, 所属阵营 = 阵营数据库.阵营.友方, 攻击目标 = target.transform,
                 攻击坐标 = target.transform.position, 攻击伤害 = damage, 是否暴击 = critical,
@@ -162,6 +163,20 @@ namespace CluckmechCoop
                     packet.造成状态.Add(State(type,detailed.状态加成列表[(int)type].当前持续时间,detailed.状态加成列表[(int)type].当前属性效果));
                 }
             target.GetComponent<模块_受伤>()?.受到伤害(packet);
+        }
+        internal void EagleMinerals(Vector2 point,StratagemParameters parameters,bool critical)
+        {
+            var minerals=new Dictionary<模块_基本属性,float>();
+            foreach(var collider in Physics2D.OverlapCircleAll(point,parameters.BlastRadius))
+            {
+                var stats=collider.GetComponentInParent<模块_基本属性>();
+                if(stats==null||!stats.单位定位列表.Contains(模块_基本属性.单位定位枚举.矿山)||
+                    OtherworldWorld.Space(stats.gameObject)!=OtherworldWorld.Space(Source))continue;
+                float distance=(collider.ClosestPoint(point)-point).sqrMagnitude;
+                if(!minerals.TryGetValue(stats,out float previous)||distance<previous)minerals[stats]=distance;
+            }
+            foreach(var entry in minerals)
+                Hit(entry.Key,Attack*parameters.EagleDamage(Mathf.Sqrt(entry.Value))/parameters.Definition.Damage,critical,mineral:true);
         }
         internal void Area(Vector2 point, float radius, float damage, bool critical, Func<模块_基本属性,float> multiplier = null)
         {

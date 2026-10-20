@@ -22,7 +22,7 @@ static class ModuleStateHarness
             ModuleSettings.EnterRun();
             Check(ModuleSettings.InRun&&ModuleSettings.Music,"enter captures local music for every role");
             Check(ModuleSettings.Expedition==(role!=2)&&ModuleSettings.Transfer==(role!=2),"guest awaits host expedition/transfer");
-            Check(ModuleSettings.Extra.Otherworld==(role!=2)&&ModuleSettings.Extra.Stratagems==(role!=2),"guest awaits host gameplay modules");
+            Check(ModuleSettings.Extra.Otherworld==(role!=2)&&ModuleSettings.Extra.Stratagems==(role!=2)&&ModuleSettings.Extra.Bronze==(role!=2),"guest awaits host gameplay modules");
             Check(Plugin.Network.Published==published+(role==2?0:1),"only authority publishes once on entry");
             var progress=ModuleSettings.Progress;var modules=ModuleSettings.Extra;
             progress.Player(role).Coupons=4;
@@ -54,12 +54,12 @@ static class ModuleStateHarness
         Check(Equals(ES3.Data[path+progressKey],progressJson)&&Equals(ES3.Data[path+choiceKey],choiceJson)&&Equals(ES3.Data[path+charactersKey],charactersJson),"existing ES3 keys and serialized JSON remain byte compatible");
         Plugin.Role=2;ModuleSettings.MainMenu();Preferences(false);
         ModuleSettings.Preference(ModuleId.Music,true);
-        var hostModules=new GameplayModules{Growth=true,Otherworld=true};
+        var hostModules=new GameplayModules{Growth=true,Otherworld=true,Bronze=true};
         var hostProgress=new RunProgress();hostProgress.Player(2).Coupons=7;
         int beforeHostSettings=Plugin.Network.Published;
         ModuleSettings.ApplyHostSettings(true,true,new(){Node="host",Token="same",Enabled=true},hostModules,hostProgress);
         Check(ModuleSettings.InRun&&ModuleSettings.Music&&ModuleSettings.Expedition&&ModuleSettings.Transfer,"host settings enter guest run while retaining local music");
-        Check(ReferenceEquals(ModuleSettings.Extra,hostModules)&&ReferenceEquals(ModuleSettings.Progress,hostProgress)&&ModuleSettings.LocalProgress.Coupons==7,"host snapshot is applied by current-run owner");
+        Check(ReferenceEquals(ModuleSettings.Extra,hostModules)&&ModuleSettings.Extra.Bronze&&ReferenceEquals(ModuleSettings.Progress,hostProgress)&&ModuleSettings.LocalProgress.Coupons==7,"host snapshot is applied by current-run owner");
         Check(!ModuleSettings.Preference(ModuleId.Otherworld)&&Plugin.Network.Published==beforeHostSettings,"host settings neither overwrite preferences nor publish guest settings");
         ModuleSettings.Choice.RewardApplied=true;ModuleSettings.Choice.Locked=true;
         ModuleSettings.ApplyHostSettings(false,true,new(){Node="host",Token="same"},null,null);

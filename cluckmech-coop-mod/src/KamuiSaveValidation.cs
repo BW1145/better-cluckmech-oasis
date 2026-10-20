@@ -23,6 +23,7 @@ namespace CluckmechCoop
         public int Id,Owner,Faction,Difficulty;
         public bool Permanent;
         public StratagemSaved Stratagem;
+        public BronzeDragonState Bronze;
         public List<string> Summons=new List<string>();
         public float Hatch=-1;
         public float X,Y,Health,Cooldown,Lifetime=-1,Warm,Rally;
@@ -105,7 +106,7 @@ namespace CluckmechCoop
                 if(unit.Components.TryGetValue(type.Name,out var values))
                     foreach(var field in Fields(type))
                         if(values.TryGetValue(field.Name,out var value)&&!Scalar(field.FieldType,value))return false;
-            return unit.Stratagem==null||ValidRuntime(unit.Stratagem);
+            return (unit.Bronze==null||unit.Bronze.Valid)&&(unit.Stratagem==null||ValidRuntime(unit.Stratagem));
         }
         internal static bool ValidRuntime(StratagemSaved runtime)
         {

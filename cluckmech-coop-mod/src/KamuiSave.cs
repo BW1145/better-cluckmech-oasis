@@ -68,6 +68,7 @@ namespace CluckmechCoop
                         Permanent=unit.Permanent,X=unit.transform.position.x-room.Center.x,Y=unit.transform.position.y-room.Center.y,
                         Health=unit.Health.当前生命值,Cooldown=unit.Attack?.当前攻击倒计时??0,Warm=Mathf.Max(0,unit.WarmUntil-Time.time),Rally=Mathf.Max(0,unit.RallyUntil-Time.time),Affixes=new List<int>(unit.Health.强化词条列表)};
                     entry.Stratagem=stratagem?.SaveRuntime(room.Center);
+                    entry.Bronze=unit.GetComponent<BronzeDragon>()?.State;
                     var nest=unit.GetComponent<词条_100009_巢穴类召唤>();
                     if(nest!=null){entry.Hatch=nest.当前孵化时间;foreach(var child in nest.当前存在召唤物){var tag=OtherworldWorld.Unit(child);if(tag!=null)entry.Summons.Add(tag.PersistentId);}}
                     var level=unit.GetComponent<模块_难度等级>();if(level!=null)entry.Difficulty=level.设定等级;
@@ -126,6 +127,7 @@ namespace CluckmechCoop
                         else foreach(int id in saved.Affixes)affixes.赋予词缀(id,obj,true);
                         OtherworldWorld.Add(hp);var unit=OtherworldWorld.Unit(obj);unit.Permanent=saved.Permanent;unit.PersistentId=saved.Key;unit.Restoring=true;
                         var stratagem=obj.GetComponent<StratagemUnit>();if(stratagem!=null)stratagem.Resume=saved.Stratagem;
+                        var bronze=obj.GetComponent<BronzeDragon>();if(bronze!=null)bronze.Resume=saved.Bronze;
                         objects[saved.Key]=unit;pending.Add(new KeyValuePair<KamuiSavedUnit,OtherworldUnit>(saved,unit));
                         var level=obj.GetComponent<模块_难度等级>();if(level!=null)level.设定等级=saved.Difficulty;
                     }

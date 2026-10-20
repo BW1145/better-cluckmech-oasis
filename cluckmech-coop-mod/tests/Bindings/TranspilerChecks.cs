@@ -7,6 +7,38 @@ using HarmonyLib;
 
 internal static class TranspilerChecks
 {
+    internal static void BronzeMinerals(Assembly original,Assembly mod,Action<List<CodeInstruction>> validateStack)
+    {
+        List<CodeInstruction> Body(Type type,string name)=>PatchProcessor.GetOriginalInstructions(AccessTools.DeclaredMethod(type,name));
+        foreach(var type in mod.GetTypes().Where(t=>t.Name.StartsWith("Bronze")||t.Name.StartsWith("RegisterBronze")))
+        foreach(HarmonyPatch attribute in type.GetCustomAttributes(typeof(HarmonyPatch),false))
+            Require(AccessTools.Method(attribute.info.declaringType,attribute.info.methodName)!=null,"native bronze binding: "+type.Name);
+        var registry=mod.GetType("CluckmechCoop.BronzeDragonRegistry",true);
+        foreach(var overload in registry.GetMethods(BindingFlags.Static|BindingFlags.NonPublic).Where(m=>m.Name=="Install"))
+            validateStack(PatchProcessor.GetOriginalInstructions(overload));
+        var producer=mod.GetType("CluckmechCoop.BronzeDragon",true);
+        var start=producer.GetNestedTypes(BindingFlags.NonPublic).Single(t=>t.Name.StartsWith("<Start>"));
+        var begin=Body(start,"MoveNext");
+        Require(begin.Any(c=>c.operand is MethodInfo m&&m.Name=="get_Role")&&begin.Any(c=>c.operand is FieldInfo f&&f.Name=="Resume")&&begin.Any(c=>c.operand is FieldInfo f&&f.Name=="Started"),"producer gates authority and resumes opening-reward state");
+        var produce=Body(producer,"Produce");
+        Require(produce.Count(c=>c.operand is MethodInfo m&&m.Name=="Broadcast")==1&&produce.Any(c=>c.operand is MethodInfo m&&m.Name=="Space"),"main-field coin batch uses one broadcast while private space retains its drop channel");
+        var damage=mod.GetType("CluckmechCoop.StratagemDamage",true);
+        var minerals=Body(damage,"EagleMinerals");
+        Require(minerals.Count(c=>c.operand is MethodInfo m&&m.Name=="OverlapCircleAll")==1&&minerals.Any(c=>c.operand is MethodInfo m&&m.Name=="TryGetValue"),"mineral blast uses one overlap and deduplicates native roots");
+        Require(minerals.Any(c=>c.operand is MethodInfo m&&m.Name=="EagleDamage")&&minerals.Count(c=>c.operand is MethodInfo m&&m.Name=="Space")==2,"mineral damage retains Eagle falloff and space separation");
+        var unit=mod.GetType("CluckmechCoop.StratagemUnit",true);
+        foreach(var iterator in unit.GetNestedTypes(BindingFlags.NonPublic).Where(t=>t.Name.StartsWith("<")&&AccessTools.DeclaredMethod(t,"MoveNext")!=null))
+        {
+            var body=Body(iterator,"MoveNext");
+            int calls=body.Count(c=>c.operand is MethodInfo m&&m.Name=="EagleMinerals");
+            Require(calls==(iterator.Name.StartsWith("<Eagle>")?1:0),"only Eagle adds mineral blast targets: "+iterator.Name);
+        }
+        var hit=AccessTools.DeclaredMethod(damage,"Hit");
+        Require(hit.GetParameters().Last().Name=="mineral"&&Equals(hit.GetParameters().Last().DefaultValue,false),"shared hit retains enemy-only behavior by default");
+        Require(Body(damage,"Hit").Any(c=>c.operand is MethodInfo m&&m.Name=="受到伤害"),"mineral damage uses the native hurt method");
+        foreach(var body in new[]{produce,minerals,Body(damage,"Hit")})validateStack(body);
+        Console.WriteLine("PASS: bronze native registry bindings, authority/opening state and coin routing; isolated Eagle mineral targeting, root deduplication, native damage and falloff");
+    }
     internal static void FlameTrigger(Assembly mod,Action<List<CodeInstruction>> validateStack)
     {
         var actor=mod.GetType("CluckmechCoop.OtherworldActor",true);

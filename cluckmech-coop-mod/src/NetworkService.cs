@@ -113,6 +113,7 @@ namespace CluckmechCoop
             if (!Finite(message.Delay) || message.Delay < 0 || !Finite(message.X) || !Finite(message.Y)) return false;
             switch (message.Type)
             {
+                case "bronze-coins": return !string.IsNullOrWhiteSpace(message.Token) && message.Stage>0 && message.Stage<=128;
                 case "swallow": case "swallow-request":
                     return !string.IsNullOrWhiteSpace(message.Token) && message.Unit != 0 && message.Revision > 0 && message.Targets != null && message.Targets.Length <= 32;
                 case "stratagem-effect": return !string.IsNullOrWhiteSpace(message.Token) && message.Effect != null && message.Effect.Valid;
@@ -178,6 +179,7 @@ namespace CluckmechCoop
             }
             else if (message.Token == Plugin.Combat?.Token && ModuleSettings.Extra.Stratagems && message.Type == "stratagem-effect")
                 StratagemEffects.Play(message.Effect);
+            else if (message.Type=="bronze-coins") BronzeDragon.Receive(message);
             else if (message.Type=="growth-event") GrowthEventPanel.Receive(message);
             else if (FeatureNetwork.Receive(message)) return;
             else if (message.Type == "complete" && ModuleSettings.Active && ModuleSettings.Choice?.Token != null && ModuleSettings.Choice.Token == message.Token)

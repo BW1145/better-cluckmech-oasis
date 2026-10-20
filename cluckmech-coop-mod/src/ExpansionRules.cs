@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace CluckmechCoop
 {
-    internal enum ModuleId { Speed, Characters, Energy, Music, Growth, Shop, Expedition, Transfer, SkipSplash, Stratagems, NativeRepairs, Boons, Wealth, Otherworld }
+    internal enum ModuleId { Speed, Characters, Energy, Music, Growth, Shop, Expedition, Transfer, SkipSplash, Stratagems, NativeRepairs, Boons, Wealth, Otherworld, Bronze }
 
     internal sealed class ModuleInfo
     {
@@ -16,6 +16,7 @@ namespace CluckmechCoop
     internal static class ModuleCatalog
     {
         internal static readonly ModuleInfo[] All = {
+            new ModuleInfo(ModuleId.Bronze, "青铜龙雕像", "增加B级经济鸡械青铜龙雕像及其专属强化。", "3动力、35秒放置冷却、350生命，基础强化4次。\n每10秒生产1金币。4项专属强化可提升产量、缩短生产间隔、提供额外金币和放置收益。\n强化池共14项，包含10项原版强化。\n通过商店、关卡奖励获取，在工匠处强化。"),
             new ModuleInfo(ModuleId.Otherworld, "异界角色", "佩丽卡与宇智波带土，包含专属成长及神威空间。", "佩丽卡：电磁轰击、闪链、战备调度与过载授权。\n宇智波带土：虚化冲刺、神威空间、火遁与空间阵地。\n各有4项初始天赋。本局可获得4项通用成长及所选路线的2项成长。神威空间内的鸡械本局跨关保留。"),
             new ModuleInfo(ModuleId.Speed, "倍速", "左Shift切换2倍速，按住Ctrl开启3倍速。", "左Shift：按一下开启2倍速，再按一下关闭。\nCtrl：按住开启3倍速，松开回到1倍速。\n联机任意玩家均可控制双方速度。移动、攻击、刷怪、冷却和持续效果同步加速。"),
             new ModuleInfo(ModuleId.Characters, "更好的角色右键强化", "增强角色右键，并改善鼠标吞噬选择。", "战斗鸡：三连霰弹，间隔0.2秒，冷却4秒。\n工程狮：集结时移速×2、蓄力时间×0.75；松手后集结战士伤害提高25%、攻速提高20%，持续4秒，冷却8秒。\n肌肉鼠：移动治疗；按下额外治疗20%最大生命，冷却10秒。\n阿法狗：召唤并自爆，伤害300；召唤物前5秒生命、格挡×2。\n八酱兔：向鼠标处召唤；前5秒伤害提高50%、移速提高30%。\n肚子鳄、水母骑士：优先吞噬范围内鼠标指向的可吞噬目标；空地仍选最近目标。"),
@@ -35,7 +36,7 @@ namespace CluckmechCoop
 
     internal sealed class GameplayModules
     {
-        public bool Speed, Characters, Energy, Growth, Shop, Stratagems, Boons, Wealth, Otherworld;
+        public bool Speed, Characters, Energy, Growth, Shop, Stratagems, Boons, Wealth, Otherworld, Bronze;
     }
 
     internal sealed class ShopProgress

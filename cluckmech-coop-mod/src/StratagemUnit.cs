@@ -405,6 +405,7 @@ namespace CluckmechCoop
                     enemy.GetComponent<模块_移动>()?.被击退(new Vector4(point.x,point.y,2,.2f));
                 }
             }
+            Damage.EagleMinerals(point,p,critical);
             StratagemEffects.Emit(this,StratagemEffectAction.EagleBlast,point,p.BlastRadius);
             ReleaseSource();
         }

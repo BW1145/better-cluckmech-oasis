@@ -8,6 +8,7 @@
     <Compile Include="../../src/ModulePreferences.cs"/><Compile Include="../../src/ModuleRunState.cs"/><Compile Include="../../src/ModuleSaveStore.cs"/>
     <Compile Include="../../src/OtherworldTalentState.cs"/>
     <Compile Include="../../src/OtherworldBurnSettlement.cs"/>
+    <Compile Include="../../src/BronzeDragonRules.cs"/>
     <Compile Include="Program.cs"/><Compile Include="StorageHarness.cs"/><Compile Include="ModuleStateHarness.cs"/><Compile Include="LifecycleHarness.cs"/>
     <Reference Include="Game"><HintPath>$(Managed)/Assembly-CSharp.dll</HintPath></Reference>
     <Reference Include="UnityEngine"><HintPath>$(Managed)/UnityEngine.dll</HintPath></Reference>

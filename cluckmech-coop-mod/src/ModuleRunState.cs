@@ -29,7 +29,8 @@ namespace CluckmechCoop
                 Stratagems = preferences.Get(ModuleId.Stratagems),
                 Boons = preferences.Get(ModuleId.Boons),
                 Wealth = preferences.Get(ModuleId.Wealth),
-                Otherworld = preferences.Get(ModuleId.Otherworld)
+                Otherworld = preferences.Get(ModuleId.Otherworld),
+                Bronze = preferences.Get(ModuleId.Bronze)
             };
             return true;
         }

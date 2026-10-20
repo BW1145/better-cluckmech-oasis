@@ -41,6 +41,27 @@ static class Program
     private static void BadRuntime(string name,Action<StratagemSaved> mutate)=>BadUnit(name,u=>mutate(u.Stratagem));
     static void Main(string[] args)
     {
+        if(args.Length>0&&args[0]=="bronze")
+        {
+            Check(BronzeDragonRules.Power==3&&BronzeDragonRules.Cap==4&&BronzeDragonRules.Health==350&&BronzeDragonRules.Cooldown==35,"confirmed B-tier parameters");
+            var pool=BronzeDragonRules.Pool();Check(pool.Count==14&&new HashSet<int>(pool).Count==14,"four exclusive and ten native candidates have no duplicate weighting");
+            var normal=new BronzeDragonState();Check(normal.Advance(9,false,false,false)==0&&normal.Advance(1,false,false,false)==1,"first coin occurs after ten game seconds");
+            Check(normal.Advance(50,false,false,false)==5,"base production gives six coins per minute");
+            var full=new BronzeDragonState{Remaining=6,Started=true};Check(full.Advance(60,true,true,true)==24,"full production gives 24 coins per minute without counting bonus coins as cycles");
+            var partial=new BronzeDragonState{Remaining=1.5f,Cycles=4,Started=true};
+            var saved=Healthy();saved.Rooms[0].Units[0].Id=BronzeDragonRules.Unit;saved.Rooms[0].Units[0].Bronze=partial;
+            var resumed=JsonConvert.DeserializeObject<OtherworldSave>(JsonConvert.SerializeObject(saved));
+            var state=resumed.Rooms[0].Units[0].Bronze;
+            Check(KamuiWorld.Valid(resumed)&&state.Started&&state.Cycles==4&&state.Remaining==1.5f,"room snapshot retains opening payment, production progress and fifth-cycle bonus");
+            Check(state.Advance(1,true,true,true)==0&&state.Advance(.5f,true,true,true)==4,"restored fifth cycle produces two regular and two bonus coins once");
+            var legacy=Healthy();Check(KamuiWorld.Valid(legacy)&&legacy.Rooms[0].Units[0].Bronze==null,"existing room snapshots retain their normal loading behavior");
+            foreach(var corrupt in new[]{new BronzeDragonState{Remaining=float.NaN},new BronzeDragonState{Remaining=-1},new BronzeDragonState{Cycles=5}})
+            {resumed.Rooms[0].Units[0].Bronze=corrupt;Check(!KamuiWorld.Valid(resumed),"invalid bronze runtime is rejected");}
+            var modules=JsonConvert.DeserializeObject<GameplayModules>(JsonConvert.SerializeObject(new GameplayModules{Bronze=true}));
+            Check(modules.Bronze,"new module survives the existing host settings JSON");
+            ModuleStateHarness.Run();
+            Console.WriteLine($"PASS: {checks} bronze economy, candidate pool and room-save checks");return;
+        }
         if(args.Length>0&&args[0]=="coupons-burn")
         {
             var progress=new PlayerProgress{Coupons=12};
