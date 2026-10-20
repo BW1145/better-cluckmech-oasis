@@ -7,6 +7,32 @@ using HarmonyLib;
 
 internal static class TranspilerChecks
 {
+    internal static void PerlicaHits(Assembly original,Assembly mod,Action<List<CodeInstruction>> validateStack)
+    {
+        List<CodeInstruction> Body(Type type,string name)=>PatchProcessor.GetOriginalInstructions(AccessTools.DeclaredMethod(type,name));
+        bool Calls(CodeInstruction c,string type,string name)=>c.operand is MethodInfo m&&m.DeclaringType.Name==type&&m.Name==name;
+        var hit=mod.GetType("CluckmechCoop.OtherworldNormalHit",true);
+        var native=AccessTools.Method(original.GetType("模块_伤害精灵",true),"OnTriggerEnter2D");
+        var binding=(HarmonyPatch)hit.GetCustomAttributes(typeof(HarmonyPatch),false).Single();
+        Require(AccessTools.Method(binding.info.declaringType,binding.info.methodName)==native,"normal-hit patch binds the native projectile contact");
+        var contact=PatchProcessor.GetOriginalInstructions(native);
+        Require(contact.Any(c=>Calls(c,"List`1","Contains"))&&contact.Any(c=>Calls(c,"List`1","Add")),"native contact deduplicates repeated collisions");
+        var prefix=Body(hit,"Prefix");var postfix=Body(hit,"Postfix");
+        Require(prefix.Any(c=>Calls(c,"Plugin","get_Role"))&&prefix.Any(c=>c.opcode==OpCodes.Ldc_I4_2),"contact counts on the authority side");
+        Require(prefix.Any(c=>c.operand is FieldInfo f&&f.Name=="当前阵营")&&prefix.Any(c=>c.operand is FieldInfo f&&f.Name=="当前生命值"),"contact captures a living enemy's health");
+        Require(postfix.Any(c=>c.operand is FieldInfo f&&f.Name=="当前生命值")&&postfix.Any(c=>c.opcode==OpCodes.Bge_Un||c.opcode==OpCodes.Bge_Un_S)&&postfix.Count(c=>Calls(c,"OtherworldActions","Normal"))==1,"chain count follows an actual health decrease after the native contact");
+        var actor=mod.GetType("CluckmechCoop.OtherworldActor",true);
+        Require(!Body(actor,"Fired").Any(c=>Calls(c,"OtherworldActions","Normal")),"empty shots retain presentation without counting toward the chain");
+        var capture=Body(mod.GetType("CluckmechCoop.OtherworldProjectile",true),"伤害数据传递");
+        Require(capture.Any(c=>c.operand is FieldInfo f&&f.Name=="当前攻击力")&&!capture.Any(c=>c.operand is FieldInfo f&&f.Name=="攻击伤害"),"chain snapshots the shot's normal damage before projectile critical damage");
+        var actions=mod.GetType("CluckmechCoop.OtherworldActions",true);
+        var normal=Body(actions,"Normal");
+        Require(normal.Any(c=>c.opcode==OpCodes.Ldc_I4_4)&&normal.Any(c=>c.opcode==OpCodes.Ldc_I4_2)&&normal.Any(c=>c.opcode==OpCodes.Ldc_R4&&Equals(c.operand,3f)),"four/two-hit cadence and triple damage remain");
+        var damage=Body(actions,"Hit");
+        Require(damage.Any(c=>c.operand is FieldInfo f&&f.Name=="当前暴击率")&&damage.Any(c=>c.operand is FieldInfo f&&f.Name=="当前暴击倍率"),"chain hits retain independent native critical rolls");
+        foreach(var code in new[]{prefix,postfix,capture})validateStack(code);
+        Console.WriteLine("PASS: native hit binding/deduplication, authority and health-decrease gate, empty-shot exclusion, shot damage snapshot, retained cadence and critical hits");
+    }
     internal static void BronzeMinerals(Assembly original,Assembly mod,Action<List<CodeInstruction>> validateStack)
     {
         List<CodeInstruction> Body(Type type,string name)=>PatchProcessor.GetOriginalInstructions(AccessTools.DeclaredMethod(type,name));

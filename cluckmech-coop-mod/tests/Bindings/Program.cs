@@ -20,6 +20,11 @@ var original=Assembly.LoadFrom(Path.Combine(managed,"Assembly-CSharp.dll"));
 var mod=Assembly.LoadFrom(Path.Combine(root,"src/bin/Release/net472/CluckmechCoop.dll"));
 int checks=0;
 try{
+if(args.Length>2 && args[2]=="--perlica-hits")
+{
+    TranspilerChecks.PerlicaHits(original,mod,ValidateStack);
+    return;
+}
 if(args.Length>2 && args[2]=="--obito-balance")
 {
     var catalog=mod.GetType("CluckmechCoop.OtherworldCatalog",true);

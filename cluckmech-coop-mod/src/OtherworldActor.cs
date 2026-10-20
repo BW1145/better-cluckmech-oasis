@@ -345,12 +345,11 @@ namespace CluckmechCoop
             if(finish)EndPhase(true,Space!=0);
             else {Movement?.运算移动速度();Health?.运算无敌();}
         }
-        internal void Fired(float damage)
+        internal void Fired()
         {
             float interval=1/Mathf.Max(.1f,Attack.当前攻击速度);
             motionState.Fired(Time.time,interval);
             OtherworldAudio.Normal(this);
-            if(Plugin.Role!=2)OtherworldActions.Normal(this,damage);
         }
         internal void CastPose()=>castUntil=Time.time+.4f;
         private void QualifyHold(double now)
@@ -439,8 +438,8 @@ namespace CluckmechCoop
         }
         private static void Postfix(Saved __state)
         {
-            if(__state.Actor==null)return;var actor=__state.Actor;float damage=actor.Attack.当前攻击力;
-            actor.Attack.当前攻击力=__state.Attack;actor.Gun.炮口位置.position=__state.Muzzle;actor.Fired(damage);
+            if(__state.Actor==null)return;var actor=__state.Actor;
+            actor.Attack.当前攻击力=__state.Attack;actor.Gun.炮口位置.position=__state.Muzzle;actor.Fired();
         }
     }
 }
