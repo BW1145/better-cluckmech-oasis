@@ -25,14 +25,14 @@ namespace CluckmechCoop
         internal const string ObitoSkillDescription="短按虚化1秒并加速，冷却5秒。\n长按最多冲刺3段，逐段收容敌人5秒；松手后完成当前段进入空间，3段自动进入，冷却10／12／14秒。\n空间内右键返回；空间内鸡械本局跨关保留。";
         internal static readonly OtherworldHero[] Heroes={
             new OtherworldHero(12,"佩丽卡",16,600,50,4,6,4),
-            new OtherworldHero(13,"宇智波带土",78,750,80,2.5f,5,4.5f)
+            new OtherworldHero(13,"宇智波带土",78,750,70,2.5f,5,4.5f)
         };
         internal static readonly OtherworldTalent[] Talents={
             new OtherworldTalent(26001,12,0,"长效导流","本人及所属鸡械的麻痹效果提高100%，麻痹附带25%基础脆弱，并随全局元素影响增强。\n研究每级还需10、20、30……名受本人或所属鸡械麻痹的敌人死亡；每级全局元素影响提高10%。"),
             new OtherworldTalent(26002,12,1,"即时协议·闪链","射程增加2格。每第四次普攻追加闪链，命中自身4格内最多6名敌人，每名受到单发普攻300%的伤害。\n闪链每命中一名敌人，右键冷却减少0.5秒，每条最多减少2秒；本局每获得一次鸡械强化，普攻成长倍率增加5%。"),
             new OtherworldTalent(26003,12,2,"协议调度","右键冷却×2。施放时在落点附近额外部署1台最后成功手动放置的鸡械，保留该鸡械当前的强化。"),
             new OtherworldTalent(26004,12,3,"过载授权","右键本体伤害×2，可储存3次使用并逐次恢复。额外伤害为场上攻击力最高的5台所属鸡械攻击力合计×2。\n落点标定8秒，再次轰击标定区时范围扩大50%。"),
-            new OtherworldTalent(26005,13,0,"火遁·爆风乱舞","普攻附加灼烧，基础每0.5秒造成10点伤害、持续2秒。本人及所属鸡械的灼烧伤害提高70%、持续时间增加2秒。\n敌人死亡时，直接施加的灼烧可向3格内最多3名敌人传播一次，继承剩余伤害的50%；本局每获得一次鸡械强化，灼烧伤害加成增加6%。"),
+            new OtherworldTalent(26005,13,0,"火遁·爆风乱舞","普攻附加灼烧，基础每0.5秒造成10点伤害、持续2秒。本人及所属鸡械的灼烧伤害提高50%、持续时间增加2秒。\n敌人死亡时，直接施加的灼烧可向3格内最多3名敌人传播一次，继承剩余伤害的50%；本局每获得一次鸡械强化，灼烧伤害加成增加7%。"),
             new OtherworldTalent(26006,13,1,"神威工坊","神威空间内部署鸡械消耗0动力，放置冷却缩短50%。空间内所属鸡械最大生命×2、攻击力×1.5。"),
             new OtherworldTalent(26007,13,2,"异界狩猎","所属鸡械攻击力、最大生命各提高50%。神威空间内每死亡10名敌人，本局两项加成各再提高5%，作用于空间内外。"),
             new OtherworldTalent(26008,13,3,"神威武库","虚化时长翻倍。每次被虚化躲过的敌方攻击，将其伤害的50%转为储能。\n虚化结束时向瞄准方向释放螺旋火焰，造成攻击力×30＋储能的伤害；随后3秒普攻伤害×3。"),
@@ -82,6 +82,6 @@ namespace CluckmechCoop
         internal bool Has(int id) => Talents.Contains(id);
         internal float Influence => OtherworldCatalog.ResearchLevel(ShockKills)*(Has(26106)?.15f:.1f);
         internal float Hunting => .5f+(SpaceKills/10)*(Has(26121)?.1f:.05f);
-        internal float BurnBonus => .7f+Upgrades*(Has(26118)?.1f:.06f);
+        internal float BurnBonus => .5f+Upgrades*(Has(26118)?.1f:.07f);
     }
 }

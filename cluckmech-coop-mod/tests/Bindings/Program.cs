@@ -20,6 +20,25 @@ var original=Assembly.LoadFrom(Path.Combine(managed,"Assembly-CSharp.dll"));
 var mod=Assembly.LoadFrom(Path.Combine(root,"src/bin/Release/net472/CluckmechCoop.dll"));
 int checks=0;
 try{
+if(args.Length>2 && args[2]=="--obito-balance")
+{
+    var catalog=mod.GetType("CluckmechCoop.OtherworldCatalog",true);
+    var hero=AccessTools.Method(catalog,"Hero").Invoke(null,new object[]{13});
+    foreach(var stat in new[]{("Attack",70f),("Health",750f),("Rate",2.5f),("Range",5f),("Speed",4.5f)})
+        if((float)AccessTools.Field(hero.GetType(),stat.Item1).GetValue(hero)!=stat.Item2)throw new Exception("Obito stat mismatch: "+stat.Item1);
+    var run=Activator.CreateInstance(mod.GetType("CluckmechCoop.OtherworldRun",true),true);
+    var upgrades=AccessTools.Field(run.GetType(),"Upgrades");
+    var bonus=AccessTools.Property(run.GetType(),"BurnBonus");
+    foreach(var sample in new[]{(0,.5f),(10,1.2f),(20,1.9f),(30,2.6f)})
+    {
+        upgrades.SetValue(run,sample.Item1);
+        if(Math.Abs((float)bonus.GetValue(run)-sample.Item2)>.00001f)throw new Exception("Fire growth mismatch");
+    }
+    ((HashSet<int>)AccessTools.Field(run.GetType(),"Talents").GetValue(run)).Add(26118);
+    upgrades.SetValue(run,20);
+    if(Math.Abs((float)bonus.GetValue(run)-2.5f)>.00001f)throw new Exception("Ember growth mismatch");
+    Console.WriteLine("PASS: Obito base stats, 0/10/20/30 reinforcement fire growth and Ember override in final DLL");return;
+}
 if(args.Length>2 && args[2]=="--bronze-minerals")
 {
     TranspilerChecks.BronzeMinerals(original,mod,ValidateStack);
