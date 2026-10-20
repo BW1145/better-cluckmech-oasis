@@ -1,6 +1,7 @@
 param(
     [string]$GameDir=$env:CLUCKMECH_GAME_DIR,
     [string]$NativeStateSource,
+    [string]$NativeSource,
     [string[]]$Select=@('All'),
     [switch]$BuildMain,
     [switch]$Package
@@ -29,7 +30,7 @@ function Invoke-Test([string]$name,[string]$folder,[string]$project,[string[]]$e
     if($extra.Count){$arguments+=@('--')+$extra}
     Invoke-Check $name 'dotnet' $arguments
 }
-$known=@('ActionLifetime','Actor','Targets','RuntimeScopes','Visibility','CanvasOwnership','NestedHierarchy','SessionNotifications','Effects','EffectProtocol','SensorPrune','Invulnerability','SaveValidation','Storage','Modules','ModuleLifecycle','Protocol','ActionWiring','RuntimeWiring','NotificationWiring','Transpilers')
+$known=@('ActionLifetime','Actor','Targets','RuntimeScopes','Visibility','CanvasOwnership','NestedHierarchy','SessionNotifications','Effects','EffectProtocol','SensorPrune','Invulnerability','SaveValidation','Storage','Modules','ModuleLifecycle','Protocol','ActionWiring','RuntimeWiring','NotificationWiring','Transpilers','CoopRepairs','CoopRepairWiring')
 foreach($name in $Select){if($name -ne 'All' -and $name -notin $known){throw "Unknown suite: $name"}}
 $suites=if('All' -in $Select){$known}else{$Select}
 try {
@@ -40,6 +41,12 @@ try {
     $effectsPrepared=$false
     foreach($suite in $suites){
         switch($suite){
+            'CoopRepairs' {
+                if(-not $NativeSource){throw 'NativeSource must point to a private native source directory'}
+                Invoke-Check 'PrepareCoopRepairs' 'pwsh' @('-NoProfile','-File',(Join-Path $root 'tests/CoopRepairs/Prepare.ps1'),'-NativeSource',$NativeSource)
+                Invoke-Test $suite 'CoopRepairs' 'CoopRepairsTests.csproj' @() -Native
+            }
+            'CoopRepairWiring' {Invoke-Test $suite 'Bindings' 'BindingsTests.csproj' @($root,$GameDir,'--coop-repairs')}
             'ActionLifetime' {Invoke-Test $suite 'UnitLifecycle' 'UnitLifecycleTests.csproj'}
             'Actor' {Invoke-Test $suite 'OtherworldActor' 'OtherworldActorTests.csproj'}
             'Targets' {Invoke-Test $suite 'OtherworldTargets' 'OtherworldTargetsTests.csproj'}

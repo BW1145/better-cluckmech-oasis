@@ -1,6 +1,6 @@
 # 更新检查入口
 
-在模组目录运行 `./ValidateUpdate.ps1 -GameDir <游戏目录> -NativeStateSource <原生状态源码> -Select All`。可以用 `-Select RuntimeScopes,ModuleLifecycle` 只执行受影响的检查；`-BuildMain` 构建主插件，`-Package` 使用已有三个 Release DLL 生成完整包。诊断与跳屏插件需要先按各自 csproj 构建。日志写入忽略的 `artifacts/checks`，失败立即返回非零退出码。
+在模组目录运行 `./ValidateUpdate.ps1 -GameDir <游戏目录> -NativeStateSource <原生状态源码> -NativeSource <原生反编译目录> -Select All`。可以用 `-Select RuntimeScopes,ModuleLifecycle` 只执行受影响的检查；`-BuildMain` 构建主插件，`-Package` 使用已有三个 Release DLL 生成完整包。诊断与跳屏插件需要先按各自 csproj 构建。日志写入忽略的 `artifacts/checks`，失败立即返回非零退出码。
 
 | 检查层 | Suite | 实际覆盖 |
 |---|---|---|
@@ -9,7 +9,11 @@
 | 生产生命周期加替身 | RuntimeScopes、ModuleLifecycle、Modules、Storage | 实际场景清理协调器/会话状态；完整模块owner、两局与换关、三种角色与模块组合、ES3存储替身的损坏原档保护 |
 | 原生类型/序列化 | SaveValidation、Protocol、EffectProtocol | 实际游戏存档类型及JSON；实际Mirror字节固定样本和往返；战备协议枚举 |
 | 实际程序集绑定 | ActionWiring、RuntimeWiring、NotificationWiring、Transpilers | 最终DLL异步状态机接线、清理与会话注册释放；原生方法签名、精确转译匹配次数、缺失/重复接缝、组合顺序及IL栈 |
+| 联机修复回归 | CoopRepairs | 生产客机伤害guard、原版受伤/召唤/周期方法摘录、prefab解析与待识别记录保留；600帧角色/产物矩阵；实际结算显示捕获及分批；Unity/渲染/网络替身 |
+| 联机修复接线 | CoopRepairWiring | 本机原版显示门控/私有签名、调用入口注入字段、最终DLL保存身份/限时/青铜龙、纯显示和延迟技能消息时序 |
 
 以上检查不会运行 Unity 或游戏，也不代表真实联机、视觉或整局游玩验收。旧 `Integration`、`Stratagems` 夹具仍有基线过时接口，不计入本次通过项；本轮使用上表可运行且直接关联的生产逻辑套件。`All` 会完整运行一次，不用于重复执行已通过且未受改动影响的检查。
 
 `Prepare.ps1` 需要本机同版本 `模块_状态属性.cs`，仅在忽略的 obj 中生成检查输入；原生源码与游戏程序集均不得加入仓库或安装包。云端可复用同版本保留引用，并对照交接哈希。
+
+联机修复使用 `./ValidateUpdate.ps1 -GameDir <游戏目录> -NativeSource <原生反编译目录> -Select CoopRepairs,CoopRepairWiring`，并先构建主插件。`NativeSource` 应含 `世界类.cs`、`模块_受伤.cs`、两类原版周期词条及 `函数库/词条函数.cs`。专项夹具从这些文件和当前生产源码抽取方法到忽略的 obj。独立复查分批逻辑可在准备后运行 `dotnet run --project tests/CoopRepairs/CoopRepairsTests.csproj -p:GameDir=<游戏目录> -- --network`。
