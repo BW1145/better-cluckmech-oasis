@@ -1,5 +1,6 @@
 using Mirror;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -119,9 +120,9 @@ namespace CluckmechCoop
             });
         }
 
-        internal static void Effect(OtherworldActor actor, int effect, Vector2 point, float duration = 0, float amount = 0)
+        internal static void Effect(OtherworldActor actor, int effect, Vector2 point, float duration = 0, float amount = 0, List<OtherworldDisplayHit> hits = null)
         {
-            if (Plugin.Role == 1) Send(new OtherworldMessage
+            if (Plugin.Role == 1) SendDisplay(new OtherworldMessage
             {
                 Kind = OtherworldMessageKind.Effect,
                 Player = StratagemWorld.Id(actor.gameObject),
@@ -132,7 +133,22 @@ namespace CluckmechCoop
                 Amount = amount,
                 EndX = effect == 6 ? actor.NextDashDirection.x : 0,
                 EndY = effect == 6 ? actor.NextDashDirection.y : 0
-            });
+            },hits,hits==null||actor.Space==0?-1:actor.Role);
+        }
+
+        internal static void SendDisplay(OtherworldMessage message,List<OtherworldDisplayHit> hits,int owner)
+        {
+            if(Plugin.Role!=1)return;
+            if(hits==null||hits.Count==0)
+            {if(message.Kind!=OtherworldMessageKind.Effect||message.Value!=0)Send(message,owner);return;}
+            // Keep each existing Data string comfortably below Mirror's UTF-8 string limit.
+            for(int offset=0;offset<hits.Count;offset+=256)
+            {
+                var batch=message;
+                batch.Data=JsonConvert.SerializeObject(hits.GetRange(offset,System.Math.Min(256,hits.Count-offset)));
+                if(offset>0){batch.Kind=OtherworldMessageKind.Effect;batch.Value=0;}
+                Send(batch,owner);
+            }
         }
 
         internal static void Send(OtherworldMessage message, int owner = -1)
@@ -274,6 +290,7 @@ namespace CluckmechCoop
                     new Vector2(message.X, message.Y), new Vector2(message.EndX, message.EndY));
                 return;
             }
+            if(message.Kind==OtherworldMessageKind.Beam||message.Kind==OtherworldMessageKind.Effect)OtherworldHitDisplay.Receive(message.Data);
             if (!NetworkClient.spawned.TryGetValue(message.Player, out var identity)) return;
             var actor = identity.GetComponent<OtherworldActor>();
             if (actor == null) return;
