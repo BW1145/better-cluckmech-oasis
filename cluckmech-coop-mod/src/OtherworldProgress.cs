@@ -101,11 +101,11 @@ namespace CluckmechCoop
             if(run==null || Health.当前阵营!=阵营数据库.阵营.友方)return;
             if(Detailed!=null)
             {
-                float next=run.Initial==26001?run.Influence:0;
+                float next=run.Initial==OtherworldTalentIds.Conductance?run.Influence:0;
                 Detailed.增加状态元素效果(攻击类型与状态数据库.元素状态分类枚举.元素影响类,next-influence);influence=next;
-                next=run.Initial==26001?1:0;
+                next=run.Initial==OtherworldTalentIds.Conductance?1:0;
                 Detailed.增加状态百分比效果加成(攻击类型与状态数据库.状态枚举.感电,next-shock);shock=next;
-                next=run.Initial==26005?run.BurnBonus:0;
+                next=run.Initial==OtherworldTalentIds.FireStyle?run.BurnBonus:0;
                 Detailed.增加状态百分比效果加成(攻击类型与状态数据库.状态枚举.灼烧,new Vector4(next-burn,0,0,0));burn=next;
             }
             float ratio=Health.当前生命值上限>0?Health.当前生命值/Health.当前生命值上限:1;

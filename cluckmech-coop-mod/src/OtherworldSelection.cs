@@ -61,7 +61,7 @@ namespace CluckmechCoop
                         var talents=panel.GetComponentsInChildren<天赋单元>(true);
                         for(int i=0;i<talents.Length;i++)
                         {
-                            talents[i].天赋id=(hero.Id==12?26001:26005)+i;
+                            talents[i].天赋id=(hero.Id==12?OtherworldTalentIds.Conductance:OtherworldTalentIds.FireStyle)+i;
                             TalentIcon(talents[i]);
                         }
                     }

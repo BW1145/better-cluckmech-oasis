@@ -1,6 +1,6 @@
 # 离线检查入口
 
-运行版本：0.6.16。入口为模组目录下的 `ValidateUpdate.ps1`。
+运行版本：0.6.17。入口为模组目录下的 `ValidateUpdate.ps1`。
 
 ```powershell
 ./ValidateUpdate.ps1 -List
@@ -8,10 +8,11 @@
 ./ValidateUpdate.ps1 -GameDir "游戏目录" -Select PerlicaHits,ObitoBalance
 ```
 
-`-List` 仅列出名称；`-Select` 运行所选项并去重；`All` 包含下表全部检查，需要全部外部依赖。通常选择本次改动直接关联的项，通过后沿用结果。`-BuildMain` 构建主插件，`-Package` 使用已有三个Release DLL打包。
+`-List` 仅列出名称；`-Select` 运行所选项并去重；`All` 包含下表全部检查，需要全部外部依赖。通常选择本次改动直接关联的项，通过后沿用结果。`RefactorParity` 另需 `-BaselineAssembly` 提供整理前主插件。`-BuildMain` 构建主插件，`-Package` 使用已有三个Release DLL打包。
 
 | 选择名称 | 检查范围 | 依赖 |
 |---|---|---|
+| RefactorParity | 对照同一编译器生成的整理前后主插件，比较执行指令、字段顺序、补丁/JSON声明、天赋ID及内嵌资源；仅归一化版本字符串和有单独等价检查的公共查询调用 | BaselineAssembly |
 | Rules | 转交守恒、鸡械快照比较、远征波次和倍率 | .NET 8 |
 | CoopRepairs、CoopRepairNetwork、CoopRepairWiring | 原版周期生成、神威模板身份、客机反馈与真实程序集接线；排队模式单独选择 | GameDir；前两项另需NativeGameSource |
 | CoopRepairLimits、StratagemHitDisplay | 模板索引工作量、延迟显示队列边界、战备与状态显示分批，使用既有替身 | .NET 8、Newtonsoft.Json 13.0.3；后者另需Python |

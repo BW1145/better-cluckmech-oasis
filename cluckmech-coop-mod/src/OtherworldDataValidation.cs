@@ -6,7 +6,7 @@ namespace CluckmechCoop
     // checks belong to the network handler; optional legacy fields belong to storage.
     internal static class OtherworldDataValidation
     {
-        internal static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+        internal static bool Finite(float value) => NetworkValues.Finite(value);
 
         internal static bool Run(OtherworldRun run)
         {

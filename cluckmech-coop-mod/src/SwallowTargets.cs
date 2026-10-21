@@ -96,8 +96,8 @@ namespace CluckmechCoop
             Select();
             if (Plugin.Role == 0) { Execute(selected); return; }
             var ids = new uint[selected.Count];
-            for (int i = 0; i < ids.Length; i++) ids[i] = StratagemWorld.Id(selected[i].gameObject);
-            Plugin.Network.Send(new SessionMessage {Type="swallow-request",Token=Plugin.Combat.Token,Unit=StratagemWorld.Id(gameObject),Targets=ids,Revision=++sent});
+            for (int i = 0; i < ids.Length; i++) ids[i] = NetworkObjects.Id(selected[i].gameObject);
+            Plugin.Network.Send(new SessionMessage {Type="swallow-request",Token=Plugin.Combat.Token,Unit=NetworkObjects.Id(gameObject),Targets=ids,Revision=++sent});
         }
         private void Execute(List<模块_基本属性> targets)
         {
@@ -134,7 +134,7 @@ namespace CluckmechCoop
             if (server)
             {
                 var accepted = new uint[targets.Count];
-                for (int i = 0; i < accepted.Length; i++) accepted[i] = StratagemWorld.Id(targets[i].gameObject);
+                for (int i = 0; i < accepted.Length; i++) accepted[i] = NetworkObjects.Id(targets[i].gameObject);
                 message.Type = "swallow"; message.Targets = accepted;
                 if (targets.Count > 0) value.nextUse = Time.time+(value.crocodile != null ? value.crocodile.技能cd : value.jelly.技能cd);
                 Plugin.Network.Broadcast(message);

@@ -4,6 +4,8 @@ on:
     paths:
       - 'cluckmech-coop-mod/src/Stratagem*.cs'
       - 'cluckmech-coop-mod/src/OtherworldHitDisplay.cs'
+      - 'cluckmech-coop-mod/src/OtherworldTalentIds.cs'
+      - 'cluckmech-coop-mod/src/NetworkObjects.cs'
       - 'cluckmech-coop-mod/src/OtherworldNetwork.cs'
       - 'cluckmech-coop-mod/src/OtherworldStates.cs'
       - 'cluckmech-coop-mod/src/HostStatusFeedback.cs'

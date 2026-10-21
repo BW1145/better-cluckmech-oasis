@@ -72,7 +72,7 @@ stubs = replace_once(stubs, 'public class 状态类{public GameObject 攻击者;
 stubs = replace_once(stubs, 'public int Count; public void 增加状态', 'public List<状态类> 当前状态列表=new();public int Count; public void 增加状态')
 stubs = replace_once(stubs, 'public class OtherworldRun {public bool Pressure;', 'public class OtherworldRun {public int Initial;public bool Pressure;')
 stubs = replace_once(stubs, 'public static 联机状态 当前联机状态;', 'public static 联机状态 当前联机状态;public static 联机玩家控件 玩家_客户端=new(){connectionToClient=new Mirror.NetworkConnectionToClient{connectionId=2}};')
-stubs = replace_once(stubs, 'public class NetworkIdentity:Component {public uint assetId;}', 'public class NetworkIdentity:Component {public uint assetId,netId;public readonly Dictionary<int,NetworkConnectionToClient> observers=new();}')
+stubs = replace_once(stubs, 'public class NetworkIdentity:Component {public uint assetId,netId;}', 'public class NetworkIdentity:Component {public uint assetId,netId;public readonly Dictionary<int,NetworkConnectionToClient> observers=new();}')
 stubs = replace_once(stubs, 'public static Dictionary<uint,NetworkIdentity> spawned=new();', 'public static IdentityTable spawned=new();')
 stubs = replace_once(stubs, 'public static class NetworkServer {public static int Calls;', 'public static class NetworkServer {public static Dictionary<uint,NetworkIdentity> spawned=new();public static int Calls;')
 stubs = replace_once(stubs, 'internal static class OtherworldActions {internal static OtherworldActor Viewer;', 'internal static class OtherworldActions {internal static void Status(){}internal static OtherworldActor Viewer;')

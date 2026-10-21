@@ -97,7 +97,7 @@ namespace CluckmechCoop
             if (Plugin.Role == 1 && obj.GetComponent<NetworkIdentity>() != null) NetworkServer.Destroy(obj);
             else UnityEngine.Object.Destroy(obj);
         }
-        internal static uint Id(GameObject obj) => obj == null ? 0 : obj.GetComponent<NetworkIdentity>()?.netId ?? 0;
+        internal static uint Id(GameObject obj) => NetworkObjects.Id(obj);
         internal static 模块_基本属性 Enemy(uint id)
         {
             if (NetworkClient.spawned.TryGetValue(id,out var identity)) return identity.GetComponent<模块_基本属性>();

@@ -13,29 +13,29 @@ namespace CluckmechCoop
         {
             var unit=OtherworldWorld.Unit(health.gameObject);var run=OtherworldProgress.For((int)health.所属玩家);
             if(unit==null||!unit.IsMachine||run==null)return value;
-            if(run.Initial==26007)value*=1+run.Hunting;
-            if(unit.Space!=0&&run.Initial==26006)value*=2;
+            if(run.Initial==OtherworldTalentIds.Hunting)value*=1+run.Hunting;
+            if(unit.Space!=0&&run.Initial==OtherworldTalentIds.Workshop)value*=2;
             return value;
         }
         internal static float BaseAttack(float value,模块_攻击属性 stats)
         {
             var unit=OtherworldWorld.Unit(stats.gameObject);if(unit==null||!unit.IsPlayer)return value;
-            var run=OtherworldProgress.For((int)unit.Health.所属玩家);return run!=null&&run.Has(26108)?value+run.Upgrades:value;
+            var run=OtherworldProgress.For((int)unit.Health.所属玩家);return run!=null&&run.Has(OtherworldTalentIds.Calibration)?value+run.Upgrades:value;
         }
         internal static float Rate(float value,模块_攻击属性 stats)
         {
             var unit=OtherworldWorld.Unit(stats.gameObject);if(unit==null||!unit.IsMachine)return value;
             var run=OtherworldProgress.For((int)unit.Health.所属玩家);if(run==null)return value;
             if(unit.WarmUntil>Time.time)value+=.5f;if(unit.RallyUntil>Time.time)value+=.5f;
-            if(unit.Space!=0&&run.Initial==26006&&run.Has(26120))value+=KamuiWorld.Categories(unit.Space,(int)unit.Health.所属玩家)*.25f;
+            if(unit.Space!=0&&run.Initial==OtherworldTalentIds.Workshop&&run.Has(OtherworldTalentIds.Formation))value+=KamuiWorld.Categories(unit.Space,(int)unit.Health.所属玩家)*.25f;
             return value;
         }
         internal static void Attack(模块_攻击属性 stats)
         {
             var unit=OtherworldWorld.Unit(stats.gameObject);if(unit==null||!unit.IsMachine)return;
             var run=OtherworldProgress.For((int)unit.Health.所属玩家);if(run==null)return;
-            if(run.Initial==26007)stats.当前攻击力*=1+run.Hunting;
-            if(unit.Space!=0&&run.Initial==26006)stats.当前攻击力*=run.Has(26119)?2.5f:1.5f;
+            if(run.Initial==OtherworldTalentIds.Hunting)stats.当前攻击力*=1+run.Hunting;
+            if(unit.Space!=0&&run.Initial==OtherworldTalentIds.Workshop)stats.当前攻击力*=run.Has(OtherworldTalentIds.ExcessSupply)?2.5f:1.5f;
             if(unit.WarmUntil>Time.time)stats.当前攻击力*=1.5f;
         }
         internal static IEnumerable<CodeInstruction> Wrap(IEnumerable<CodeInstruction> instructions, Type type, string field, string method, int expected)
@@ -78,7 +78,7 @@ namespace CluckmechCoop
     internal static class OtherworldAttackRange
     {
         private static void Postfix(模块_攻击属性 __instance)
-        {var unit=OtherworldWorld.Unit(__instance.gameObject);if(unit!=null&&unit.IsPlayer&&OtherworldProgress.For((int)unit.Health.所属玩家)?.Initial==26002)__instance.当前攻击范围+=2;}
+        {var unit=OtherworldWorld.Unit(__instance.gameObject);if(unit!=null&&unit.IsPlayer&&OtherworldProgress.For((int)unit.Health.所属玩家)?.Initial==OtherworldTalentIds.FlashChain)__instance.当前攻击范围+=2;}
     }
     [HarmonyPatch(typeof(模块_基本属性),"运算格挡值")]
     internal static class OtherworldBlock
@@ -87,7 +87,7 @@ namespace CluckmechCoop
         {
             var unit=OtherworldWorld.Unit(__instance.gameObject);if(unit==null||!unit.IsMachine||unit.Space==0)return;
             var run=OtherworldProgress.For((int)__instance.所属玩家);
-            if(run?.Initial==26006&&run.Has(26120))__instance.当前格挡值+=KamuiWorld.Categories(unit.Space,(int)__instance.所属玩家)*10;
+            if(run?.Initial==OtherworldTalentIds.Workshop&&run.Has(OtherworldTalentIds.Formation))__instance.当前格挡值+=KamuiWorld.Categories(unit.Space,(int)__instance.所属玩家)*10;
         }
     }
     [HarmonyPatch(typeof(模块_移动属性),"运算移动速度")]
@@ -115,7 +115,7 @@ namespace CluckmechCoop
             }
             if(Plugin.Role==2&&(unit.Space!=0||OtherworldProgress.For(sjb.攻击者)!=null))
             {OtherworldHitDisplay.Local(__instance,unit,sjb);return false;}
-            if(unit.Space!=0&&unit.Health.当前阵营==阵营数据库.阵营.敌方&&KamuiWorld.Run(unit.Space)?.Has(26116)==true)
+            if(unit.Space!=0&&unit.Health.当前阵营==阵营数据库.阵营.敌方&&KamuiWorld.Run(unit.Space)?.Has(OtherworldTalentIds.SpacePressure)==true)
             {
                 sjb=new 世界类.伤害数据包{攻击者=sjb.攻击者,攻击目标=sjb.攻击目标,攻击坐标=sjb.攻击坐标,是否制导=sjb.是否制导,
                     所属阵营=sjb.所属阵营,攻击伤害=sjb.攻击伤害*1.25f,暴击倍率=sjb.暴击倍率,造成状态=sjb.造成状态,
@@ -136,7 +136,7 @@ namespace CluckmechCoop
         {
             var unit=OtherworldWorld.Unit(__instance.gameObject);if(unit==null)return true;
             var actor=unit.IsPlayer?unit.GetComponent<OtherworldActor>():null;if(actor!=null&&actor.Phased)return false;
-            if(unit.Space!=0&&unit.Health.当前阵营==阵营数据库.阵营.敌方&&KamuiWorld.Run(unit.Space)?.Has(26116)==true)伤害*=1.25f;
+            if(unit.Space!=0&&unit.Health.当前阵营==阵营数据库.阵营.敌方&&KamuiWorld.Run(unit.Space)?.Has(OtherworldTalentIds.SpacePressure)==true)伤害*=1.25f;
             return true;
         }
     }
@@ -147,7 +147,7 @@ namespace CluckmechCoop
         {
             var unit=OtherworldWorld.Unit(__instance.gameObject);if(unit==null)return true;
             if(unit.IsPlayer&&unit.GetComponent<OtherworldActor>()?.Phased==true)return false;
-            if(unit.Space!=0&&unit.Health.当前阵营==阵营数据库.阵营.敌方&&KamuiWorld.Run(unit.Space)?.Has(26116)==true)
+            if(unit.Space!=0&&unit.Health.当前阵营==阵营数据库.阵营.敌方&&KamuiWorld.Run(unit.Space)?.Has(OtherworldTalentIds.SpacePressure)==true)
                 sh=new 模块_状态持续效果.状态伤害类{状态=sh.状态,数值=sh.数值*1.25f};
             return true;
         }

@@ -96,7 +96,7 @@ namespace CluckmechCoop
             if (Plugin.Role == 1 && Steam联机管理器.玩家_主机 != null)
                 rpc.Invoke(Steam联机管理器.玩家_主机, new object[] { ReplyKey, JsonConvert.SerializeObject(message) });
         }
-        private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+        private static bool Finite(float value) => NetworkValues.Finite(value);
         private static bool ValidProgress(PlayerProgress progress)
         {
             if (progress == null || progress.Coupons < 0 || !progress.ValidGrowthRewards() || !progress.ValidArtisan || !progress.ValidShop || progress.Regions == null || progress.RepairNodes == null || progress.Shops == null || progress.StratagemCooldowns == null) return false;

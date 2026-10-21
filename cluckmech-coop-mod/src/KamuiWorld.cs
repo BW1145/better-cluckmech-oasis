@@ -150,7 +150,7 @@ namespace CluckmechCoop
                     if(actor.Death.是否玩家死亡||!owner.Actions.Current(lease))yield break;
                     var start=(Vector2)actor.transform.position;
                     if(navigation==null)navigation=Object.FindObjectOfType<导航管理器>();
-                    if(navigation==null||!KamuiNavigation.TryDash(navigation.地面导航地图,start,actor.NextDashDirection,actor.Run.Has(26114)?5:3,out var end))break;
+                    if(navigation==null||!KamuiNavigation.TryDash(navigation.地面导航地图,start,actor.NextDashDirection,actor.Run.Has(OtherworldTalentIds.SpaceExtension)?5:3,out var end))break;
                     if(!actor.StartDashSegment())break;
                     captured.Clear();Vector2 previous=start;
                     OtherworldNetwork.Effect(actor,6,end,OtherworldMotion.DashSeconds);
@@ -193,11 +193,11 @@ namespace CluckmechCoop
                 {
                     if(member.Space!=0)continue;
                     var origin=origins[member];var position=room.Center+Vector2.ClampMagnitude(origin-end,8);
-                    bool permanent=actor.Run.Has(26113)&&Ordinary(member);
+                    bool permanent=actor.Run.Has(OtherworldTalentIds.PermanentCapture)&&Ordinary(member);
                     if(!Transfer(member,actor.Role+1,position,false))continue;
                     transferred=true;
                     if(permanent){member.Permanent=true;RemoveFromEncounter(member);}
-                    else room.Temporary.Add(new KamuiCapture{Unit=member,Origin=origin,Until=Time.time+(actor.Run.Has(26114)?10:5)});
+                    else room.Temporary.Add(new KamuiCapture{Unit=member,Origin=origin,Until=Time.time+(actor.Run.Has(OtherworldTalentIds.SpaceExtension)?10:5)});
                 }
             }
             if(transferred)OtherworldAudio.Transfer(true,actor.Role+1,end,room.Center);
@@ -251,7 +251,7 @@ namespace CluckmechCoop
             OtherworldAudio.Transfer(false,space,actor.transform.position,roomPoint);
             OtherworldDeployment.SpaceChanged(actor);
             actor.EndPhase(false);
-            if(actor.Run.Has(26115)){actor.ReduceCooldown(4);actor.BeginPhase(true);}else actor.EndAction(false);
+            if(actor.Run.Has(OtherworldTalentIds.PhaseTransfer)){actor.ReduceCooldown(4);actor.BeginPhase(true);}else actor.EndAction(false);
         }
         internal static bool Transfer(OtherworldUnit unit,int space,Vector2 point,bool refresh=true)
         {
@@ -301,7 +301,7 @@ namespace CluckmechCoop
                 OtherworldNetwork.Send(new OtherworldMessage
                 {
                     Kind=OtherworldMessageKind.Transfer,
-                    Player=StratagemWorld.Id(unit.gameObject),
+                    Player=NetworkObjects.Id(unit.gameObject),
                     Value=space,
                     X=point.x,
                     Y=point.y

@@ -4,6 +4,8 @@ on:
     paths:
       - 'cluckmech-coop-mod/src/KamuiPrefabs.cs'
       - 'cluckmech-coop-mod/src/OtherworldHitDisplay.cs'
+      - 'cluckmech-coop-mod/src/OtherworldTalentIds.cs'
+      - 'cluckmech-coop-mod/src/NetworkObjects.cs'
       - 'cluckmech-coop-mod/tests/CoopRepairs/Stubs.cs'
       - 'cluckmech-coop-mod/tests/CoopRepairLimits/**'
       - '.github/workflows/coop-repair-limits.yml'
@@ -21,6 +23,8 @@ jobs:
           sparse-checkout: |
             cluckmech-coop-mod/src/KamuiPrefabs.cs
             cluckmech-coop-mod/src/OtherworldHitDisplay.cs
+            cluckmech-coop-mod/src/OtherworldTalentIds.cs
+            cluckmech-coop-mod/src/NetworkObjects.cs
             cluckmech-coop-mod/tests/CoopRepairs/Stubs.cs
             cluckmech-coop-mod/tests/CoopRepairLimits/
       - uses: actions/setup-dotnet@v4

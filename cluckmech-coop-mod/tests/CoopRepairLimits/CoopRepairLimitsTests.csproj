@@ -6,6 +6,7 @@
     <NoWarn>$(NoWarn);CS0649</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../src/OtherworldTalentIds.cs;../../src/NetworkObjects.cs" />
     <Compile Include="../../src/KamuiPrefabs.cs" Link="Production/KamuiPrefabs.cs" />
     <Compile Include="../../src/OtherworldHitDisplay.cs" Link="Production/OtherworldHitDisplay.cs" />
     <Compile Include="../CoopRepairs/Stubs.cs" Link="Stubs.cs" />

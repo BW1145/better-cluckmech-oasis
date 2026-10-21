@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using HarmonyLib;
 using Mirror;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -9,7 +8,7 @@ using UnityEngine.UI;
 namespace CluckmechCoop
 {
     [DefaultExecutionOrder(100)]
-    internal sealed class OtherworldActor : MonoBehaviour
+    internal sealed partial class OtherworldActor : MonoBehaviour
     {
         internal 模块_基本属性 Health;
         internal 模块_攻击属性 Attack;
@@ -52,8 +51,8 @@ namespace CluckmechCoop
         internal bool Phased=>Dashing||Time.time<PhaseUntil;
         internal int Space=>OtherworldWorld.Space(gameObject);
         internal Vector2 Aim=>Gun.目标;
-        internal float Cooldown=>Hero==13?(skillState.Cooldown>0?skillState.Cooldown:5):8f*(Run.Initial==26003?2:1)*(Run.Has(26102)?.75f:1);
-        internal float NormalFactor=>(Run.Initial==26002?1+Run.Upgrades*.05f:1)*(Time.time<NormalUntil?3:1);
+        internal float Cooldown=>Hero==13?(skillState.Cooldown>0?skillState.Cooldown:5):8f*(Run.Initial==OtherworldTalentIds.Deployment?2:1)*(Run.Has(OtherworldTalentIds.ProtocolAcceleration)?.75f:1);
+        internal float NormalFactor=>(Run.Initial==OtherworldTalentIds.FlashChain?1+Run.Upgrades*.05f:1)*(Time.time<NormalUntil?3:1);
         internal Vector2 Muzzle=>(Vector2)transform.position+Vector2.up*.45f+((Vector2)Gun.目标-(Vector2)transform.position).normalized*.6f;
 
         private void Start()
@@ -65,7 +64,7 @@ namespace CluckmechCoop
             OtherworldProgress.ReadNative(Role);Run=OtherworldProgress.For(Role)??new OtherworldRun{Hero=Hero};
             skillState.Initialize(MaximumCharges);
             OtherworldWorld.Add(Health);
-            if(Run.Initial==26005)
+            if(Run.Initial==OtherworldTalentIds.FireStyle)
             {
                 var detailed=GetComponent<模块_攻击详细属性>();var burn=detailed.状态加成列表[(int)攻击类型与状态数据库.状态枚举.灼烧];
                 burn.默认持续时间=2;burn.默认属性效果=new Vector4(10,0,0,0);detailed.运算全部加成();
@@ -90,7 +89,7 @@ namespace CluckmechCoop
             CurrentFrame=Body.sprite;
             if(Hero==13)gameObject.AddComponent<OtherworldPhaseVisual>().Initialize(this);
             previous=transform.position;
-            if(Run.Initial==26004)
+            if(Run.Initial==OtherworldTalentIds.Overload)
             {
                 var bar=GetComponent<模块_生命显示>()?.生命UI底;
                 if(bar!=null)
@@ -201,11 +200,11 @@ namespace CluckmechCoop
 
         internal float Remaining => skillState.Remaining(Time.time);
         internal float RechargeRemaining => skillState.RechargeRemaining(Time.time);
-        internal int MaximumCharges=>Run.Initial==26004?3:1;
+        internal int MaximumCharges=>Run.Initial==OtherworldTalentIds.Overload?3:1;
         internal void BeginPhase(bool continueAction=false)
         {
             phaseFromReturn=continueAction;
-            float seconds=Run.Initial==26008?2:1;
+            float seconds=Run.Initial==OtherworldTalentIds.Arsenal?2:1;
             PhaseUntil=Time.time+seconds;if(!continueAction){StoredDamage=0;Avoided.Clear();}
             Movement.运算移动速度();Health.运算无敌();
             if(!continueAction)OtherworldAudio.Play(transform.position);
@@ -222,18 +221,18 @@ namespace CluckmechCoop
         }
         internal void EndAction(bool emitFlame=true)
         {
-            if(Run.Initial==26008)
+            if(Run.Initial==OtherworldTalentIds.Arsenal)
             {
-                NormalUntil=Time.time+(Run.Has(26124)?6:3);
+                NormalUntil=Time.time+(Run.Has(OtherworldTalentIds.Cooperation)?6:3);
                 OtherworldActions.Counter(this,StoredDamage);StoredDamage=0;Avoided.Clear();
-                if(Run.Has(26124))OtherworldActions.Rally(this);
+                if(Run.Has(OtherworldTalentIds.Cooperation))OtherworldActions.Rally(this);
             }
-            if(emitFlame&&Run.Has(26117))StartCoroutine(OtherworldActions.Flame(this));
+            if(emitFlame&&Run.Has(OtherworldTalentIds.GreatFlame))StartCoroutine(OtherworldActions.Flame(this));
         }
         internal void Avoid(世界类.伤害数据包 packet)
         {
-            if(Plugin.Role!=2&&Run.Initial==26008&&Avoided.Add(packet))
-                StoredDamage+=Mathf.Max(0,packet.攻击伤害)*(packet.是否暴击?1+packet.暴击倍率:1)*(Run.Has(26123)?1:.5f);
+            if(Plugin.Role!=2&&Run.Initial==OtherworldTalentIds.Arsenal&&Avoided.Add(packet))
+                StoredDamage+=Mathf.Max(0,packet.攻击伤害)*(packet.是否暴击?1+packet.暴击倍率:1)*(Run.Has(OtherworldTalentIds.FanCounter)?1:.5f);
         }
         private void Update()
         {
@@ -285,26 +284,6 @@ namespace CluckmechCoop
                 }
             }
         }
-        private void LateUpdate()
-        {
-            if(Body==null)return;
-            Vector2 motion=transform.position-previous;previous=transform.position;
-            bool local=Plugin.Role==0||Gun.isOwned;
-            Vector2 intent=local?Locomotion:motion;
-            Vector2 direction=Dashing?dashDirection:(Vector2)Gun.目标-(Vector2)transform.position;
-            int facing=motionState.Face(direction.x,direction.y,Dashing);FacingDirection=facing;
-            int movementFacing=motionState.MovementDirection(intent.x,intent.y);
-            float stride=OtherworldAssets.MovementStridePixels(Hero,movementFacing,facing)/32f*Mathf.Abs(VisualScale);
-            bool moving=motionState.Sample(intent.x,intent.y,Dashing?0:motion.magnitude,Time.time,local,stride,OtherworldMotion.MaximumRunCyclesPerSecond);
-            bool attacking=motionState.Attacking(Time.time)||Gun.是否正在蓄力;
-            bool casting=Time.time<castUntil;
-            int walk=motionState.GaitFrame(OtherworldAssets.MovementFrameCount(Hero));
-            int attackCount=OtherworldAssets.AttackFrameCount(Hero);
-            int attackFrame=casting?Mathf.Min(attackCount-1,(int)((1-(castUntil-Time.time)/.4f)*attackCount)):motionState.AttackFrame(Time.time,attackCount);
-            CurrentFrame=Death.是否玩家死亡?OtherworldAssets.Hero(Hero,3,5):Dashing?OtherworldAssets.Dash(Hero,facing,OtherworldMotion.DashFrame(Time.time-dashStartedAt,dashSeconds)):moving?OtherworldAssets.Movement(Hero,walk,motionState.MovementFacing,facing,attacking||casting,attackFrame):OtherworldAssets.Pose(Hero,facing,attacking||casting,attackFrame);
-            Body.sprite=CurrentFrame;
-            Body.color=nativeBody.color;Body.sortingOrder=nativeBody.sortingOrder;
-        }
         private Vector2 Locomotion=>playerMovement!=null?new Vector2(-playerMovement.左右程度,playerMovement.上下程度):Vector2.zero;
         private Vector2 MovementIntent
         {
@@ -345,13 +324,6 @@ namespace CluckmechCoop
             if(finish)EndPhase(true,Space!=0);
             else {Movement?.运算移动速度();Health?.运算无敌();}
         }
-        internal void Fired()
-        {
-            float interval=1/Mathf.Max(.1f,Attack.当前攻击速度);
-            motionState.Fired(Time.time,interval);
-            OtherworldAudio.Normal(this);
-        }
-        internal void CastPose()=>castUntil=Time.time+.4f;
         private void QualifyHold(double now)
         {
             if (Hero == 13 && inputState.Qualify(now, Application.isFocused && Time.timeScale > 0))
@@ -395,62 +367,4 @@ namespace CluckmechCoop
         }
     }
 
-    [HarmonyPatch(typeof(模块_玩家_技能),"按键触发_技能")]
-    internal static class OtherworldRightInput
-    {
-        private static bool Prefix(模块_玩家_技能 __instance,InputAction.CallbackContext 上下文,bool ___是否光标位于UI界面,bool ___是否建造模式,bool ___是否放置基地)
-        {
-            if(__instance==null)return false;
-            var actor=__instance.GetComponent<OtherworldActor>();if(actor==null)return true;
-            bool owned=Plugin.Role==0||__instance.isOwned;
-            if(owned)actor.Input(上下文,!___是否光标位于UI界面&&!___是否建造模式&&___是否放置基地&&!actor.Death.是否玩家死亡);
-            return false;
-        }
-    }
-    internal sealed class OtherworldSkillLifetime:MonoBehaviour
-    {
-        internal 模块_玩家_技能 Skill;
-        internal InputAction Action;
-        private void OnDestroy()
-        {
-            if(Action==null||ReferenceEquals(Skill,null))return;
-            Action.started-=Skill.按键触发_技能;Action.canceled-=Skill.按键触发_技能;
-        }
-    }
-    [HarmonyPatch(typeof(模块_玩家_技能),"Start")]
-    internal static class OtherworldSkillSubscription
-    {
-        private static void Postfix(模块_玩家_技能 __instance,InputAction ___技能)
-        {var lifetime=__instance.gameObject.AddComponent<OtherworldSkillLifetime>();lifetime.Skill=__instance;lifetime.Action=___技能;}
-    }
-    [HarmonyPatch(typeof(模块_玩家_技能),"技能冷却")]
-    internal static class OtherworldRightCooldown
-    {private static bool Prefix(模块_玩家_技能 __instance)=>__instance.GetComponent<OtherworldActor>()==null;}
-    [HarmonyPatch(typeof(模块_玩家_攻击),"攻击实现")]
-    internal static class OtherworldNormalAttack
-    {
-        private struct Saved {internal OtherworldActor Actor;internal float Attack;internal Vector3 Muzzle;}
-        private static void Prefix(模块_玩家_攻击 __instance,out Saved __state)
-        {
-            __state=default;var actor=__instance.GetComponent<OtherworldActor>();if(actor==null||actor.Attack==null)return;
-            __state=new Saved{Actor=actor,Attack=actor.Attack.当前攻击力,Muzzle=__instance.炮口位置.position};
-            actor.Attack.当前攻击力*=actor.NormalFactor;__instance.炮口位置.position=actor.Muzzle;
-        }
-        private static void Postfix(Saved __state)
-        {
-            if(__state.Actor==null)return;var actor=__state.Actor;
-            actor.Attack.当前攻击力=__state.Attack;actor.Gun.炮口位置.position=__state.Muzzle;actor.Fired();
-        }
-    }
-}
-
-namespace CluckmechCoop
-{
-    // Native locomotion translates the root in FixedUpdate. During dash only the dash owns it.
-    [HarmonyPatch(typeof(模块_玩家_移动),"移动实现")]
-    internal static class OtherworldDashMovement
-    {
-        private static bool Prefix(模块_玩家_移动 __instance)
-        {var actor=__instance.GetComponent<OtherworldActor>();return actor==null||!actor.Dashing;}
-    }
 }

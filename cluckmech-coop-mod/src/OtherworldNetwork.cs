@@ -48,7 +48,7 @@ namespace CluckmechCoop
             Register();
             NetworkClient.Send(new OtherworldMessage
             {
-                Player = StratagemWorld.Id(actor.gameObject),
+                Player = NetworkObjects.Id(actor.gameObject),
                 Kind = action,
                 Value = action == OtherworldMessageKind.Dash ? OtherworldMotion.DashProtocol : 0,
                 Sequence = sequence,
@@ -99,7 +99,7 @@ namespace CluckmechCoop
             if (Plugin.Role == 1) Send(new OtherworldMessage
             {
                 Kind = OtherworldMessageKind.State,
-                Player = StratagemWorld.Id(actor.gameObject),
+                Player = NetworkObjects.Id(actor.gameObject),
                 Value = actor.Charges,
                 Duration = actor.RechargeRemaining,
                 Amount = actor.Cooldown
@@ -114,7 +114,7 @@ namespace CluckmechCoop
             NetworkClient.Send(new OtherworldMessage
             {
                 Kind = OtherworldMessageKind.CollectDrop,
-                Player = StratagemWorld.Id(actor.gameObject),
+                Player = NetworkObjects.Id(actor.gameObject),
                 Token = Plugin.Combat.Token,
                 Data = key
             });
@@ -125,7 +125,7 @@ namespace CluckmechCoop
             if (Plugin.Role == 1) SendDisplay(new OtherworldMessage
             {
                 Kind = OtherworldMessageKind.Effect,
-                Player = StratagemWorld.Id(actor.gameObject),
+                Player = NetworkObjects.Id(actor.gameObject),
                 Value = effect,
                 X = point.x,
                 Y = point.y,
@@ -195,7 +195,7 @@ namespace CluckmechCoop
                 NetworkClient.Send(new OtherworldMessage
                 {
                     Kind = OtherworldMessageKind.SubmitProgress,
-                    Player = StratagemWorld.Id(actor.gameObject),
+                    Player = NetworkObjects.Id(actor.gameObject),
                     Token = Plugin.Combat.Token,
                     Data = data
                 });

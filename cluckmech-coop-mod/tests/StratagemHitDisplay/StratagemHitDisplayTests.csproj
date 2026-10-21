@@ -6,6 +6,7 @@
     <NoWarn>$(NoWarn);CS0649</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../src/OtherworldTalentIds.cs;../../src/NetworkObjects.cs" />
     <Compile Include="../../src/OtherworldHitDisplay.cs;../../src/StratagemHitDisplay.cs;../../src/StratagemStatusDisplay.cs;../../src/TranspilerContract.cs;../../src/HostStatusFeedback.cs;../../src/GuestHitVisibility.cs" />
     <Compile Include="obj/Stubs.cs;Fixture.cs;Program.cs;HostFeedbackTests.cs;obj/Production.cs" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />

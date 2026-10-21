@@ -116,7 +116,7 @@ namespace CluckmechCoop
         private void Fire()
         {
             Vector2 aim=target.transform.position,start=drone.Muzzle;
-            uint targetId=StratagemWorld.Id(target.gameObject);
+            uint targetId=NetworkObjects.Id(target.gameObject);
             Vector2 direction=(aim-start).normalized;
             bool critical=drone.Damage.Critical();
             float damage=drone.Damage.Attack*root.Parameters.DamageMultiplier;
@@ -162,7 +162,7 @@ namespace CluckmechCoop
             phase = value;
             if(value!=0&&drone!=null)drone.StopDroneBeam();
             if(drone!=null)drone.Dock(value);
-            if (drone != null) StratagemEffects.Emit(drone,StratagemEffectAction.DronePhase,drone.transform.position,0,value,StratagemWorld.Id(root.gameObject));
+            if (drone != null) StratagemEffects.Emit(drone,StratagemEffectAction.DronePhase,drone.transform.position,0,value,NetworkObjects.Id(root.gameObject));
         }
         private void MoveDrone(Vector2 destination,float speed)
         {

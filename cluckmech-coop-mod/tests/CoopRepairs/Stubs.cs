@@ -105,7 +105,7 @@ public class Steam联机管理器 {public enum 联机状态 {未联机,主机端
 public class dw单位库 {public class Entry {public GameObject 单位预制体;}public List<Entry> 单位列表=new();}
 namespace Mirror {
  public interface NetworkMessage {}
- public class NetworkIdentity:Component {public uint assetId;}
+ public class NetworkIdentity:Component {public uint assetId,netId;}
  public class NetworkManager {public static NetworkManager singleton=new();public List<GameObject> spawnPrefabs=new();}
  public static class NetworkClient {public static Dictionary<uint,GameObject> prefabs=new();public static Dictionary<uint,NetworkIdentity> spawned=new();}
  public static class NetworkServer {public static int Calls;public static void Spawn(GameObject g){if(g==null)throw new Exception("null spawn");Calls++;}}

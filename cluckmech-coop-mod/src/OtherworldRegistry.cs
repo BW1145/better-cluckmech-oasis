@@ -60,7 +60,7 @@ namespace CluckmechCoop
                 {
                     data=ScriptableObject.CreateInstance<角色天赋数据模板>();data.id=definition.Id;data.name=definition.Name;
                     data.是否指定角色=true;data.指定角色id=definition.Hero;data.是否录入随机池=!definition.Initial;
-                    data.图标=data.卡牌图标=OtherworldAssets.Named(definition.Id==26008?"kamui.0.7":"talent."+definition.Id);
+                    data.图标=data.卡牌图标=OtherworldAssets.Named(definition.Id==OtherworldTalentIds.Arsenal?"kamui.0.7":"talent."+definition.Id);
                     Talents.Add(data.id,data);
                 }
                 library.角色天赋数据列表.Add(data);

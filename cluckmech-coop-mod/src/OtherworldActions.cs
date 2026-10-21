@@ -26,21 +26,21 @@ namespace CluckmechCoop
         }
         internal static void Cast(OtherworldActor actor,Vector2 point)
         {
-            bool ultimate=actor.Run.Has(26101),marked=actor.MarkUntil>Time.time&&(actor.Mark-point).sqrMagnitude<=3.5f*3.5f;
+            bool ultimate=actor.Run.Has(OtherworldTalentIds.Orbital),marked=actor.MarkUntil>Time.time&&(actor.Mark-point).sqrMagnitude<=3.5f*3.5f;
             float radius=(ultimate?3.5f:1.8f)*(marked?1.5f:1);
-            float damage=actor.Attack.当前攻击力*(ultimate?80:12)*(actor.Run.Initial==26004?2:1);
-            if(actor.Run.Initial==26004)
+            float damage=actor.Attack.当前攻击力*(ultimate?80:12)*(actor.Run.Initial==OtherworldTalentIds.Overload?2:1);
+            if(actor.Run.Initial==OtherworldTalentIds.Overload)
             {
                 var attacks=new List<float>();
                 foreach(var unit in OtherworldWorld.Units.Values)
                     if(unit.IsMachine&&(int)unit.Health.所属玩家==actor.Role&&unit.Space==actor.Space&&unit.Health.当前生命值>0&&unit.Attack!=null)attacks.Add(unit.Attack.当前攻击力);
                 attacks.Sort((a,b)=>b.CompareTo(a));
-                for(int i=0;i<Mathf.Min(5,attacks.Count);i++)damage+=attacks[i]*(actor.Run.Has(26111)?4:2);
+                for(int i=0;i<Mathf.Min(5,attacks.Count);i++)damage+=attacks[i]*(actor.Run.Has(OtherworldTalentIds.CompositeProtocol)?4:2);
                 actor.Mark=point;actor.MarkUntil=Time.time+8;
             }
             Bombard(actor,point,radius,damage,ultimate,true);
-            if(actor.Run.Initial==26003)OtherworldDeployment.Dispatch(actor,point,actor.Run.Has(26109)?2:1);
-            if(marked&&actor.Run.Has(26112))actor.StartCoroutine(DelayedBombard(actor,point,radius,damage,ultimate));
+            if(actor.Run.Initial==OtherworldTalentIds.Deployment)OtherworldDeployment.Dispatch(actor,point,actor.Run.Has(OtherworldTalentIds.BatchDelivery)?2:1);
+            if(marked&&actor.Run.Has(OtherworldTalentIds.CrossBombardment))actor.StartCoroutine(DelayedBombard(actor,point,radius,damage,ultimate));
         }
         private static IEnumerator DelayedBombard(OtherworldActor actor,Vector2 point,float radius,float damage,bool ultimate)
         {
@@ -89,13 +89,13 @@ namespace CluckmechCoop
                 hits++;
                 Hit(actor, target, damage);
                 Status(target, actor.gameObject, 攻击类型与状态数据库.状态枚举.感电, 5, shock);
-                if (actor.Run.Has(26104) && !target.Health.免疫击退)
+                if (actor.Run.Has(OtherworldTalentIds.Convergence) && !target.Health.免疫击退)
                 {
                     actor.StartCoroutine(Pull(target, point));
                 }
             }
             OtherworldNetwork.Effect(actor,delayed?0:2,point,.5f,radius,display?.Hits);
-            if (rewards && hits > 0 && actor.Run.Has(26103)) RewardGold(actor, hits*5);
+            if (rewards && hits > 0 && actor.Run.Has(OtherworldTalentIds.Salvage)) RewardGold(actor, hits*5);
         }
         private static IEnumerator Pull(OtherworldUnit unit,Vector2 point)
         {
@@ -127,12 +127,12 @@ namespace CluckmechCoop
         }
         internal static void Normal(OtherworldActor actor, float damage)
         {
-            if (actor.Run.Initial != 26002) return;
-            if (++actor.NormalCount%(actor.Run.Has(26107) ? 2 : 4) != 0) return;
+            if (actor.Run.Initial != OtherworldTalentIds.FlashChain) return;
+            if (++actor.NormalCount%(actor.Run.Has(OtherworldTalentIds.InstantCircuit) ? 2 : 4) != 0) return;
             var targets = new List<OtherworldUnit>();
             OtherworldWorld.CollectNearby(actor.gameObject, actor.transform.position, 4, targets);
             OtherworldWorld.SortNearest(targets, actor.Aim);
-            int count = Mathf.Min(actor.Run.Has(26107) ? 8 : 6, targets.Count);
+            int count = Mathf.Min(actor.Run.Has(OtherworldTalentIds.InstantCircuit) ? 8 : 6, targets.Count);
             Vector2 previous = actor.Muzzle;
             for (int i = 0; i < count; i++)
             {
@@ -144,7 +144,7 @@ namespace CluckmechCoop
                 OtherworldNetwork.SendDisplay(new OtherworldMessage
                 {
                     Kind = OtherworldMessageKind.Beam,
-                    Player = StratagemWorld.Id(actor.gameObject),
+                    Player = NetworkObjects.Id(actor.gameObject),
                     X = previous.x,
                     Y = previous.y,
                     EndX = target.transform.position.x,
@@ -168,10 +168,10 @@ namespace CluckmechCoop
                 if (Vector2.Dot(((Vector2)target.transform.position-(Vector2)actor.transform.position).normalized, direction) >= .35f)
                 {
                     hit=true;
-                    Hit(actor, target, actor.Attack.当前攻击力*30+stored, actor.Run.Has(26123));
+                    Hit(actor, target, actor.Attack.当前攻击力*30+stored, actor.Run.Has(OtherworldTalentIds.FanCounter));
                 }
             }
-            if(hit&&actor.Run.Has(26124))actor.ReduceCooldown(2);
+            if(hit&&actor.Run.Has(OtherworldTalentIds.Cooperation))actor.ReduceCooldown(2);
             Visual(actor, 5, actor.transform.position, .35f, 1);
             OtherworldNetwork.Effect(actor, 5, actor.transform.position, .35f, 1,display?.Hits);
         }

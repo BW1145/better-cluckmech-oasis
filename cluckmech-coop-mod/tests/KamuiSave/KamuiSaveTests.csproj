@@ -4,7 +4,7 @@
     <Managed>$(GameDir)/Cluckmech Oasis_Data/Managed</Managed>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../src/KamuiSaveValidation.cs"/><Compile Include="../../src/OtherworldDataValidation.cs"/><Compile Include="../../src/OtherworldCatalog.cs"/><Compile Include="../../src/Rules.cs"/><Compile Include="../../src/ExpansionRules.cs"/><Compile Include="../../src/StratagemRules.cs"/><Compile Include="../../src/ModuleSettings.cs"/>
+    <Compile Include="../../src/KamuiSaveValidation.cs"/><Compile Include="../../src/OtherworldDataValidation.cs"/><Compile Include="../../src/NetworkValues.cs"/><Compile Include="../../src/OtherworldCatalog.cs"/><Compile Include="../../src/OtherworldTalentIds.cs"/><Compile Include="../../src/OtherworldRun.cs"/><Compile Include="../../src/Rules.cs"/><Compile Include="../../src/ExpansionRules.cs"/><Compile Include="../../src/StratagemRules.cs"/><Compile Include="../../src/ModuleSettings.cs"/>
     <Compile Include="../../src/ModulePreferences.cs"/><Compile Include="../../src/ModuleRunState.cs"/><Compile Include="../../src/ModuleSaveStore.cs"/>
     <Compile Include="../../src/OtherworldTalentState.cs"/>
     <Compile Include="../../src/OtherworldBurnSettlement.cs"/>

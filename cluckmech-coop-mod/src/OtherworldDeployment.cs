@@ -42,7 +42,7 @@ namespace CluckmechCoop
         internal static void Manual(建造系统 value)
         {
             if(Generating!=null)return;
-            var run=OtherworldProgress.For(Plugin.Role);if(run?.Initial!=26003)return;
+            var run=OtherworldProgress.For(Plugin.Role);if(run?.Initial!=OtherworldTalentIds.Deployment)return;
             var card=Plugin.Summary.当前携带炮台[建造系统.当前选中背包id];
             run.LastMachine=identities.GetValue(card,_=>new Identity{Id=Guid.NewGuid().ToString("N")}).Id;
             RefreshLocal();OtherworldNetwork.Progress(Plugin.Role);
@@ -82,7 +82,7 @@ namespace CluckmechCoop
             if(Generating==null)return;
             health.所属玩家=(Steam联机管理器.联机状态)Generating.Role;
             OtherworldWorld.Add(health);var unit=OtherworldWorld.Unit(health.gameObject);
-            if(unit!=null&&Generating.Run.Has(26110)){unit.WarmUntil=Time.time+10;unit.Refresh();}
+            if(unit!=null&&Generating.Run.Has(OtherworldTalentIds.Preheat)){unit.WarmUntil=Time.time+10;unit.Refresh();}
         }
         internal static bool FindPoint(int space,Vector2 point,Vector2 size,out Vector2 found)
         {
@@ -111,8 +111,8 @@ namespace CluckmechCoop
         internal static void SpaceChanged(OtherworldActor actor)
         {
             if(actor.Role!=Plugin.Role||build==null||cooldown==null)return;
-            bool workshop=actor.Space!=0&&actor.Run.Initial==26006;
-            float next=workshop?(actor.Run.Has(26119)?.25f:.5f):1;
+            bool workshop=actor.Space!=0&&actor.Run.Initial==OtherworldTalentIds.Workshop;
+            float next=workshop?(actor.Run.Has(OtherworldTalentIds.ExcessSupply)?.25f:.5f):1;
             if(next==factor)return;
             for(int i=0;i<cooldown.Length;i++)
             {

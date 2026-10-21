@@ -57,7 +57,7 @@ namespace CluckmechCoop
             Parameters = new StratagemParameters(id,Stats.强化词条列表);
             Damage = new StratagemDamage(gameObject);
             ResumeRuntime();
-            uint netId = StratagemWorld.Id(gameObject);
+            uint netId = NetworkObjects.Id(gameObject);
             if (netId != 0) networkUnits[netId] = this;
             if (Stats.ID == 20101)
             {
@@ -252,7 +252,7 @@ namespace CluckmechCoop
             if(Parent==null)yield break;
             var p = Parent.Parameters;
             if(Resume==null)mineArmUntil=Time.time+p.ArmTime;
-            StratagemEffects.Emit(this,StratagemEffectAction.MineSetup,transform.position,p.BlastRadius,Mathf.Max(0,mineArmUntil-Time.time),StratagemWorld.Id(Parent.gameObject),new Vector2(MineDamage,0));
+            StratagemEffects.Emit(this,StratagemEffectAction.MineSetup,transform.position,p.BlastRadius,Mathf.Max(0,mineArmUntil-Time.time),NetworkObjects.Id(Parent.gameObject),new Vector2(MineDamage,0));
             while(Time.time<mineArmUntil)yield return null;
             rig.MineState(false);
             var sensor = new GameObject("MineSensor"); sensor.transform.SetParent(transform,false);
@@ -348,7 +348,7 @@ namespace CluckmechCoop
                     {
                         target=StratagemWorld.Target(center,target==null?6:8,true);nextSearch=Time.time+.5f;
                         beamTarget=target;
-                        StratagemEffects.Emit(this,StratagemEffectAction.BeamTarget,beamPosition,0,0,StratagemWorld.Id(target?.gameObject));
+                        StratagemEffects.Emit(this,StratagemEffectAction.BeamTarget,beamPosition,0,0,NetworkObjects.Id(target?.gameObject));
                     }
                 }
                 float now=Mathf.Min(Time.time,until),delta=now-lastTime;lastTime=now;
@@ -492,7 +492,7 @@ namespace CluckmechCoop
         {
             Damage?.Dispose();
             EndBeam();
-            uint id = StratagemWorld.Id(gameObject);
+            uint id = NetworkObjects.Id(gameObject);
             if (id != 0) networkUnits.Remove(id);
             Rovers.Remove(this);
             placedMines.Remove(this);

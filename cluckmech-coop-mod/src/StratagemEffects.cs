@@ -7,7 +7,7 @@ namespace CluckmechCoop
     {
         internal static void Emit(StratagemUnit root,StratagemEffectAction action,Vector2 point,float radius=1,float duration=1,uint target=0,Vector2 end=default)
         {
-            var message=new StratagemEffectMessage{Kind=(int)root.Kind,Action=(int)action,Root=StratagemWorld.Id(root.gameObject),Target=target,
+            var message=new StratagemEffectMessage{Kind=(int)root.Kind,Action=(int)action,Root=NetworkObjects.Id(root.gameObject),Target=target,
                 X=point.x,Y=point.y,EndX=end.x,EndY=end.y,Radius=radius,Duration=duration};
             PlayReady(message,root);
             if(Plugin.Role==1)Plugin.Network.Broadcast(new SessionMessage{Type="stratagem-effect",Token=Plugin.Combat.Token,Effect=message});

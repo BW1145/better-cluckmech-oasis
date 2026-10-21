@@ -36,13 +36,13 @@ namespace CluckmechCoop
                 var owner=state.攻击者!=null?OtherworldProgress.For(state.攻击者):state is OtherworldState prepared?OtherworldProgress.For(prepared.Owner):null;
                 if(owner==null)continue;
                 int role=state is OtherworldState own?own.Owner:(int)state.攻击者.GetComponent<模块_基本属性>().所属玩家;
-                if(state.状态类型==攻击类型与状态数据库.状态枚举.感电&&owner.Initial==26001&&researchers.Add(role))
+                if(state.状态类型==攻击类型与状态数据库.状态枚举.感电&&owner.Initial==OtherworldTalentIds.Conductance&&researchers.Add(role))
                 {
                     int previous=OtherworldCatalog.ResearchLevel(owner.ShockKills);owner.ShockKills++;
                     if(previous!=OtherworldCatalog.ResearchLevel(owner.ShockKills)){OtherworldWorld.Refresh(role);OtherworldNetwork.Progress(role);}
-                    if(owner.Has(26105))Spread(victim,state,role,3,5);
+                    if(owner.Has(OtherworldTalentIds.GridSpread))Spread(victim,state,role,3,5);
                 }
-                if(state.状态类型==攻击类型与状态数据库.状态枚举.灼烧&&owner.Initial==26005&&spreadBurns.Add(role))
+                if(state.状态类型==攻击类型与状态数据库.状态枚举.灼烧&&owner.Initial==OtherworldTalentIds.FireStyle&&spreadBurns.Add(role))
                 {
                     var burns=states.Where(s=>s.状态类型==攻击类型与状态数据库.状态枚举.灼烧&&!(s is OtherworldState propagated&&propagated.BurnSpread)&&
                         (s is OtherworldState mark?mark.Owner==role:s.攻击者!=null&&OtherworldProgress.For(s.攻击者)==owner)).ToArray();
@@ -64,7 +64,7 @@ namespace CluckmechCoop
             var run=KamuiWorld.Run(victim.Space);if(run==null)return;
             run.SpaceKills++;
             if(run.SpaceKills%10==0){OtherworldWorld.Refresh(victim.Space-1);OtherworldNetwork.Progress(victim.Space-1);}
-            if(run.Has(26122))
+            if(run.Has(OtherworldTalentIds.Spoils))
             {
                 var player=OtherworldActions.Player(victim.Space-1);
                 if(player!=null)player.GetComponent<模块_受伤>()?.受到治疗(player.Health.当前生命值上限*.03f);
@@ -114,16 +114,16 @@ namespace CluckmechCoop
             if(run==null&&!feedback)return true;
             int role=run==null?-1:(int)状态.攻击者.GetComponent<模块_基本属性>().所属玩家;
             var copy=OtherworldStates.Copy(状态,role);copy.HostDisplay=feedback;
-            if(copy.状态类型==攻击类型与状态数据库.状态枚举.灼烧&&run?.Initial==26005)
-                copy.加成属性.默认持续时间+=run.Has(26118)?4:2;
+            if(copy.状态类型==攻击类型与状态数据库.状态枚举.灼烧&&run?.Initial==OtherworldTalentIds.FireStyle)
+                copy.加成属性.默认持续时间+=run.Has(OtherworldTalentIds.Embers)?4:2;
             状态=copy;return true;
         }
         private static void Postfix(模块_状态属性 __instance,模块_状态属性.状态类 状态,int __state)
         {
             if(__instance.当前状态列表.Count<=__state||状态.状态类型!=攻击类型与状态数据库.状态枚举.感电||!(状态 is OtherworldState prepared))return;
-            var run=OtherworldProgress.For(prepared.Owner);if(run?.Initial!=26001)return;
+            var run=OtherworldProgress.For(prepared.Owner);if(run?.Initial!=OtherworldTalentIds.Conductance)return;
             var applied=__instance.当前状态列表[__state];
-            float seconds=applied.剩余时间+(run.Has(26106)?2:0);
+            float seconds=applied.剩余时间+(run.Has(OtherworldTalentIds.AdvancedAnalysis)?2:0);
             var fragile=OtherworldActions.State(状态.攻击者,攻击类型与状态数据库.状态枚举.脆弱,seconds,new Vector4(.25f*(1+OtherworldProgress.NativeInfluence(prepared.Owner)+run.Influence),0,0,0));
             var copy=OtherworldStates.Copy(fragile,prepared.Owner);copy.Space=prepared.Space;
             __instance.增加状态(copy);
@@ -143,7 +143,7 @@ namespace CluckmechCoop
         {
             if(Plugin.Role==2)return;
             int space=OtherworldWorld.Space(__instance.gameObject);
-            if(space==0||KamuiWorld.Run(space)?.Has(26122)!=true||__instance.随机掉落物.Length==0)return;
+            if(space==0||KamuiWorld.Run(space)?.Has(OtherworldTalentIds.Spoils)!=true||__instance.随机掉落物.Length==0)return;
             float bonus=___掉落数量*.5f;int count=Mathf.FloorToInt(bonus)+(Random.value<bonus%1?1:0);
             for(int i=0;i<count;i++)
             {

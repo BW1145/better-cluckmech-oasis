@@ -3,6 +3,7 @@ param(
     [string]$NativeStateSource,
     [Alias('NativeSource')][string]$NativeGameSource,
     [string]$NativeNavigationSource,
+    [string]$BaselineAssembly,
     [string[]]$Select=@('All'),
     [switch]$List,
     [switch]$BuildMain,
@@ -45,7 +46,7 @@ $projects=[ordered]@{
     RunSave=@('RunSave','RunSaveTests.csproj');TransferUi=@('TransferUi','TransferUiTests.csproj')
     CoopRepairLimits=@('CoopRepairLimits','CoopRepairLimitsTests.csproj');Rig=@('Rig','RigTests.csproj');TransferProtocol=@('TransferProtocol','TransferProtocolTests.csproj')
 }
-$known=@('CoopRepairs','CoopRepairNetwork','StratagemHitDisplay','ActionLifetime','Actor','Targets','RuntimeScopes','Visibility','CanvasOwnership','NestedHierarchy','SessionNotifications','Effects','EffectProtocol','SensorPrune','Invulnerability','SaveValidation','Storage','Modules','ModuleLifecycle','Protocol','ActionWiring','RuntimeWiring','NotificationWiring','Music','Encounter','BossBar','EnemyMovement','NativeBindings','RuntimePaths','UiLayout','StratagemAssets','ProductionAtlas','AssetSelection')+@($projects.Keys)+@($bindingModes.Keys)
+$known=@('RefactorParity','CoopRepairs','CoopRepairNetwork','StratagemHitDisplay','ActionLifetime','Actor','Targets','RuntimeScopes','Visibility','CanvasOwnership','NestedHierarchy','SessionNotifications','Effects','EffectProtocol','SensorPrune','Invulnerability','SaveValidation','Storage','Modules','ModuleLifecycle','Protocol','ActionWiring','RuntimeWiring','NotificationWiring','Music','Encounter','BossBar','EnemyMovement','NativeBindings','RuntimePaths','UiLayout','StratagemAssets','ProductionAtlas','AssetSelection')+@($projects.Keys)+@($bindingModes.Keys)
 if($List){$known;return}
 foreach($name in $Select){if($name -ne 'All' -and $name -notin $known){throw "Unknown suite: $name"}}
 $suites=@(if('All' -in $Select){$known}else{$Select}) | Select-Object -Unique
@@ -73,6 +74,10 @@ try {
             continue
         }
         switch($suite){
+            'RefactorParity' {
+                if(-not $BaselineAssembly){throw 'BaselineAssembly must point to a main plugin built before refactoring with the same compiler'}
+                Invoke-Check $suite 'pwsh' @('-NoProfile','-File',(Join-Path $root 'tests/RefactorParity.ps1'),'-BaselineAssembly',$BaselineAssembly)
+            }
             {$_ -in @('CoopRepairs','CoopRepairNetwork')} {
                 if(-not $NativeGameSource){throw 'NativeGameSource (alias NativeSource) is required for CoopRepairs'}
                 if(-not $coopPrepared){

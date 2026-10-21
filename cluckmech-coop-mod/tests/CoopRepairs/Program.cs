@@ -48,7 +48,7 @@ static class Program
         // Preserve the explicitly chosen host cross-space reflection behavior.
         (t,tu)=Unit();t.基本属性.当前反伤值=.1f;Plugin.Role=1;old=Packet(a.gameObject);OtherworldDamage.Remember(old,0);Apply(t,old);
         Check(a.基本属性.当前生命值==990,"host scalar reflection retains gameplay behavior");
-        StratagemWorld.Ids[t.gameObject]=9;var identity=t.gameObject.Add(new NetworkIdentity());NetworkClient.spawned[9]=identity;
+        StratagemWorld.Ids[t.gameObject]=9;var identity=t.gameObject.Add(new NetworkIdentity{netId=9});NetworkClient.spawned[9]=identity;
         using(var display=new OtherworldHitDisplay.Batch())
         {
             Apply(t,old);Check(display.Hits.Count==1&&display.Hits[0].Amount==100,"batch captures actual native target value");
@@ -150,7 +150,7 @@ static class Program
     {
         Plugin.Role=2;Plugin.Instance.Pending.Clear();SceneLifecycle.Current=new();Plugin.Combat.Token="ready-test";
         var(view,viewer)=Unit(1);OtherworldActions.Viewer=view.gameObject.Add(new OtherworldActor());
-        var(target,unit)=Unit(1);var identity=target.gameObject.Add(new NetworkIdentity());NetworkClient.spawned[100]=identity;
+        var(target,unit)=Unit(1);var identity=target.gameObject.Add(new NetworkIdentity{netId=100});NetworkClient.spawned[100]=identity;
         var data=JsonConvert.SerializeObject(new[]{new OtherworldDisplayHit{Target=100,Space=1,Amount=10},new OtherworldDisplayHit{Target=100,Space=1,Amount=20,Critical=true}});
         target.引用器=null;OtherworldWorld.Units.Remove(target.gameObject);OtherworldHitDisplay.Receive(data);
         Check(target.Visuals==0&&Plugin.Instance.Pending.Count==1,"same-batch Spawn/result waits for native Start and space registration");

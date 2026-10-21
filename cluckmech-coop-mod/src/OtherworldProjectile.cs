@@ -44,7 +44,7 @@ namespace CluckmechCoop
             __state=default;
             if(Plugin.Role==2)return;
             var shot=__instance.GetComponent<OtherworldProjectile>();
-            if(shot==null || shot.Hero!=12 || shot.Owner==null || shot.Owner.Run.Initial!=26002)return;
+            if(shot==null || shot.Hero!=12 || shot.Owner==null || shot.Owner.Run.Initial!=OtherworldTalentIds.FlashChain)return;
             var target=col.GetComponent<模块_基本属性>();
             if(target==null || target.当前阵营!=阵营数据库.阵营.敌方 || target.当前生命值<=0)return;
             __state=new Contact{Owner=shot.Owner,Target=target,Health=target.当前生命值,Damage=shot.NormalDamage};

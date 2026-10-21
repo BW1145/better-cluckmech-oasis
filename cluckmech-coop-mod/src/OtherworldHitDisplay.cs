@@ -68,7 +68,7 @@ namespace CluckmechCoop
         {
             if(!(packet.攻击伤害>=0)||unit.Health.当前是否无敌||unit.Space!=ViewerSpace)return;
             float damage=packet.攻击伤害;
-            if(unit.Space!=0&&unit.Health.当前阵营==阵营数据库.阵营.敌方&&KamuiWorld.Run(unit.Space)?.Has(26116)==true)damage*=1.25f;
+            if(unit.Space!=0&&unit.Health.当前阵营==阵营数据库.阵营.敌方&&KamuiWorld.Run(unit.Space)?.Has(OtherworldTalentIds.SpacePressure)==true)damage*=1.25f;
             float value=Value(damage,unit.Health.当前抗性,unit.Health.当前格挡值,unit.Health.当前是否保护,packet.是否暴击,packet.暴击倍率);
             Show(target,value,packet.是否暴击,false);
         }
@@ -77,7 +77,7 @@ namespace CluckmechCoop
             if(Plugin.Role!=1)return;
             if(sink!=null){sink(target,amount,crit,color!=0?color:burn?1:0);return;}
             if(current==null)return;
-            uint id=StratagemWorld.Id(target.gameObject);if(id==0)return;
+            uint id=NetworkObjects.Id(target.gameObject);if(id==0)return;
             current.Hits.Add(new OtherworldDisplayHit{Target=id,Space=OtherworldWorld.Space(target.gameObject),Amount=amount,Critical=crit,Burn=burn,Color=color});
         }
         private static void Show(模块_受伤 target,float amount,bool crit,bool burn,int color=0)
