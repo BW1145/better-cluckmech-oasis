@@ -7,6 +7,14 @@ using HarmonyLib;
 
 internal static class CoopRepairChecks
 {
+    internal static void CheckDisplayShow(List<CodeInstruction> show,Action<bool,string> check)
+    {
+        foreach(string name in new[]{"normal","critical","colored"})
+            check(show.Any(c=>c.opcode==OpCodes.Ldsfld&&c.operand is FieldInfo f&&f.DeclaringType.Name=="OtherworldHitDisplay"&&f.Name==name),"cached native display route: "+name);
+        var calls=show.Where(c=>c.operand is MethodInfo).Select(c=>(MethodInfo)c.operand).ToArray();
+        check(calls.Length>0&&calls.All(m=>m.Name=="Invoke"&&typeof(Delegate).IsAssignableFrom(m.DeclaringType)),"Show calls only cached display delegates, not damage/status/events");
+        check(!show.Any(c=>c.opcode==OpCodes.Stfld||c.opcode==OpCodes.Stsfld),"Show does not write gameplay fields");
+    }
     internal static void Run(Assembly native,Assembly mod)
     {
         int checks=0;
@@ -38,7 +46,7 @@ internal static class CoopRepairChecks
         Check(tick.Count(c=>Calls(c,"召唤","召唤衍生物"))==1&&!tick.Any(c=>Calls(c,"NetworkServer","Spawn")),"original summon remains responsible for Spawn");
         var local=Body(Mod("OtherworldHitDisplay"),"Local");
         Check(!local.Any(c=>c.operand is MethodInfo m&&(m.Name=="受到伤害"||m.Name=="实现伤害"||m.Name=="SendMessage")),"local presentation has no native gameplay call");
-        var show=Body(Mod("OtherworldHitDisplay"),"Show");Check(show.Count(c=>c.operand is MethodInfo m&&m.Name=="Invoke")==3,"cached normal/critical/color delegates");
+        CheckDisplayShow(Body(Mod("OtherworldHitDisplay"),"Show"),Check);
         Check(AccessTools.Field(injury,"引用器")!=null&&Body(injury,"Start").Any(c=>Calls(c,"模块_受伤","初始化")),"native Start owns display reference initialization");
         var replay=Body(Mod("OtherworldHitDisplay"),"Replay");
         Check(replay.Any(c=>Calls(c,"OtherworldWorld","Unit"))&&replay.Any(c=>Field(c,"references")),"network replay waits for native display and space registration");
@@ -57,6 +65,10 @@ internal static class CoopRepairChecks
         var restoreCode=Body(restore,"MoveNext");
         Check(restoreCode.Any(c=>Calls(c,"KamuiPrefabs","Resolve"))&&!restoreCode.Any(c=>Calls(c,"dw单位库","获取单位")),"restoration resolves prefab identity instead of gameplay ID");
         Check(restoreCode.Any(c=>Calls(c,"Plugin","Warn")),"unresolved snapshot entries are reported");
+        Check(restoreCode.Any(c=>c.opcode==OpCodes.Stfld&&Field(c,"HostDisplay")),"restored authority-only states retain guest feedback");
+        var stateType=native.GetType("模块_状态属性+状态类",true);
+        Check(Body(stateType,"Clone").Any(c=>Calls(c,"Object","MemberwiseClone")),"native state cloning preserves derived feedback metadata");
+        Check(Body(Mod("OtherworldStatusApplication"),"Prefix").Any(c=>Calls(c,"HostStatusFeedback","RequiresDisplay")),"state application records guest-missing provenance");
         var actions=Mod("OtherworldActions");
         foreach(string method in new[]{"ApplyBombard","Normal","Counter"})
         {
@@ -70,7 +82,7 @@ internal static class CoopRepairChecks
             Check(code.Any(c=>Calls(c,"UnitActionLifetime","Current")),"delayed skill retains action lease: "+routine);
             Check(code.Any(c=>Calls(c,"OtherworldNetwork","Effect")||Calls(c,"OtherworldActions","ApplyBombard")),"result path is inside actual delayed impact: "+routine);
         }
-        // No new ordinary-hit broadcasting: only the established skill scopes call SendDisplay.
+        // Ordinary local-hit paths do not broadcast results.
         foreach(string type in new[]{"OtherworldDirectDamage","OtherworldHitDisplay","OtherworldNormalHit"})
         foreach(var method in Mod(type).GetMethods(BindingFlags.Static|BindingFlags.NonPublic|BindingFlags.DeclaredOnly))
             Check(!PatchProcessor.GetOriginalInstructions(method).Any(c=>Calls(c,"OtherworldNetwork","Send")||Calls(c,"OtherworldNetwork","SendDisplay")),"ordinary hit network budget: "+type+"."+method.Name);

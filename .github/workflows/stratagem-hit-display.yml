@@ -5,6 +5,11 @@ on:
       - 'cluckmech-coop-mod/src/Stratagem*.cs'
       - 'cluckmech-coop-mod/src/OtherworldHitDisplay.cs'
       - 'cluckmech-coop-mod/src/OtherworldNetwork.cs'
+      - 'cluckmech-coop-mod/src/OtherworldStates.cs'
+      - 'cluckmech-coop-mod/src/HostStatusFeedback.cs'
+      - 'cluckmech-coop-mod/src/GuestHitVisibility.cs'
+      - 'cluckmech-coop-mod/src/KamuiSave.cs'
+      - 'cluckmech-coop-mod/tests/Bindings/CoopRepairChecks.cs'
       - 'cluckmech-coop-mod/tests/CoopRepairs/Stubs.cs'
       - 'cluckmech-coop-mod/tests/StratagemHitDisplay/**'
       - '.github/workflows/stratagem-hit-display.yml'
@@ -19,6 +24,7 @@ jobs:
         with:
           sparse-checkout: |
             cluckmech-coop-mod/src
+            cluckmech-coop-mod/tests/Bindings
             cluckmech-coop-mod/tests/CoopRepairs
             cluckmech-coop-mod/tests/CoopRepairLimits
             cluckmech-coop-mod/tests/StratagemHitDisplay
@@ -27,7 +33,7 @@ jobs:
           dotnet-version: '8.0.x'
       - name: Prepare exact production paths
         run: python3 cluckmech-coop-mod/tests/StratagemHitDisplay/Prepare.py
-      - name: Verify stratagem display and native status seams
+      - name: Verify stratagem and missing-state display, sender visibility and Show IL
         run: dotnet run --project cluckmech-coop-mod/tests/StratagemHitDisplay/StratagemHitDisplayTests.csproj -c Release
       - name: Preserve indexed lookup and bounded display waiting
         run: dotnet run --project cluckmech-coop-mod/tests/CoopRepairLimits/CoopRepairLimitsTests.csproj -c Release

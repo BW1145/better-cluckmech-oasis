@@ -172,7 +172,8 @@ namespace CluckmechCoop
                         {
                             int sourceOwner=Plugin.Role==0&&state.Owner==1?0:Plugin.Role==1&&state.Owner==0?1:state.Owner;
                             var source=state.Source!=null&&objects.TryGetValue(state.Source,out var found)?found.gameObject:OtherworldActions.Player(sourceOwner)?.gameObject;
-                            stateModule.当前状态列表.Add(new OtherworldState{Owner=sourceOwner,Space=unit.Space,BurnSpread=state.BurnSpread,攻击者=source,状态类型=(攻击类型与状态数据库.状态枚举)state.Type,
+                            // This state list is reconstructed only on the authority, not by a client Spawn.
+                            stateModule.当前状态列表.Add(new OtherworldState{Owner=sourceOwner,Space=unit.Space,BurnSpread=state.BurnSpread,HostDisplay=Plugin.Role==1,攻击者=source,状态类型=(攻击类型与状态数据库.状态枚举)state.Type,
                                 剩余时间=state.Remaining,加成属性=Unpack(state.Values),自身抗性属性=new 模块_抗性属性.状态抗性单元{当前效果抗性=state.EffectResistance,当前时间抗性=state.TimeResistance}});
                         }
                     }
