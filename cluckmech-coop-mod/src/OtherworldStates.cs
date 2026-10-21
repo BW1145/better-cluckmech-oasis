@@ -10,13 +10,16 @@ namespace CluckmechCoop
         internal int Owner;
         internal int Space;
         internal bool BurnSpread;
+        // Native State.Clone uses MemberwiseClone, so this survives state cloning
+        // and source destruction without keeping a separate per-tick lookup table.
+        internal bool HostDisplay;
     }
     internal static class OtherworldStates
     {
         internal static OtherworldState Copy(模块_状态属性.状态类 state,int owner,float duration=-1)
         {
             var s=state.加成属性;
-            return new OtherworldState{Owner=owner,BurnSpread=state is OtherworldState original&&original.BurnSpread,Space=OtherworldDamage.ApplyingSpace??(state is OtherworldState tagged?tagged.Space:OtherworldWorld.Space(state.攻击者)),攻击者=state.攻击者,状态类型=state.状态类型,剩余时间=state.剩余时间,
+            return new OtherworldState{Owner=owner,BurnSpread=state is OtherworldState original&&original.BurnSpread,HostDisplay=state is OtherworldState feedback&&feedback.HostDisplay,Space=OtherworldDamage.ApplyingSpace??(state is OtherworldState tagged?tagged.Space:OtherworldWorld.Space(state.攻击者)),攻击者=state.攻击者,状态类型=state.状态类型,剩余时间=state.剩余时间,
                 自身抗性属性=state.自身抗性属性,加成属性=new 模块_攻击详细属性.状态属性单元{默认持续时间=duration<0?s.默认持续时间:duration,
                     默认属性效果=s.默认属性效果,变化持续时间=duration<0?s.变化持续时间:0,变化百分比持续时间=duration<0?s.变化百分比持续时间:0,
                     变化属性效果=s.变化属性效果,变化百分比属性效果=s.变化百分比属性效果,当前持续时间=duration<0?s.当前持续时间:duration,当前属性效果=s.当前属性效果}};
@@ -99,13 +102,19 @@ namespace CluckmechCoop
         private static bool Prefix(模块_状态属性 __instance,ref 模块_状态属性.状态类 状态,out int __state)
         {
             __state=__instance.当前状态列表.Count;
-            if(!OtherworldWorld.Active||状态.攻击者==null)return true;
+            if(!OtherworldWorld.Active)return true;
+            bool feedback=HostStatusFeedback.RequiresDisplay(__instance,状态);
+            if(状态.攻击者==null)
+            {if(feedback)状态=HostStatusFeedback.Tag(状态);return true;}
             int origin=OtherworldDamage.ApplyingSpace??(状态 is OtherworldState tagged?tagged.Space:OtherworldWorld.Space(状态.攻击者));
             if(origin!=OtherworldWorld.Space(__instance.gameObject))return false;
-            var run=OtherworldProgress.For(状态.攻击者);if(run==null||状态 is OtherworldState)return true;
-            int role=(int)状态.攻击者.GetComponent<模块_基本属性>().所属玩家;
-            var copy=OtherworldStates.Copy(状态,role);
-            if(copy.状态类型==攻击类型与状态数据库.状态枚举.灼烧&&run.Initial==26005)
+            var run=OtherworldProgress.For(状态.攻击者);
+            if(状态 is OtherworldState)
+            {if(feedback)状态=HostStatusFeedback.Tag(状态);return true;}
+            if(run==null&&!feedback)return true;
+            int role=run==null?-1:(int)状态.攻击者.GetComponent<模块_基本属性>().所属玩家;
+            var copy=OtherworldStates.Copy(状态,role);copy.HostDisplay=feedback;
+            if(copy.状态类型==攻击类型与状态数据库.状态枚举.灼烧&&run?.Initial==26005)
                 copy.加成属性.默认持续时间+=run.Has(26118)?4:2;
             状态=copy;return true;
         }
