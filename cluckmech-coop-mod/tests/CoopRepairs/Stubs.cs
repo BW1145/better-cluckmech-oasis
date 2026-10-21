@@ -8,10 +8,10 @@ using UnityEngine;
 
 namespace HarmonyLib {
  public class HarmonyPatch:Attribute { public HarmonyPatch(params object[] args){} }
- public static class AccessTools {
+ public static partial class AccessTools {
   public delegate ref F FieldRef<T,F>(T instance);
   public static FieldRef<T,F> FieldRefAccess<T,F>(string name)=>(FieldRef<T,F>)(object)(FieldRef<模块_受伤,效果物体引用器>)((模块_受伤 owner)=>ref owner.引用器);
-  public static MethodInfo Method(Type t,string n,Type[] a)=>t.GetMethod(n,BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public,null,a,null);
+  public static MethodInfo Method(Type t,string n,Type[] a=null)=>a==null?t.GetMethod(n,BindingFlags.Instance|BindingFlags.Static|BindingFlags.NonPublic|BindingFlags.Public):t.GetMethod(n,BindingFlags.Instance|BindingFlags.Static|BindingFlags.NonPublic|BindingFlags.Public,null,a,null);
   public static T MethodDelegate<T>(MethodInfo m) where T:Delegate=>m.CreateDelegate<T>();
  }
 }
@@ -47,13 +47,13 @@ namespace UnityEngine {
 }
 public class 阵营数据库 { public enum 阵营 { 无,友方,敌方 } }
 public class 攻击类型与状态数据库 { public enum 状态枚举 { 中毒,灼烧,流血 } }
-public class 模块_基本属性:Component {
+public partial class 模块_基本属性:Component {
     public int ID,母体id;public float 生命值=100;public int 初始阵营=1,单位分类=0;public enum 单位类型枚举{地面友方单位=9,陷阱=14,场景=16}public 单位类型枚举 单位类型=单位类型枚举.地面友方单位;
     public float 当前生命值=1000,当前反伤值,当前抗性,当前格挡值,最近受到伤害;
     public bool 当前是否无敌,当前是否保护; public GameObject 最近攻击者; public 阵营数据库.阵营 当前阵营=阵营数据库.阵营.敌方;
 }
-public class 模块_状态持续效果 {public class 底层状态类 {} public class 状态伤害类 {public float 数值;public 攻击类型与状态数据库.状态枚举 状态;} }
-public class 模块_状态属性 { public class 状态类{} public int Count; public void 增加状态(状态类 state){Count++;} }
+public class 模块_状态持续效果:Component {public class 底层状态类 {} public class 状态伤害类 {public float 数值;public 攻击类型与状态数据库.状态枚举 状态;} }
+public class 模块_状态属性:Component { public class 状态类{public GameObject 攻击者;public 攻击类型与状态数据库.状态枚举 状态类型;public 模块_攻击详细属性.状态属性单元 加成属性=new();} public int Count; public void 增加状态(状态类 state){Count++;} }
 public class 模块_仇恨 {public int Count;public void 增加仇恨目标(float value,GameObject source){Count++;} }
 public class 模块_移动 {public class Path {public Vector2 movingDirection;} public Path 寻路脚本=new();public int Pushes;public void 被击退(Vector4 p){Pushes++;} }
 public class 事件管理器_战斗 {public int Events;public float Total;public void 触发_造成伤害(GameObject g,float v){Events++;Total+=v;} }
@@ -61,10 +61,10 @@ public partial class 模块_受伤:Component {
     public 效果物体引用器 引用器=new();
     GameObject 自身=>gameObject;
     public 模块_基本属性 基本属性;public 模块_状态属性 状态属性=new();public 模块_仇恨 仇恨=new();public 模块_移动 移动=new();public 事件管理器_战斗 战斗事件=new();
-    public int Visuals,CriticalVisuals,PushVisuals; public float LastVisual;
+    public int Visuals,CriticalVisuals,PushVisuals; public float LastVisual;public Vector4 LastColor;
     void 伤害出现(float value){伤害出现(value,new Vector4(1,1,1,1));}
-    void 伤害出现(float value,Vector4 color){CluckmechCoop.OtherworldHitDisplay.Record(this,value,false,color.y==.4f);Visuals++;LastVisual=value;}
-    void 暴击出现(float value){CluckmechCoop.OtherworldHitDisplay.Record(this,value,true,false);Visuals++;CriticalVisuals++;LastVisual=value;}
+    void 伤害出现(float value,Vector4 color){typeof(CluckmechCoop.OtherworldNormalDisplayResult).GetMethod("Prefix",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,new object[]{this,value,color});Visuals++;LastVisual=value;LastColor=color;}
+    void 暴击出现(float value){CluckmechCoop.OtherworldHitDisplay.Record(this,value,true,false);Visuals++;LastVisual=value;CriticalVisuals++;}
     void 击退效果出现(float value){PushVisuals++;}
     public void Show(float value,bool critical){if(critical)暴击出现(value);else 伤害出现(value);}
 }
@@ -72,7 +72,7 @@ namespace CluckmechCoop {
     public class OtherworldUnit:Component {public 模块_基本属性 Health;public int Space;public bool IsPlayer;}
     public class OtherworldActor:Component {public bool Phased;public int Avoids;public void Avoid(世界类.伤害数据包 p){Avoids++;}}
     public class OtherworldRun {public bool Pressure;public bool Has(int id)=>Pressure&&id==26116;}
-    public static class Plugin {public static int Role;public static dw单位库 Units;public static CoroutineHost Instance=new();public static CombatStub Combat=new();}
+    public static class Plugin {public static int Role;public static bool InCombat=true;public static NetworkStub Network=new();public static dw单位库 Units;public static CoroutineHost Instance=new();public static CombatStub Combat=new();}
     public static class OtherworldWorld {public static int Space(GameObject g)=>Unit(g)?.Space??0;public static bool Active=true;public static readonly Dictionary<GameObject,OtherworldUnit> Units=new();public static OtherworldUnit Unit(GameObject g)=>g!=null&&Units.TryGetValue(g,out var v)?v:null;}
     public static class OtherworldProgress {public static readonly Dictionary<GameObject,OtherworldRun> Runs=new();public static OtherworldRun For(GameObject g)=>g!=null&&Runs.TryGetValue(g,out var r)?r:null;}
     public static class KamuiWorld {public static OtherworldRun Current=new();public static OtherworldRun Run(int space)=>Current;}
@@ -90,7 +90,7 @@ namespace UnityEngine {
  public static class Random {public static float Range(float a,float b)=>0;}
  public static class Object {public static int Instantiations;public static GameObject Instantiate(GameObject p,Vector3 pos,Quaternion q){Instantiations++;var g=new GameObject();if(p.GetComponent<模块_基本属性>() is {} hp)g.Add(new 模块_基本属性{ID=hp.ID});return g;}}
 }
-public class 模块_攻击属性:Component {public float 攻击力=10,攻击速度=1,攻击范围=3;}
+public partial class 模块_攻击属性:Component {public float 攻击力=10,攻击速度=1,攻击范围=3;}
 public class 效果物体引用器 {}
 public class 模块_移动属性:Component {public float 移动速度=2;}
 public class 模块_加成管理器 {public class 状态加成类 {}}
@@ -111,6 +111,9 @@ namespace Mirror {
  public static class NetworkServer {public static int Calls;public static void Spawn(GameObject g){if(g==null)throw new Exception("null spawn");Calls++;}}
 }
 namespace CluckmechCoop {
+ public class NetworkStub {public bool PeerReady=true;}
+ internal static class ModuleSettings {internal static GameplayStub Extra=new();}
+ internal sealed class GameplayStub {internal bool Stratagems;}
  public class SceneLifetime {}
  public static class SceneLifecycle {public static SceneLifetime Current=new();public static bool IsCurrent(SceneLifetime scene)=>ReferenceEquals(scene,Current);}
  public class CombatStub {public string Token="run";}
@@ -122,11 +125,14 @@ namespace CluckmechCoop {
  internal static class OtherworldMessageKind {internal const int Effect=11;}
  internal static partial class OtherworldNetwork {
   internal static List<OtherworldMessage> Sent=new();
-  internal static void Send(OtherworldMessage message,int owner)=>Sent.Add(message);
+  internal static int LastOwner;
+  internal static void Send(OtherworldMessage message,int owner){LastOwner=owner;Sent.Add(message);}
  }
  internal class StratagemSaved {} internal class BronzeDragonState {}
  internal static class NativeRepairs {internal static bool Enabled=true;}
  internal static class OtherworldActions {internal static OtherworldActor Viewer;internal static OtherworldActor Player(int role)=>Viewer;}
- internal static class StratagemWorld {internal static readonly Dictionary<GameObject,uint> Ids=new();internal static uint Id(GameObject g)=>Ids.TryGetValue(g,out var id)?id:0;}
+ internal static partial class StratagemWorld {internal static 模块_基本属性 NativeViewer;internal static 模块_基本属性 Player(int role)=>NativeViewer;internal static readonly Dictionary<GameObject,uint> Ids=new();internal static uint Id(GameObject g)=>Ids.TryGetValue(g,out var id)?id:0;}
  internal static class OtherworldDataValidation {internal static bool Finite(float f)=>!float.IsNaN(f)&&!float.IsInfinity(f);}
 }
+
+public class 模块_攻击详细属性:UnityEngine.Component {public float 当前暴击倍率=1;public List<状态属性单元> 状态加成列表=new();public class 状态属性单元 {public float 默认持续时间,当前持续时间;public UnityEngine.Vector4 默认属性效果,当前属性效果;}}

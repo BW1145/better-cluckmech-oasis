@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems><NuGetAudit>false</NuGetAudit>
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/OtherworldHitDisplay.cs;../../src/StratagemHitDisplay.cs;../../src/StratagemStatusDisplay.cs;../../src/TranspilerContract.cs" />
+    <Compile Include="../CoopRepairs/Stubs.cs;Fixture.cs;Program.cs;obj/Production.cs" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+</Project>

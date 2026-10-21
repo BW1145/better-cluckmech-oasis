@@ -134,7 +134,7 @@ namespace CluckmechCoop
         private readonly StratagemUnit unit;
         private readonly Dictionary<模块_基本属性,StratagemStateHandle> burns = new Dictionary<模块_基本属性,StratagemStateHandle>();
         internal StratagemDamage(GameObject source)
-        { sources.Add(this); Source = source; attack = source.GetComponent<模块_攻击属性>(); detailed = source.GetComponent<模块_攻击详细属性>(); states = source.GetComponent<模块_状态属性>(); unit = source.GetComponent<StratagemUnit>(); }
+        { sources.Add(this); StratagemHitDisplay.TrackSource(source); Source = source; attack = source.GetComponent<模块_攻击属性>(); detailed = source.GetComponent<模块_攻击详细属性>(); states = source.GetComponent<模块_状态属性>(); unit = source.GetComponent<StratagemUnit>(); }
         internal float Attack => attack == null ? 0 : attack.当前攻击力;
         internal float Rate => attack == null || !attack.当前是否能攻击 || states != null && states.查询状态(攻击类型与状态数据库.状态枚举.眩晕) ? 0 : attack.当前攻击速度;
         internal float Range => attack == null ? 0 : attack.当前攻击范围;
@@ -162,7 +162,8 @@ namespace CluckmechCoop
                     if (type == 攻击类型与状态数据库.状态枚举.灼烧 && (unit.Kind == StratagemKind.Laser || unit.Parameters.BurningMines || unit.Parameters.BurningRover || unit.Parameters.Scorch)) continue;
                     packet.造成状态.Add(State(type,detailed.状态加成列表[(int)type].当前持续时间,detailed.状态加成列表[(int)type].当前属性效果));
                 }
-            target.GetComponent<模块_受伤>()?.受到伤害(packet);
+            using(StratagemHitDisplay.Capture())
+                target.GetComponent<模块_受伤>()?.受到伤害(packet);
         }
         internal void EagleMinerals(Vector2 point,StratagemParameters parameters,bool critical)
         {

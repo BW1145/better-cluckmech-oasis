@@ -1,0 +1,33 @@
+name: Stratagem hit display
+on:
+  pull_request:
+    paths:
+      - 'cluckmech-coop-mod/src/Stratagem*.cs'
+      - 'cluckmech-coop-mod/src/OtherworldHitDisplay.cs'
+      - 'cluckmech-coop-mod/src/OtherworldNetwork.cs'
+      - 'cluckmech-coop-mod/tests/CoopRepairs/Stubs.cs'
+      - 'cluckmech-coop-mod/tests/StratagemHitDisplay/**'
+      - '.github/workflows/stratagem-hit-display.yml'
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            cluckmech-coop-mod/src
+            cluckmech-coop-mod/tests/CoopRepairs
+            cluckmech-coop-mod/tests/CoopRepairLimits
+            cluckmech-coop-mod/tests/StratagemHitDisplay
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Prepare exact production paths
+        run: python3 cluckmech-coop-mod/tests/StratagemHitDisplay/Prepare.py
+      - name: Verify stratagem display and native status seams
+        run: dotnet run --project cluckmech-coop-mod/tests/StratagemHitDisplay/StratagemHitDisplayTests.csproj -c Release
+      - name: Preserve indexed lookup and bounded display waiting
+        run: dotnet run --project cluckmech-coop-mod/tests/CoopRepairLimits/CoopRepairLimitsTests.csproj -c Release
