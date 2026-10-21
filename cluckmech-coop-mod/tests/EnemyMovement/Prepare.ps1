@@ -1,3 +1,4 @@
+param([Parameter(Mandatory)][string]$NativeGameSource)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $source = [System.IO.File]::ReadAllText((Join-Path $PSScriptRoot '../../src/Difficulty.cs'), [System.Text.Encoding]::UTF8)
@@ -46,7 +47,7 @@ internal static class Difficulty {
 $generated = $header + ($methods -join "`n") + "`n}`n" + $reward + "`n" + $gate + "`n}"
 New-Item -ItemType Directory -Path (Join-Path $PSScriptRoot 'obj') -Force | Out-Null
 [System.IO.File]::WriteAllText((Join-Path $PSScriptRoot 'obj/CompletionMethods.cs'), $generated, [System.Text.UTF8Encoding]::new($false))
-$nativeUi = [System.IO.File]::ReadAllText((Join-Path $PSScriptRoot '../../../cluckmech-research/inspection/game/模块_波次倒计时UI.cs'), [System.Text.Encoding]::UTF8)
+$nativeUi = [System.IO.File]::ReadAllText((Join-Path $NativeGameSource '模块_波次倒计时UI.cs'), [System.Text.Encoding]::UTF8)
 foreach ($read in @(@('倒计时', 'PlaybackCountdown'), @('当前波次', 'PlaybackStage'), @('是否计时', 'PlaybackCounting'), @('关卡状态', 'PlaybackPhase'))) {
     $nativeUi = $nativeUi.Replace("波次控制器.$($read[0])", "CluckmechCoop.Difficulty.$($read[1])(波次控制器)")
 }

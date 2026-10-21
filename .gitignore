@@ -19,10 +19,7 @@
 *.log
 .env*
 
-/cluckmech-coop-mod/evidence/*
-!/cluckmech-coop-mod/evidence/startup-destruction/
-/cluckmech-coop-mod/evidence/startup-destruction/*
-!/cluckmech-coop-mod/evidence/startup-destruction/BepInEx.cfg.updated
+/cluckmech-coop-mod/evidence/
 /cluckmech-music/tools/
 /cluckmech-music/原版参考/
 *.wav

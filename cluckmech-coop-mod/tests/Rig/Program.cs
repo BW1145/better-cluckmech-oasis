@@ -330,7 +330,7 @@ static class Program
             }
             Time.time=14;rig.Die();Snapshot("destroyed");Check(!go.Renderers.Any(x=>x.enabled),"Destroyed rig does not re-enable its body or flashes");
         }
-        Directory.CreateDirectory(Path.Combine(root,"evidence/0.5.1"));
+        Directory.CreateDirectory(Path.Combine(root,"artifacts/checks/rig"));
         var first=new StratagemRig{gameObject=new GameObject()};var second=new StratagemRig{gameObject=new GameObject()};
         first.Build(new StratagemUnit{gameObject=first.gameObject,Stats=new(){ID=20102},Kind=StratagemKind.Rover});
         second.Build(new StratagemUnit{gameObject=second.gameObject,Stats=new(){ID=20102},Kind=StratagemKind.Rover});
@@ -338,7 +338,7 @@ static class Program
         first.Dock(2,0);update.Invoke(first,null);update.Invoke(second,null);
         Check(first.Body.transform.localScale.x==second.Body.transform.localScale.x,"Docking preserves both drones' physical size");
         Check(first.gameObject.Renderers.Count(x=>x.enabled&&x.sprite.Name.StartsWith("rover-drone"))==1&&second.gameObject.Renderers.Count(x=>x.enabled&&x.sprite.Name.StartsWith("rover-drone"))==1,"Two bases maintain two independent drone renderers");
-        File.WriteAllText(Path.Combine(root,"evidence/0.5.1/rig-poses.json"),JsonSerializer.Serialize(frames));
+        File.WriteAllText(Path.Combine(root,"artifacts/checks/rig/rig-poses.json"),JsonSerializer.Serialize(frames));
         Console.WriteLine($"PASS: {checks} production rig checks; {frames.Count} animation poses exported");
     }
 }

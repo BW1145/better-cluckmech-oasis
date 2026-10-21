@@ -61,7 +61,7 @@ static class Program
         oasisOnly.OriginalClosed = true;
         Check(oasisOnly.Stages.Count == 0 && !oasisOnly.TryStart(false), "oasis-only encounter never duplicates its boss");
         Check(Rules.HealthMultiplier(false, false) == 1 && Rules.AttackMultiplier(false, false) == 1, "original enemies and ordinary bosses retain native stats");
-        Check(Rules.HealthMultiplier(false, true) == 1.5f && Rules.AttackMultiplier(false, true) == 2, "repeated enemies and ordinary bosses HP x1.5 ATK x2");
+        Check(Rules.HealthMultiplier(false, true) == 2f && Rules.AttackMultiplier(false, true) == 2, "repeated enemies and ordinary bosses HP x2 ATK x2");
         Check(Rules.HealthMultiplier(true, false) == 10 && Rules.AttackMultiplier(true, false) == 2, "oasis boss HP x10 ATK x2");
         Check(Rules.HealthMultiplier(true, true) == 10 && Rules.AttackMultiplier(true, true) == 2, "oasis multiplier cannot stack");
         var timedStage = new EncounterStage<string> { Limit = 20 };

@@ -23,7 +23,7 @@ installed game's BCL/facades and embeds the same character, stratagem and UI
 resources as the main project; it is not a replacement for an in-game test.
 
 Checks include input completeness, all three production compilations, all ten
-music OGG files, all four effect OGG files, ZIP integrity, plugin hashes and
+music OGG files, four stratagem and eight character effect OGG files, ZIP integrity, plugin hashes and
 required loader/configuration. Private game assemblies are excluded from the
 package and explicitly checked against accidental inclusion. Assembly versions
 and source-path mapping are generated; source paths are not embedded as local

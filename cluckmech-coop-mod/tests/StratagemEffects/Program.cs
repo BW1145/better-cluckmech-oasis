@@ -19,7 +19,8 @@ namespace UnityEngine
     {
         public bool enabled = true, Destroyed;
         public readonly GameObject gameObject = new GameObject();
-        public T GetComponentInParent<T>() => default;
+        public T GetComponentInParent<T>() => gameObject.GetComponent<T>();
+        public Vector2 ClosestPoint(Vector2 point)=>(Vector2)gameObject.transform.position;
         public static bool operator ==(Collider2D a,Collider2D b)
         {
             bool absentA=ReferenceEquals(a,null)||a.Destroyed,absentB=ReferenceEquals(b,null)||b.Destroyed;
@@ -29,6 +30,8 @@ namespace UnityEngine
         public override bool Equals(object value) => ReferenceEquals(this,value);
         public override int GetHashCode() => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
     }
+    public static class Physics2D {public static Collider2D[] OverlapCircleAll(Vector2 point,float radius)=>Array.Empty<Collider2D>();}
+    public static class Mathf {public static float Sqrt(float value)=>(float)Math.Sqrt(value);}
     public sealed class CircleCollider2D : Collider2D { public float radius; public bool isTrigger; }
     public enum SendMessageOptions { DontRequireReceiver }
     public sealed class Transform { public Vector3 position; }
@@ -70,6 +73,8 @@ public static class 攻击类型与状态数据库
 public static class 阵营数据库 { public enum 阵营 {友方,敌方} }
 public sealed class 模块_基本属性
 {
+    public enum 单位定位枚举 {矿山}
+    public readonly List<单位定位枚举> 单位定位列表=new();
     public readonly GameObject gameObject; public Transform transform => gameObject.transform;
     public bool Living = true, Enemy = true;
     public float 当前生命值 => Living ? 10 : 0;
@@ -393,3 +398,5 @@ static class Program
         Console.WriteLine($"PASS: {checks} production damage/status checks with native clone and resistance code");
     }
 }
+
+namespace CluckmechCoop {internal static class OtherworldWorld {internal static int Space(GameObject obj)=>0;}}

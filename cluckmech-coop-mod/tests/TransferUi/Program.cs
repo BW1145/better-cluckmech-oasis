@@ -85,28 +85,28 @@ namespace UnityEngine.UI
     public static class LayoutRebuilder { public static void ForceRebuildLayoutImmediate(RectTransform rect) { } }
     public sealed class ScrollRect : Component { public enum MovementType { Clamped } public enum ScrollbarVisibility { AutoHide } public bool horizontal; public MovementType movementType; public float scrollSensitivity; public RectTransform viewport,content; public Scrollbar verticalScrollbar; public ScrollbarVisibility verticalScrollbarVisibility; }
 }
-namespace HarmonyLib { public static class AccessTools { public static FieldInfo Field(Type type,string name)=>type.GetField(name,BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance); } public static class Priority { public const int Last=0; } [AttributeUsage(AttributeTargets.Method)] public sealed class HarmonyPriority : Attribute { public HarmonyPriority(int value) { } } [AttributeUsage(AttributeTargets.Class)] public sealed class HarmonyPatch : Attribute { public HarmonyPatch(Type type,string name) { } public HarmonyPatch(Type type,string name,Type[] args) { } } }
 public sealed class 全局加成 { public float 商店价格倍率加成=-.2f; }
 public sealed class dw单位价格库 { public int[] 单位价格 = {10,20,60,80,100,120}; }
 public sealed class 背包类预制体脚本 : Component {
  public List<int> 当前已选单元=new List<int>();public List<GameObject> 单元列表=new List<GameObject>();
  public void 更新背包(int count){单元列表.Clear();for(int i=0;i<count;i++){var go=new GameObject("Stock");go.transform.SetParent(transform,false);单元列表.Add(go);}}
 }
-public sealed class 商店脚本 : Component { private 总结脚本 总结 = Plugin.Summary; public GameObject 商品背包类; public Vector3Int[] 当前商品=new Vector3Int[3];public int 刷新费用=5, 商品单位等级=2;public Vector2Int 价格变化区间=new Vector2Int(0,1);public dw单位价格库 价格库=new dw单位价格库();public 全局加成 全局加成=new 全局加成(); }
+public sealed class 商店脚本 : Component { public bool 当前是否符合角色需要; private 总结脚本 总结 = Plugin.Summary; public GameObject 商品背包类; public Vector3Int[] 当前商品=new Vector3Int[3];public int 刷新费用=5, 商品单位等级=2;public Vector2Int 价格变化区间=new Vector2Int(0,1);public dw单位价格库 价格库=new dw单位价格库();public 全局加成 全局加成=new 全局加成(); }
 public sealed class 选择词条脚本 { public int 词条剩余刷新次数=1; }
 public sealed class 选择词条流程脚本 { public 选择词条脚本 选择词条=new 选择词条脚本(); public Button 刷新按钮=new Button();public Text 剩余刷新次数文本=new Text(); }
 namespace CluckmechCoop { public sealed class RuleTooltip : MonoBehaviour { public string Text; } }
 namespace UnityEngine { public static class Random { public static int Range(int min,int max)=>min; } }
 namespace UnityEngine.SceneManagement { public static class SceneManager { public struct Scene { public int buildIndex; } public static Scene GetActiveScene() => new Scene { buildIndex=10 }; } }
-namespace 函数库 { public static class 常数类 { public const int 场景id_异步加载场景=-1, 场景id_选择地图=8; } public static class 场景函数 { } }
+namespace 函数库 { public static class 常数类 { public const int 场景id_异步加载场景=-1, 场景id_选择地图=8; } public static class 场景函数 { public static void 切换场景(int scene){} } }
 public sealed class 联机玩家控件 { public void 上传玩家总结数据() { } }
 public sealed class 玩家背包脚本 { public void 更新背包() { } }
 public sealed class 刷怪器 { public sealed class Data { public bool 是否最终关卡; public List<Stage> 波次数据=new List<Stage>(); } public sealed class Stage { public List<Group> 组次数据 = new List<Group>(); } public sealed class Group { public List<GameObject> 单位=new List<GameObject>(); } public Data 数据=new Data(); }
 namespace CluckmechCoop { internal class SessionMessage { public string Type, Token; } internal class GrowthNetwork { internal void Broadcast(SessionMessage value) { } } }
 public sealed class 总结脚本 { public void 获得金钱(int value) { 当前金钱数+=value; } public class Map { public bool 是否位于工匠; public int 当前地图页位置=1; public string 当前地图页="area"; } public Map 地图存档=new Map(); public void 保存单局存档() { } public sealed class 背包单元 { public int 炮台id,强化上限; public List<int> 强化词条 = new List<int>(); } public List<背包单元> 当前拥有炮台 = new List<背包单元>(); public bool 是否光标位于UI界面; public int 当前金钱数; }
-public sealed class 模块_基本属性 : Component { public string Name="同名鸡械"; public string 名称() => Name; public Sprite 图标 = new Sprite(); }
+public sealed class 模块_基本属性 : Component { public enum 单位分类枚举 { 炮台 } public string Name="同名鸡械"; public string 名称() => Name; public Sprite 图标 = new Sprite(); }
+public sealed class 角色天赋数据模板 { public List<模块_基本属性.单位分类枚举> 商店权重加成列表; }
 public sealed class cz词缀库 : Component { public int Calls; public string 获取词缀名称(int id) { Calls++; return "强化" + id; } }
-public sealed class dw单位库 : Component { public sealed class 单位单元 { public int id, 单位等级=2; public bool 是否商店内出现=true, 是否游戏内出现=true; } public List<单位单元> 单位列表=new List<单位单元>(); public bool 是否抽取(int id)=>true; public GameObject Unit = new GameObject("Unit"); public Dictionary<int,GameObject> Examples=new Dictionary<int,GameObject>(); public GameObject 获取单位(int id) => Examples.TryGetValue(id,out var item)?item:Unit; }
+public sealed class dw单位库 : Component { public sealed class 单位单元 { public int id, 单位等级=2; public bool 是否商店内出现=true, 是否游戏内出现=true; } public List<单位单元> 单位列表=new List<单位单元>(); public 单位单元 获取单位单元(int id)=>单位列表.Find(x=>x.id==id); public bool 是否抽取(int id)=>true; public GameObject Unit = new GameObject("Unit"); public Dictionary<int,GameObject> Examples=new Dictionary<int,GameObject>(); public GameObject 获取单位(int id) => Examples.TryGetValue(id,out var item)?item:Unit; }
 public sealed class 光标管理器 : Component { }
 public sealed class 设置管理器 : Component { public float UI界面大小=1; }
 namespace CluckmechCoop
@@ -234,28 +234,29 @@ static class Program
         Check(!(bool)Field(Plugin.Panel,"open") && !Plugin.Summary.是否光标位于UI界面,"close restores native input focus");
         Plugin.Summary.当前拥有炮台.Clear();Plugin.Summary.当前金钱数=480;Plugin.Transfers.Status="";
         var names=new[]{"铁甲虫车","圣甲虫炮台","空投甲虫"};var sprites=new[]{"铁甲虫车-50×50_0","圣甲虫炮台_50×50_0","空投甲虫-25x25_0"};
-        for(int i=0;i<3;i++) { var unit=new GameObject(names[i]);var attr=unit.AddComponent<模块_基本属性>();attr.Name=names[i];attr.图标=new Sprite(sprites[i]);Plugin.Units.Examples[50+i]=unit; }
+        for(int i=0;i<3;i++) { var unit=new GameObject(names[i]);var attr=unit.AddComponent<模块_基本属性>();attr.Name=names[i];attr.图标=new Sprite(sprites[i]);Plugin.Units.Examples[50+i]=unit;Plugin.Units.单位列表.Add(new dw单位库.单位单元{id=50+i,单位等级=2,是否商店内出现=false}); }
         for(int i=0;i<24;i++)Plugin.Summary.当前拥有炮台.Add(new 总结脚本.背包单元{炮台id=50+i%3,强化上限=7,强化词条=new List<int>{2,3,i%5}});
         Plugin.CanTrade=true;Plugin.Panel.RefreshInventory();Plugin.Panel.Open();inventory.anchoredPosition=Vector2.zero;Card(cards,2).onClick.Invoke();
         layout.Clear();Layout((RectTransform)Field(Plugin.Panel,"panelRect"),0,0,layout);File.WriteAllText(Path.Combine(AppContext.BaseDirectory,"layout.json"),JsonSerializer.Serialize(layout));
         var settings = new GameObject("Settings");settings.transform.sizeDelta = new Vector2(1484,924);
         var modules=settings.AddComponent<ModulePanel>(); typeof(ModulePanel).GetMethod("OnEnable",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(modules,null);
         var switches=(IList)Field(modules,"toggles"); var highlights=(IList)Field(modules,"selections");
-        Check(switches.Count==10,"control panel builds ten separate module switches");
-        ((Toggle)switches[8]).onValueChanged.Invoke(false);
+        Check(switches.Count==15,"control panel builds fifteen separate module switches");
+        int ModuleIndex(ModuleId id)=>Array.FindIndex(ModuleCatalog.All,x=>x.Id==id);
+        ((Toggle)switches[ModuleIndex(ModuleId.SkipSplash)]).onValueChanged.Invoke(false);
         Check(!ModuleSettings.Preference(ModuleId.SkipSplash) && ModuleSettings.Preference(ModuleId.Speed) && ((Text)Field(modules,"details")).text.Contains("下次启动"),"startup module has its own preference and restart timing description");
-        typeof(ModulePanel).GetMethod("Select",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(modules,new object[]{0});
-        Check(((Text)Field(modules,"title")).text=="倍速" && ((Text)Field(modules,"details")).text.Contains("左Ctrl"),"initial module details include control key");
-        ((Toggle)switches[2]).onValueChanged.Invoke(false);
+        typeof(ModulePanel).GetMethod("Select",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(modules,new object[]{ModuleIndex(ModuleId.Speed)});
+        Check(((Text)Field(modules,"title")).text=="倍速" && ((Text)Field(modules,"details")).text.Contains("Ctrl"),"initial module details include control key");
+        ((Toggle)switches[ModuleIndex(ModuleId.Energy)]).onValueChanged.Invoke(false);
         Check(!ModuleSettings.Preference(ModuleId.Energy) && ModuleSettings.Preference(ModuleId.Speed),"control panel toggles one independent module");
-        Check(((Text)Field(modules,"details")).text.Contains("500") && ((Text)Field(modules,"title")).text=="基地车后备隐藏能源","selection shows concrete effect and amount");
-        Check(((Image)highlights[2]).enabled && !((Image)highlights[0]).enabled,"selected module corners follow selection");
+        Check(((Text)Field(modules,"details")).text.Contains("1000") && ((Text)Field(modules,"title")).text=="基地车后备隐藏能源","selection shows concrete effect and amount");
+        Check(((Image)highlights[ModuleIndex(ModuleId.Energy)]).enabled && !((Image)highlights[ModuleIndex(ModuleId.Speed)]).enabled,"selected module corners follow selection");
         layout.Clear();Layout((RectTransform)Field(modules,"board"),0,0,layout);File.WriteAllText(Path.Combine(AppContext.BaseDirectory,"modules.json"),JsonSerializer.Serialize(layout));
-        typeof(ModulePanel).GetMethod("Select",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(modules,new object[]{1});
-        Check(((Text)Field(modules,"details")).text.Contains("冷却30秒")&&((Text)Field(modules,"details")).text.Contains("前5秒生命、格挡×2"),"character details show updated dog cooldown and support defense");
+        typeof(ModulePanel).GetMethod("Select",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(modules,new object[]{ModuleIndex(ModuleId.Characters)});
+        Check(((Text)Field(modules,"details")).text.Contains("前5秒生命、格挡×2"),"character details show support defense");
         layout.Clear();Layout((RectTransform)Field(modules,"board"),0,0,layout);File.WriteAllText(Path.Combine(AppContext.BaseDirectory,"modules-characters.json"),JsonSerializer.Serialize(layout));
-        typeof(ModulePanel).GetMethod("Select",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(modules,new object[]{6});
-        Check(((Text)Field(modules,"details")).text.Contains("绿洲最终Boss只出现一次，生命×10、攻击×2"),"expedition details identify final oasis boss multiplier");
+        typeof(ModulePanel).GetMethod("Select",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(modules,new object[]{ModuleIndex(ModuleId.Expedition)});
+        Check(((Text)Field(modules,"details")).text.Contains("最大生命×10、攻击力×2"),"expedition details identify final oasis boss multiplier");
         layout.Clear();Layout((RectTransform)Field(modules,"board"),0,0,layout);File.WriteAllText(Path.Combine(AppContext.BaseDirectory,"modules-expedition.json"),JsonSerializer.Serialize(layout));
         Plugin.CanTrade=false;Plugin.Panel.RefreshState();ModuleSettings.LocalProgress.PendingRegion="area-1";
         GrowthPanel.ShowPending();var growth=(GrowthPanel)typeof(GrowthPanel).GetField("active",BindingFlags.NonPublic|BindingFlags.Static).GetValue(null);
@@ -279,9 +280,9 @@ static class Program
         for(int i=1;i<=3;i++)new GameObject("商品"+i).transform.SetParent(shopObject.transform,false);
         for(int i=100;i<110;i++)Plugin.Units.单位列表.Add(new dw单位库.单位单元{id=i});
         ModuleSettings.Extra.Shop=true;Plugin.Summary.当前金钱数=500;var feature=ShopFeatures.For(shop);
-        void Reroll(){typeof(PaidShopRefresh).GetMethod("Prefix",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,new object[]{shop});feature.PrepareStock();for(int i=0;i<3;i++)shop.当前商品[i]=new Vector3Int(100+i,60,0);shop.商品背包类.GetComponent<背包类预制体脚本>().更新背包(shop.当前商品.Length);feature.StockReady(false);}
+        void Reroll(){typeof(PaidShopRefresh).GetMethod("Prefix",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,new object[]{shop,null});feature.PrepareStock();for(int i=0;i<3;i++)shop.当前商品[i]=new Vector3Int(100+i,60,0);shop.商品背包类.GetComponent<背包类预制体脚本>().更新背包(shop.当前商品.Length);feature.StockReady(false);}
         Reroll();Reroll();Check(shop.当前商品.Length==3,"two paid shop rerolls retain three slots");Reroll();Check(shop.当前商品.Length==4&&shop.当前商品[3].x==103&&shop.当前商品[3].y==48,"third reroll adds distinct fourth offer and native price modifier");
-        Plugin.Summary.当前金钱数=0;int rerolls=feature.State.Refreshes;typeof(PaidShopRefresh).GetMethod("Prefix",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,new object[]{shop});Check(feature.State.Refreshes==rerolls,"failed paid refresh does not advance four-slot threshold");
+        Plugin.Summary.当前金钱数=0;int rerolls=feature.State.Refreshes;typeof(PaidShopRefresh).GetMethod("Prefix",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,new object[]{shop,null});Check(feature.State.Refreshes==rerolls,"failed paid refresh does not advance four-slot threshold");
         var stock=shop.商品背包类.GetComponent<背包类预制体脚本>();stock.当前已选单元.Add(3);Plugin.Summary.当前金钱数=100;object[] purchase={shop,null};typeof(ShopPurchase).GetMethod("Prefix",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,purchase);typeof(ShopPurchase).GetMethod("Postfix",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,purchase);
         Check(!feature.State.Sold[3],"skipped native purchase leaves stock available despite sufficient gold");
         Plugin.Summary.当前金钱数-=shop.当前商品[3].y;
@@ -304,10 +305,30 @@ static class Program
         typeof(ShopPurchase).GetMethod("Postfix",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,purchase);
         Check(feature.State.Sold[0],"free native purchase persists sold marker after granting machine");
         stock.更新背包(4);feature.StockReady(true);Check(!stock.单元列表[3].Active&&shop.当前商品[3].x==103,"restored shop retains fourth offer and hides purchased card");
-        Plugin.Summary.当前金钱数=100;feature.BuildCoupon();NativeUi.Actions.FindLast(b=>b.Title=="工匠刷新券  30金币").onClick.Invoke();Check(Plugin.Summary.当前金钱数==70&&ModuleSettings.LocalProgress.Coupons==1&&feature.State.TicketBought,"coupon purchase deducts thirty and credits one reroll");
-        NativeUi.Actions.FindLast(b=>b.Title=="工匠刷新券  30金币").onClick.Invoke();Check(Plugin.Summary.当前金钱数==70&&ModuleSettings.LocalProgress.Coupons==1,"same shop cannot sell coupon pack twice");
+        Plugin.Summary.当前金钱数=100;feature.BuildCoupon();NativeUi.Actions.FindLast(b=>b.Title=="1次工匠刷新  30金币").onClick.Invoke();Check(Plugin.Summary.当前金钱数==70&&ModuleSettings.LocalProgress.Coupons==1&&feature.State.TicketBought,"coupon purchase deducts thirty and credits one reroll");
+        NativeUi.Actions.FindLast(b=>b.Title=="1次工匠刷新  30金币").onClick.Invoke();Check(Plugin.Summary.当前金钱数==70&&ModuleSettings.LocalProgress.Coupons==1,"same shop cannot sell coupon pack twice");
         Plugin.Summary.地图存档.是否位于工匠=true;var artisan=new 选择词条流程脚本();artisan.选择词条.词条剩余刷新次数=0;Check((bool)typeof(ArtisanCouponRefresh).GetMethod("Prefix",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,new object[]{artisan})&&ModuleSettings.LocalProgress.Coupons==0&&artisan.选择词条.词条剩余刷新次数==1,"artisan credits native refresh only after consuming one coupon");
         artisan.选择词条.词条剩余刷新次数=0;ArtisanCouponUi.Refresh(artisan);Check(!artisan.刷新按钮.interactable&&artisan.剩余刷新次数文本.text=="0","artisan button displays available retained coupon balance");
         Console.WriteLine($"PASS: {checks} production transfer UI behavior checks with code-level Unity objects");
     }
+}
+
+namespace CluckmechCoop { internal static class OtherworldProgress {internal static void RestoreNative() {}} internal static class ShopRewards {internal static void Spent(int amount,bool refreshed=false){} internal static void Save(){} internal static void Attach(商店脚本 shop){}} }
+
+namespace CluckmechCoop {
+ internal static class MapBoonsUi {internal static void RefreshCurrent(){}}
+ internal static class WealthEncounter {internal static void RefreshWarnings(){}}
+ internal static class ArtisanEconomy {internal static int Refund(int paid,int tier)=>(int)((long)paid*(tier==1?50:tier==2?20:0)/100);}
+}
+
+// UI tests use reflection only; the game's Harmony runtime targets Mono, not .NET 8.
+namespace CluckmechCoop {
+ internal static class AccessTools {
+  private const BindingFlags Flags=BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Static|BindingFlags.Instance;
+  internal static FieldInfo Field(Type type,string name)=>type.GetField(name,Flags);
+  internal static MethodInfo DeclaredMethod(Type type,string name,Type[] parameters)=>type.GetMethod(name,Flags|BindingFlags.DeclaredOnly,null,parameters,null);
+  internal static MethodInfo Method(Type type,string name,Type[] parameters=null)=>parameters==null?type.GetMethod(name,Flags):type.GetMethod(name,Flags,null,parameters,null);
+  internal static MethodInfo PropertyGetter(Type type,string name)=>type.GetProperty(name,Flags).GetGetMethod(true);
+  internal static MethodInfo PropertySetter(Type type,string name)=>type.GetProperty(name,Flags).GetSetMethod(true);
+ }
 }

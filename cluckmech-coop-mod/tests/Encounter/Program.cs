@@ -29,7 +29,8 @@ public static class 阵营数据库 { public enum 阵营{敌方,友方} }
 namespace CluckmechCoop
 {
  internal static class Plugin { internal static int Role;internal static 刷怪器 Spawner=new();internal static bool Challenge=>ModuleSettings.Active; }
- internal static class ModuleSettings {internal static bool Active=true;}
+ internal static class ModuleSettings {internal static bool Active=true;internal static bool InRun=true;internal static bool Expedition=>Active;}
+ internal static class WealthEncounter {internal static bool Spawning;}
  internal sealed class EncounterSession
  {
   internal readonly HashSet<GameObject> Living=new();
@@ -62,7 +63,7 @@ static class Program
   {var auxiliary=Unit();Awake(auxiliary);Check(auxiliary.GetComponent<EncounterEnemy>()==null&&auxiliary.GetComponent<Strength>()==null,"non-wave Awake never enrolls "+name);}
   var normal=Unit();Difficulty.Generated(normal);Difficulty.Generated(normal);
   Check(state.Living.Count==1&&state.StageCounts[2].Enemies==1,"native generated event enrolled exactly once");
-  Check(normal.GetComponent<Strength>().Health==1.5f&&normal.GetComponent<Strength>().Attack==2,"wave root receives intended replay modifiers");
+  Check(normal.GetComponent<Strength>().Health==2f&&normal.GetComponent<Strength>().Attack==2,"wave root receives intended replay modifiers");
   var building=Unit(模块_基本属性.单位类型枚举.建筑);Difficulty.Generated(building);
   Check(state.Living.Contains(building),"wave enemy building kept");
   var boss=Unit();boss.AddComponent<词条_100028_Boss胜利判断>();Difficulty.Generated(boss);

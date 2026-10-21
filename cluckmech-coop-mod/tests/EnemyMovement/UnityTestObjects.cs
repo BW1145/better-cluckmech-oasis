@@ -166,3 +166,5 @@ namespace CluckmechCoop
 }
 
 namespace CluckmechCoop { internal static class ModuleSettings { internal static bool Active = true; } }
+
+namespace CluckmechCoop { internal static class WealthEncounter {internal static bool Pending=>false;internal static bool DeferBoss(object owner,Action continuation)=>false;} }

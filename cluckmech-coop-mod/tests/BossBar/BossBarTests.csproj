@@ -3,6 +3,6 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="obj/BossBarMethods.cs" />
-    <Compile Include="../../../cluckmech-research/inspection/game/BossBloodstrip.cs" Link="BossBloodstrip.cs" />
+    <Compile Include="$(NativeGameSource)/BossBloodstrip.cs" Link="BossBloodstrip.cs" />
   </ItemGroup>
 </Project>

@@ -1,15 +1,49 @@
-# 更新检查入口
+# 离线检查入口
 
-在模组目录运行 `./ValidateUpdate.ps1 -GameDir <游戏目录> -NativeStateSource <原生状态源码> -Select All`。可以用 `-Select RuntimeScopes,ModuleLifecycle` 只执行受影响的检查；`-BuildMain` 构建主插件，`-Package` 使用已有三个 Release DLL 生成完整包。诊断与跳屏插件需要先按各自 csproj 构建。日志写入忽略的 `artifacts/checks`，失败立即返回非零退出码。
+运行版本：0.6.15。入口为模组目录下的 `ValidateUpdate.ps1`。
 
-| 检查层 | Suite | 实际覆盖 |
+```powershell
+./ValidateUpdate.ps1 -List
+./ValidateUpdate.ps1 -Select Rules,Stratagems
+./ValidateUpdate.ps1 -GameDir "游戏目录" -Select PerlicaHits,ObitoBalance
+```
+
+`-List` 仅列出名称；`-Select` 运行所选项并去重；`All` 包含下表全部检查，需要全部外部依赖。通常选择本次改动直接关联的项，通过后沿用结果。`-BuildMain` 构建主插件，`-Package` 使用已有三个Release DLL打包。
+
+| 选择名称 | 检查范围 | 依赖 |
 |---|---|---|
-| 纯规则 | ActionLifetime、Actor、Targets | 生产动作版本/输入与技能状态；生产范围查询加几何与单位替身，含递归独立快照 |
-| 生产逻辑加替身 | Visibility、CanvasOwnership、NestedHierarchy、SessionNotifications、Effects、SensorPrune、Invulnerability | 隐藏/销毁/重现、渲染缓存、父子单位共享Canvas恢复和深层监听所有权、会话消息注册；生产状态与区域聚合，原生状态代码摘录，传感器多碰撞体和无敌转换 |
-| 生产生命周期加替身 | RuntimeScopes、ModuleLifecycle、Modules、Storage | 实际场景清理协调器/会话状态；完整模块owner、两局与换关、三种角色与模块组合、ES3存储替身的损坏原档保护 |
-| 原生类型/序列化 | SaveValidation、Protocol、EffectProtocol | 实际游戏存档类型及JSON；实际Mirror字节固定样本和往返；战备协议枚举 |
-| 实际程序集绑定 | ActionWiring、RuntimeWiring、NotificationWiring、Transpilers | 最终DLL异步状态机接线、清理与会话注册释放；原生方法签名、精确转译匹配次数、缺失/重复接缝、组合顺序及IL栈 |
+| Rules | 转交守恒、鸡械快照比较、远征波次和倍率 | .NET 8 |
+| TransferProtocol | 直接运行生产TransferService：双方prepare/state/commit、重复消息、金币与鸡械守恒、精确快照及断线清理；同步/排队传输替身，设置同步就绪作为输入 | GameDir |
+| Stratagems | 战备参数与强化池、费用和冷却、范围衰减、护盾几何、吞噬选择、护卫犬与光束 | .NET 8 |
+| Characters、RunSave、Music | 原版角色补丁、原版核心存档修复、音乐池与加载顺序 | Music另需GameDir |
+| Actor、Motion、DashNetwork、Targets、PauseUi | 新角色输入/技能状态、动作、联机冲刺插值、范围查询、暂停页显示 | .NET 8 |
+| ActionLifetime、RuntimeScopes | 动作失效和场景/会话生命周期 | .NET 8 |
+| Visibility、CanvasOwnership、NestedHierarchy、SessionNotifications | 可见性、Canvas及监听所有权、会话处理器释放 | .NET 8 |
+| SaveValidation、Storage、Modules、ModuleLifecycle | 附加数据验证、存储保护、模块组合与换关/重开 | GameDir |
+| Protocol | 实际Mirror消息序列化和固定字节样本 | GameDir |
+| Effects、EffectProtocol、SensorPrune、Invulnerability | 战备状态、协议、传感器与无敌处理 | NativeStateSource |
+| Encounter、BossBar、EnemyMovement | 遭遇计数、Boss血条、原版移动及结算协调 | 后两项需NativeGameSource；EnemyMovement另需NativeNavigationSource |
+| TransferUi、Rig | 原版风格界面布局和战备部件动作，使用替身对象 | .NET 8；输出至artifacts/checks |
+| Bindings、NativeBindings、RuntimePaths | 模组/原版程序集接缝、签名及资源/运行路径 | GameDir、最终主插件DLL |
+| Transpilers、OtherworldBindings | 精确补丁匹配、组合顺序、IL栈、新角色绑定与研究门槛 | GameDir、最终主插件DLL |
+| PerlicaHits、ObitoBalance、BronzeMinerals、FlameTrigger | 闪链实际命中接线、带土数值、青铜龙及矿石、豪火触发点 | GameDir、最终主插件DLL |
+| SettlementRepairs、EnergyAudio、DashChain | 结算补丁、能源与音效接线、分段冲刺 | GameDir、最终主插件DLL |
+| Shop、ShopStock、ParticleInit、NativeRepairs | 商店生成与池子、粒子部件查找、原版修复绑定 | GameDir、最终主插件DLL |
+| ActionWiring、RuntimeWiring、NotificationWiring | 最终DLL动作失效、场景和通知释放接线 | 最终主插件DLL |
+| UiLayout、StratagemAssets、ProductionAtlas | 布局约束、战备图集、角色正式动作图集 | Python、Pillow；ProductionAtlas另需NumPy |
+| AssetSelection | 用正式嵌入图集执行生产角色素材选择器 | Python、.NET 8 SDK |
 
-以上检查不会运行 Unity 或游戏，也不代表真实联机、视觉或整局游玩验收。旧 `Integration`、`Stratagems` 夹具仍有基线过时接口，不计入本次通过项；本轮使用上表可运行且直接关联的生产逻辑套件。`All` 会完整运行一次，不用于重复执行已通过且未受改动影响的检查。
+## 外部资料参数
 
-`Prepare.ps1` 需要本机同版本 `模块_状态属性.cs`，仅在忽略的 obj 中生成检查输入；原生源码与游戏程序集均不得加入仓库或安装包。云端可复用同版本保留引用，并对照交接哈希。
+- `GameDir`：游戏安装目录，也可由 `CLUCKMECH_GAME_DIR` 提供。
+- `NativeStateSource`：同版本 `模块_状态属性.cs` 私有调查源码。
+- `NativeGameSource`：同版本原版源码目录；BossBar读取 `BossBloodstrip.cs`，EnemyMovement读取移动、仇恨、Boss与倒计时源码。
+- `NativeNavigationSource`：同版本PolyNavAgent源码文件。
+
+私有源码摘录仅生成到各测试的 `obj`，不进入仓库和安装包。测试读取生产源码或最终程序集；替身只负责提供原版/Unity依赖。这些检查验证各自列出的范围，不执行游戏、物理场景或真实双机传输。
+
+日志写入 `artifacts/checks/<名称>.log`，本次入口结果写入 `latest.json`。失败返回非零退出码；修正后只复查失败项和受影响部分。
+
+## 素材制作复核
+
+`Rig` 默认执行完整战备部件检查；局部制作复核还可直接使用其 `--vfx-revision`、`--rover-beam`、`--dock-alignment`、`--rover-visual`、`--laser-seam`、`--revision` 模式，按该程序参数提供JSON输出路径。角色离线动作预览见 `art/OtherworldRig/README.md`。这些制作工具与原图保留供后续修改使用。

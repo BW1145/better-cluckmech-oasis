@@ -33,7 +33,8 @@ def main():
     music = sorted((ROOT/'src/MusicAssets').glob('*.ogg'))
     sounds = [ROOT/'src/StratagemSounds'/name for name in ('barrage.ogg','eagle.ogg','laser-start.ogg','laser-loop.ogg','sounds.json')]
     assert len(music) == 10, 'Expected all ten OGG music tracks'
-    required = music + sounds + [ROOT/'src/MusicAssets/mix.json', ROOT/'使用说明.md', ROOT/'design/异界角色设计.md', ROOT/'dependencies/BepInEx-LICENSE.txt', ROOT/'evidence/startup-destruction/BepInEx.cfg.updated']
+    otherworld_sounds = [ROOT/'src/OtherworldSounds'/f'{name}.ogg' for name in ('kamui','kamui-in','kamui-out','perlica-shot','perlica-thunder','perlica-orbital','obito-throw','obito-fire')]
+    required = music + sounds + otherworld_sounds + [ROOT/'src/MusicAssets/mix.json', ROOT/'使用说明.md', ROOT/'design/异界角色设计.md', ROOT/'design/青铜龙雕像.md', ROOT/'dependencies/BepInEx-LICENSE.txt', ROOT/'dependencies/Defaults/BepInEx.cfg']
     required += [loader/name for name in ('winhttp.dll','doorstop_config.ini','.doorstop_version','changelog.txt','BepInEx/core/BepInEx.dll','BepInEx/core/0Harmony.dll','BepInEx/core/BepInEx.Preloader.dll')]
     required += [ROOT/"src/OtherworldAssets"/f"faithful-{hero}.{ext}" for hero in (0,1) for ext in ("png","json")]
     plans=[]
@@ -84,13 +85,16 @@ def main():
     shutil.copytree(ROOT/'src/MusicAssets',plugin/'Music')
     (plugin/'StratagemSounds').mkdir()
     for path in sounds:shutil.copy2(path,plugin/'StratagemSounds'/path.name)
+    (plugin/'OtherworldSounds').mkdir()
+    for path in otherworld_sounds:shutil.copy2(path,plugin/'OtherworldSounds'/path.name)
     config=package/'BepInEx/config';config.mkdir(exist_ok=True)
-    shutil.copy2(ROOT/'evidence/startup-destruction/BepInEx.cfg.updated',config/'BepInEx.cfg')
+    shutil.copy2(ROOT/'dependencies/Defaults/BepInEx.cfg',config/'BepInEx.cfg')
     (config/'billy.cluckmech.coop.diagnostics.cfg').write_bytes(b'[Diagnostics]\r\nDetailedScan = false\r\n')
-    modules=('Speed','Characters','Energy','Music','Growth','Shop','Expedition','Transfer','SkipSplash','Stratagems','NativeRepairs','Boons','Wealth','Otherworld')
+    modules=('Speed','Characters','Energy','Music','Growth','Shop','Expedition','Transfer','SkipSplash','Stratagems','NativeRepairs','Boons','Wealth','Otherworld','Bronze')
     (config/'billy.cluckmech.coop.cfg').write_bytes(('[Modules]\r\n'+''.join(f'{name} = true\r\n' for name in modules)).encode())
     shutil.copy2(ROOT/'使用说明.md',package/'使用说明.md');shutil.copy2(ROOT/'dependencies/BepInEx-LICENSE.txt',package/'BepInEx-LICENSE.txt')
-    (package/'design').mkdir();shutil.copy2(ROOT/'design/异界角色设计.md',package/'design/异界角色设计.md')
+    (package/'design').mkdir()
+    for name in ('异界角色设计.md','青铜龙雕像.md'):shutil.copy2(ROOT/'design'/name,package/'design'/name)
     archive=output/(package.name+'.zip')
     with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as z:
         for path in sorted(package.rglob('*')):
@@ -105,6 +109,7 @@ def main():
             hashes[dll.name]=hashlib.sha256(dll.read_bytes()).hexdigest()
         assert len([n for n in names if '/Music/' in n and n.endswith('.ogg')])==10
         assert len([n for n in names if '/StratagemSounds/' in n and n.endswith('.ogg')])==4
+        assert len([n for n in names if '/OtherworldSounds/' in n and n.endswith('.ogg')])==8
         assert not any(Path(n).name in ('Assembly-CSharp.dll','UnityEngine.dll','mscorlib.dll','netstandard.dll','Mirror.dll','Mirror.Components.dll') for n in names),'Private game assembly included'
         assert b'HideManagerGameObject = true' in z.read('BepInEx/config/BepInEx.cfg')
     hashes['archive']=hashlib.sha256(archive.read_bytes()).hexdigest()

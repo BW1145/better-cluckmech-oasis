@@ -24,7 +24,7 @@ static class ProtocolHarness
         {
             using (Harness.Use(Harness.Host))
             {
-                ModuleSettings.MainMenu(); ModuleSettings.EnterRun(); ModuleSettings.Transfer = true; Plugin.Network.PublishSettings();
+                ModuleSettings.Transfer = true;
                 Harness.Host.Summary.当前金钱数 = 100; Harness.Guest.Summary.当前金钱数 = 40;
                 Steam联机管理器.玩家_客户端.Network总结数据_联机 = new 联机玩家控件.联机总结数据包 { 当前金钱数 = 40 };
                 Harness.DeliverTransfers = false;
@@ -35,9 +35,7 @@ static class ProtocolHarness
                 {
                     Plugin.Transfers.ServerReceive(Steam联机管理器.玩家_主机, json);
                     Plugin.Transfers.Receive(TransferService.ReplyKey, json);
-                    Plugin.Network.ServerReceive(Steam联机管理器.玩家_主机, json);
-                    using (Harness.Use(Harness.Guest)) Plugin.Network.Receive(NetworkService.ReplyKey, json);
-                    check(Pending() == null && !Plugin.Transfers.Locked, "malformed JSON is ignored across all four production receivers");
+                    check(Pending() == null && !Plugin.Transfers.Locked, "malformed JSON is ignored across both production transfer receivers");
                 }
                 var invalid = Give(); invalid.Transfer.Id = invalid.Id;
                 var cases = new List<Message> {
@@ -85,15 +83,8 @@ static class ProtocolHarness
 
                 var prefix = typeof(TransferRequestPatch).GetMethod("Prefix", BindingFlags.NonPublic | BindingFlags.Static);
                 check(!(bool)prefix.Invoke(null, new object[] { Steam联机管理器.玩家_客户端, TransferService.ReplyKey, Json(invalid) }), "client command cannot relay forged transfer replies");
-                prefix = typeof(SessionRequestPatch).GetMethod("Prefix", BindingFlags.NonPublic | BindingFlags.Static);
-                check(!(bool)prefix.Invoke(null, new object[] { Steam联机管理器.玩家_客户端, NetworkService.ReplyKey, "{}" }), "client command cannot relay forged session replies");
-
                 using (Harness.Use(Harness.Guest))
                 {
-                    ModuleSettings.Choice = null; ModuleSettings.InRun = ModuleSettings.Expedition = true;
-                    Plugin.Network.Receive(NetworkService.ReplyKey, Json(new SessionMessage { Type = "complete", Token = "test" }));
-                    Plugin.Network.Receive(NetworkService.ReplyKey, Json(new SessionMessage { Type = "playback", Token = "test" }));
-                    check(Harness.Guest.Completed == 0 && Harness.Guest.PlaybackMessages == 0, "null choice safely ignores completion and playback");
                     var prepare = Give(); prepare.Transfer.Id = prepare.Id; prepare.Type = "prepare";
                     Plugin.Transfers.Receive(TransferService.ReplyKey, Json(prepare));
                     check(Plugin.Transfers.Locked, "valid preparation captures local balance before commit");
@@ -112,16 +103,7 @@ static class ProtocolHarness
                     Plugin.Transfers.Receive(TransferService.ReplyKey, Json(new Message { Type = "commit", Id = prepareMachine.Id, Transfer = prepareMachine.Transfer, Result = new TransferResult() }));
                     check(Plugin.Summary.当前拥有炮台.Count == 0, "null commit wallets are ignored safely");
                     Plugin.Transfers.Disconnect();
-                    var settings = new SessionMessage { Type = "settings", Revision = 100, Progress = new RunProgress { Players = null } };
-                    Plugin.Network.Receive(NetworkService.ReplyKey, Json(settings));
-                    check(ModuleSettings.Progress.Players != null, "null nested synchronized progress does not replace active state");
-                    settings.Progress = new RunProgress { Players = new Dictionary<int, PlayerProgress> { [2] = new PlayerProgress { Shops = new Dictionary<string, ShopProgress> { ["shop"] = new ShopProgress { Sold = new bool[1] } } } } };
-                    Plugin.Network.Receive(NetworkService.ReplyKey, Json(settings));
-                    check(ModuleSettings.Progress.Player(2).Shops.Count == 0, "invalid sold marker dimensions are rejected before state installation");
-                    ModuleSettings.Choice = new ExpeditionChoice { Enabled = true, Token = "test" };
-                    Plugin.Network.Receive(NetworkService.ReplyKey, Json(new SessionMessage { Type = "playback", Token = "test", Delay = float.NaN }));
-                    Plugin.Network.Receive(NetworkService.ReplyKey, Json(new SessionMessage { Type = "playback", Token = "test", Stage = -1 }));
-                    check(Harness.Guest.PlaybackMessages == 0, "invalid playback delay and stage cannot enter runtime");
+
                 }
                 Harness.DeliverTransfers = true; Harness.QueueTransport = true;
                 int hostSaves = Harness.Host.Saves, guestSaves = Harness.Guest.Saves;

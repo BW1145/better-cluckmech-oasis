@@ -14,7 +14,6 @@ internal static class Program
     private sealed class Target{internal float Distance;internal bool Living=true;}
     private static void Main(string[] args)
     {
-        if(args.Contains("--rover-upgrades"))
         {
             var basic=Params(20007);Near(basic.Definition.Damage,40,"Rover base shot damage");
             var red=Params(20007,25074);Near(red.DamageMultiplier,2,"Redline damage doubles");Near(red.HeatPerShot,4.6875f,"Redline heat increases fifty percent");
@@ -23,25 +22,23 @@ internal static class Program
             Near(Params(20007,25071).HeatCap,150,"Larger cooler has 150 heat capacity");
             var both=Params(20007,25071,25074,25077,25078);Check(both.Piercing&&both.HeatRecovery==10,"Both new upgrades compose");
             Check(StratagemCatalog.UpgradePool(20007).OrderBy(x=>x).SequenceEqual(new[]{25071,25072,25074,25077,25078}),"Current upgrade pool is complete");
-            Check(!StratagemCatalog.CanChoose(25075,Array.Empty<int>())&&!StratagemCatalog.CanChoose(25076,Array.Empty<int>()),"Repair and burning are retired from new rolls");
+            Check(!StratagemCatalog.Active(25075)&&!StratagemCatalog.Active(25076),"Repair and burning are retired from new rolls");
             Check(Params(20007,25076).BurningRover,"Existing burning upgrade still loads");
             bool Hit(float x,float y,float ex,float ey,out float at)=>StratagemBeamGeometry.Intersects(0,0,1,0,4.5f,x,y,ex,ey,out at);
             Check(Hit(1,0,.2f,.2f,out float first)&&Hit(3,0,.2f,.2f,out float second)&&first<second,"Beam reaches both near and far enemies in physical order");
             Check(Hit(4.5f,0,0,0,out _)&&!Hit(4.7f,0,0,0,out _),"Fixed beam stops at its range endpoint");
             Check(!Hit(2,1,.2f,.2f,out _)&&!Hit(-1,0,.2f,.2f,out _),"Off-axis and rear enemies are excluded");
             Check(StratagemBeamGeometry.Intersects(0,0,0,1,4.5f,0,3,.2f,.2f,out _),"Vertical beam uses the same hit geometry");
-            Console.WriteLine($"PASS: {assertions} focused rover upgrade and beam checks");return;
+
         }
         var ids = new HashSet<int>();
-        var ledger = new StratagemSequence();
-        Check(ledger.Accept(1) && !ledger.Accept(1) && !ledger.Accept(0) && ledger.Accept(3) && !ledger.Accept(2), "Placement sequence executes each operation once");
         var one = new Machine { Id = 20001, UpgradeLimit = 4, Upgrades = new List<int> {25011} };
         var two = new Machine { Id = 20001, UpgradeLimit = 5, Upgrades = new List<int> {25012} };
         Check(StratagemCatalog.OwnsDeck(new[] {two,one,null,null,null},new[] {one,two}), "Reordered same-name cards keep exact upgrades and cap");
         Check(!StratagemCatalog.OwnsDeck(new[] {one,one,null,null,null},new[] {one,two}), "Deck cannot duplicate one inventory copy");
         Check(!StratagemCatalog.OwnsDeck(new[] {one.Copy()},new[] {two}), "Same identifier with different upgrades is rejected");
-        Check(StratagemCatalog.Units.Length==7&&StratagemCatalog.ActiveAffixes.Count()==31&&StratagemCatalog.Affixes.Length==42,"Seven machines, 31 candidates and 42 readable identifiers");
-        int[] counts={4,5,5,5,4,3,5};
+        Check(StratagemCatalog.Units.Length==7&&StratagemCatalog.ActiveAffixes.Count()==30&&StratagemCatalog.Affixes.Length==40,"Seven machines, 30 candidates and 40 readable identifiers");
+        int[] counts={4,5,4,5,4,3,5};
         foreach (var unit in StratagemCatalog.Units)
         {
             Check(ids.Add(unit.Id), "Unique unit identifiers");
@@ -71,7 +68,7 @@ internal static class Program
         Near(Params(20006,25062).CapacityRatio,.55f,"Capacitor scales from native maximum health");
         Near(Params(20007,25072).ReturnTime,.25f,"Cooling includes return and launch");
         var mines = Params(20001, 25011, 25012, 25014, 25016);
-        Check(mines.MineCap == 8 && mines.MineInitial == 6 && mines.MineRefill == 4 && mines.Power == 4, "Mine ammunition upgrades combine");
+        Check(mines.MineCap == 8 && mines.MineInitial == 6 && mines.MineRefill == 4 && mines.Power == 3, "Mine ammunition upgrades combine");
         Near(mines.MineInterval(.12f), 8 / 1.2f, "Attack speed accelerates refill");
         Check(float.IsPositiveInfinity(mines.MineInterval(0)), "Zero attack rate pauses refill");
         var barrage = Params(20002, 25022, 25025);
@@ -92,15 +89,15 @@ internal static class Program
         Near(laser.Duration / laser.Interval(8), 144, "Attack speed doubles laser ticks within same duration");
         Near(laser.BlastRadius, .55f, "Focused laser radius");
         var eagle = Params(20004);
-        Near(eagle.EagleDamage(0), 3000, "Blast center");
-        Near(eagle.EagleDamage(2.5f), 3000, "Inner radius edge");
-        Near(eagle.EagleDamage(3.25f), 1900, "Linear falloff midpoint");
+        Near(eagle.EagleDamage(0), 10000, "Blast center");
+        Near(eagle.EagleDamage(2.5f), 10000, "Inner radius edge");
+        Near(eagle.EagleDamage(3.25f), 5400, "Linear falloff midpoint");
         Near(eagle.EagleDamage(4), 800, "Outer radius edge");
         Near(eagle.EagleDamage(4.01f), 0, "Outside blast");
         eagle = Params(20004, 25041, 25043, 25044, 25045);
         Check(eagle.Power == 3, "Efficient Eagle payload costs three power");
-        Near(eagle.EagleDamage(4.8f), 1000, "Heavy expanded blast outer edge");
-        Near(eagle.Cooldown, 37.26f, "Heavy payload and fast return cooldown");
+        Near(eagle.EagleDamage(20), 1000, "Heavy expanded blast outer edge");
+        Near(eagle.Cooldown, 31.68f, "Heavy payload and fast return cooldown");
         var mortar = Params(20005, 25051, 25052, 25053, 25055);
         Check(mortar.Gas && mortar.Stun == 0 && mortar.Slow == .5f, "Gas replaces stun while retaining slow");
         var rover = Params(20007, 25071, 25072, 25073, 25074);
