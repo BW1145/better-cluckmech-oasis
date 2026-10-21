@@ -56,13 +56,13 @@ namespace CluckmechCoop
         private static void Bombard(OtherworldActor actor,Vector2 point,float radius,float damage,bool ultimate,bool rewards=false)
         {
             Visual(actor, ultimate ? 3 : 2, point, .5f, radius);
-            OtherworldNetwork.Effect(actor, ultimate ? 3 : 2, point, .5f, radius);
+            if(ultimate)OtherworldNetwork.Effect(actor, 3, point, .5f, radius);
             if (ultimate)
             {
                 actor.StartCoroutine(OrbitalImpact(actor, point, radius, damage, rewards, actor.Space));
                 return;
             }
-            ApplyBombard(actor, point, radius, damage, rewards);
+            ApplyBombard(actor, point, radius, damage, rewards, ultimate);
         }
         private static IEnumerator OrbitalImpact(OtherworldActor actor,Vector2 point,float radius,float damage,bool rewards,int space)
         {
@@ -72,15 +72,16 @@ namespace CluckmechCoop
             yield return new WaitForSeconds(.14f);
             if (actor != null && owner.Actions.Current(lease) && actor.Space == space)
             {
-                ApplyBombard(actor, point, radius, damage, rewards);
+                ApplyBombard(actor, point, radius, damage, rewards, true);
             }
         }
-        private static void ApplyBombard(OtherworldActor actor,Vector2 point,float radius,float damage,bool rewards)
+        private static void ApplyBombard(OtherworldActor actor,Vector2 point,float radius,float damage,bool rewards,bool delayed)
         {
             var targets = new List<OtherworldUnit>();
             OtherworldWorld.CollectNearby(actor.gameObject, point, radius, targets);
             var detailed = actor.GetComponent<模块_攻击详细属性>();
             Vector4 shock = detailed.状态加成列表[(int)攻击类型与状态数据库.状态枚举.感电].当前属性效果;
+            using var display=Plugin.Role==1?new OtherworldHitDisplay.Batch():null;
             int hits = 0;
             foreach (var target in targets)
             {
@@ -93,6 +94,7 @@ namespace CluckmechCoop
                     actor.StartCoroutine(Pull(target, point));
                 }
             }
+            OtherworldNetwork.Effect(actor,delayed?0:2,point,.5f,radius,display?.Hits);
             if (rewards && hits > 0 && actor.Run.Has(26103)) RewardGold(actor, hits*5);
         }
         private static IEnumerator Pull(OtherworldUnit unit,Vector2 point)
@@ -136,9 +138,10 @@ namespace CluckmechCoop
             {
                 var target = targets[i];
                 if (target == null || target.Space != actor.Space || target.Health.当前生命值 <= 0) continue;
+                using var display=Plugin.Role==1?new OtherworldHitDisplay.Batch():null;
                 Hit(actor, target, damage*3);
                 OtherworldFx.Beam(previous, target.transform.position, .18f);
-                OtherworldNetwork.Send(new OtherworldMessage
+                OtherworldNetwork.SendDisplay(new OtherworldMessage
                 {
                     Kind = OtherworldMessageKind.Beam,
                     Player = StratagemWorld.Id(actor.gameObject),
@@ -147,7 +150,7 @@ namespace CluckmechCoop
                     EndX = target.transform.position.x,
                     EndY = target.transform.position.y,
                     Duration = .18f
-                }, actor.Space == 0 ? -1 : actor.Role);
+                }, display?.Hits, actor.Space == 0 ? -1 : actor.Role);
                 previous = target.transform.position;
             }
             actor.ReduceCooldown(Mathf.Min(2, count*.5f));
@@ -157,6 +160,7 @@ namespace CluckmechCoop
             Vector2 direction = (actor.Aim-(Vector2)actor.transform.position).normalized;
             var targets = new List<OtherworldUnit>();
             OtherworldWorld.CollectNearby(actor.gameObject, actor.transform.position, 6, targets);
+            using var display=Plugin.Role==1?new OtherworldHitDisplay.Batch():null;
             bool hit=false;
             foreach (var target in targets)
             {
@@ -169,7 +173,7 @@ namespace CluckmechCoop
             }
             if(hit&&actor.Run.Has(26124))actor.ReduceCooldown(2);
             Visual(actor, 5, actor.transform.position, .35f, 1);
-            OtherworldNetwork.Effect(actor, 5, actor.transform.position, .35f, 1);
+            OtherworldNetwork.Effect(actor, 5, actor.transform.position, .35f, 1,display?.Hits);
         }
         internal static void Rally(OtherworldActor actor)
         {
@@ -188,33 +192,36 @@ namespace CluckmechCoop
                 if (actor == null || !owner.Actions.Current(lease) || actor.Death.是否玩家死亡) yield break;
                 Vector2 direction = (actor.Aim-(Vector2)actor.transform.position).normalized;
                 Visual(actor, 4, actor.transform.position, .24f, 1);
-                OtherworldNetwork.Effect(actor, 4, actor.transform.position, .24f, 1);
-                OtherworldWorld.CollectNearby(actor.gameObject, actor.transform.position, 5, targets);
-                foreach (var target in targets)
+                using(var display=Plugin.Role==1?new OtherworldHitDisplay.Batch():null)
                 {
-                    if (target == null || target.Space != actor.Space || target.Health.当前生命值 <= 0) continue;
-                    if (Vector2.Dot(((Vector2)target.transform.position-(Vector2)actor.transform.position).normalized, direction) < .5f) continue;
-                    if (!target.Health.当前是否无敌 && settled.Add(target))
+                    OtherworldWorld.CollectNearby(actor.gameObject, actor.transform.position, 5, targets);
+                    foreach (var target in targets)
                     {
-                        var states = target.GetComponent<模块_状态属性>();
-                        if (states != null)
+                        if (target == null || target.Space != actor.Space || target.Health.当前生命值 <= 0) continue;
+                        if (Vector2.Dot(((Vector2)target.transform.position-(Vector2)actor.transform.position).normalized, direction) < .5f) continue;
+                        if (!target.Health.当前是否无敌 && settled.Add(target))
                         {
-                            float bonus=OtherworldBurnSettlement.Consume(states.当前状态列表);
-                            if(bonus>0)
+                            var states = target.GetComponent<模块_状态属性>();
+                            if (states != null)
                             {
-                                float health=target.Health.当前生命值;
-                                target.GetComponent<模块_受伤>()?.受到伤害(new 模块_状态持续效果.状态伤害类
-                                    {状态=攻击类型与状态数据库.状态枚举.灼烧,数值=bonus});
-                                float dealt=health-target.Health.当前生命值;
-                                if(dealt>0)
-                                {target.Health.最近攻击者=actor.gameObject;target.Health.最近受到伤害=dealt;}
+                                float bonus=OtherworldBurnSettlement.Consume(states.当前状态列表);
+                                if(bonus>0)
+                                {
+                                    float health=target.Health.当前生命值;
+                                    target.GetComponent<模块_受伤>()?.受到伤害(new 模块_状态持续效果.状态伤害类
+                                        {状态=攻击类型与状态数据库.状态枚举.灼烧,数值=bonus});
+                                    float dealt=health-target.Health.当前生命值;
+                                    if(dealt>0)
+                                    {target.Health.最近攻击者=actor.gameObject;target.Health.最近受到伤害=dealt;}
+                                }
                             }
                         }
+                        if(target.Health.当前生命值<=0)continue;
+                        Hit(actor, target, actor.Attack.当前攻击力*2);
+                        var burn = actor.GetComponent<模块_攻击详细属性>().状态加成列表[(int)攻击类型与状态数据库.状态枚举.灼烧];
+                        Status(target, actor.gameObject, 攻击类型与状态数据库.状态枚举.灼烧, burn.当前持续时间, burn.当前属性效果);
                     }
-                    if(target.Health.当前生命值<=0)continue;
-                    Hit(actor, target, actor.Attack.当前攻击力*2);
-                    var burn = actor.GetComponent<模块_攻击详细属性>().状态加成列表[(int)攻击类型与状态数据库.状态枚举.灼烧];
-                    Status(target, actor.gameObject, 攻击类型与状态数据库.状态枚举.灼烧, burn.当前持续时间, burn.当前属性效果);
+                    OtherworldNetwork.Effect(actor,4,actor.transform.position,.24f,1,display?.Hits);
                 }
                 yield return new WaitForSeconds(.2f);
             }

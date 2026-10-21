@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/KamuiPrefabs.cs" Link="Production/KamuiPrefabs.cs" />
+    <Compile Include="../../src/OtherworldHitDisplay.cs" Link="Production/OtherworldHitDisplay.cs" />
+    <Compile Include="../CoopRepairs/Stubs.cs" Link="Stubs.cs" />
+    <Compile Include="Fixture.cs" />
+    <Compile Include="Program.cs" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+</Project>

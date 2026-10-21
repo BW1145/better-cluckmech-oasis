@@ -1,7 +1,7 @@
 param(
     [string]$GameDir=$env:CLUCKMECH_GAME_DIR,
     [string]$NativeStateSource,
-    [string]$NativeGameSource,
+    [Alias('NativeSource')][string]$NativeGameSource,
     [string]$NativeNavigationSource,
     [string[]]$Select=@('All'),
     [switch]$List,
@@ -36,16 +36,16 @@ $bindingModes=[ordered]@{
     Bindings='';Transpilers='--transpilers';OtherworldBindings='--otherworld';PerlicaHits='--perlica-hits'
     ObitoBalance='--obito-balance';BronzeMinerals='--bronze-minerals';FlameTrigger='--flame-trigger'
     SettlementRepairs='--settlement-repairs';EnergyAudio='--energy-audio';DashChain='--dash-chain'
-    Shop='--shop';ShopStock='--shop-stock';ParticleInit='--particle-init';NativeRepairs='--native-repairs'
+    CoopRepairWiring='--coop-repairs';Shop='--shop';ShopStock='--shop-stock';ParticleInit='--particle-init';NativeRepairs='--native-repairs'
 }
 $projects=[ordered]@{
     Rules=@('','RulesTests.csproj');Characters=@('Characters','CharacterTests.csproj')
     Stratagems=@('Stratagems','StratagemTests.csproj');Motion=@('OtherworldMotion','OtherworldMotionTests.csproj')
     DashNetwork=@('OtherworldDashNetwork','OtherworldDashNetworkTests.csproj');PauseUi=@('PauseUi','PauseUiTests.csproj')
     RunSave=@('RunSave','RunSaveTests.csproj');TransferUi=@('TransferUi','TransferUiTests.csproj')
-    Rig=@('Rig','RigTests.csproj');TransferProtocol=@('TransferProtocol','TransferProtocolTests.csproj')
+    CoopRepairLimits=@('CoopRepairLimits','CoopRepairLimitsTests.csproj');Rig=@('Rig','RigTests.csproj');TransferProtocol=@('TransferProtocol','TransferProtocolTests.csproj')
 }
-$known=@('ActionLifetime','Actor','Targets','RuntimeScopes','Visibility','CanvasOwnership','NestedHierarchy','SessionNotifications','Effects','EffectProtocol','SensorPrune','Invulnerability','SaveValidation','Storage','Modules','ModuleLifecycle','Protocol','ActionWiring','RuntimeWiring','NotificationWiring','Music','Encounter','BossBar','EnemyMovement','NativeBindings','RuntimePaths','UiLayout','StratagemAssets','ProductionAtlas','AssetSelection')+@($projects.Keys)+@($bindingModes.Keys)
+$known=@('CoopRepairs','CoopRepairNetwork','StratagemHitDisplay','ActionLifetime','Actor','Targets','RuntimeScopes','Visibility','CanvasOwnership','NestedHierarchy','SessionNotifications','Effects','EffectProtocol','SensorPrune','Invulnerability','SaveValidation','Storage','Modules','ModuleLifecycle','Protocol','ActionWiring','RuntimeWiring','NotificationWiring','Music','Encounter','BossBar','EnemyMovement','NativeBindings','RuntimePaths','UiLayout','StratagemAssets','ProductionAtlas','AssetSelection')+@($projects.Keys)+@($bindingModes.Keys)
 if($List){$known;return}
 foreach($name in $Select){if($name -ne 'All' -and $name -notin $known){throw "Unknown suite: $name"}}
 $suites=@(if('All' -in $Select){$known}else{$Select}) | Select-Object -Unique
@@ -56,6 +56,7 @@ try {
         Invoke-Check 'BuildMain' 'dotnet' @('build',(Join-Path $root 'src/CluckmechCoop.csproj'),'-c','Release',"-p:GameDir=$GameDir",'-p:NuGetAudit=false','--nologo')
     }
     $effectsPrepared=$false
+    $coopPrepared=$false
     foreach($suite in $suites){
         if($projects.Contains($suite)){
             $entry=$projects[$suite]
@@ -72,6 +73,19 @@ try {
             continue
         }
         switch($suite){
+            {$_ -in @('CoopRepairs','CoopRepairNetwork')} {
+                if(-not $NativeGameSource){throw 'NativeGameSource (alias NativeSource) is required for CoopRepairs'}
+                if(-not $coopPrepared){
+                    Invoke-Check 'PrepareCoopRepairs' 'pwsh' @('-NoProfile','-File',(Join-Path $root 'tests/CoopRepairs/Prepare.ps1'),'-NativeSource',$NativeGameSource)
+                    $coopPrepared=$true
+                }
+                $extra=if($suite -eq 'CoopRepairNetwork'){@('--network')}else{@()}
+                Invoke-Test $suite 'CoopRepairs' 'CoopRepairsTests.csproj' $extra -Native
+            }
+            'StratagemHitDisplay' {
+                Invoke-Check 'PrepareStratagemHitDisplay' 'python' @((Join-Path $root 'tests/StratagemHitDisplay/Prepare.py'))
+                Invoke-Test $suite 'StratagemHitDisplay' 'StratagemHitDisplayTests.csproj'
+            }
             'ActionLifetime' {Invoke-Test $suite 'UnitLifecycle' 'UnitLifecycleTests.csproj'}
             'Actor' {Invoke-Test $suite 'OtherworldActor' 'OtherworldActorTests.csproj'}
             'Targets' {Invoke-Test $suite 'OtherworldTargets' 'OtherworldTargetsTests.csproj'}

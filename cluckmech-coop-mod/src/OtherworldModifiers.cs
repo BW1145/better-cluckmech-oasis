@@ -113,7 +113,8 @@ namespace CluckmechCoop
                 actor.Avoid(sjb);
                 return false;
             }
-            if(Plugin.Role==2&&(unit.Space!=0||OtherworldProgress.For(sjb.攻击者)!=null))return false;
+            if(Plugin.Role==2&&(unit.Space!=0||OtherworldProgress.For(sjb.攻击者)!=null))
+            {OtherworldHitDisplay.Local(__instance,unit,sjb);return false;}
             if(unit.Space!=0&&unit.Health.当前阵营==阵营数据库.阵营.敌方&&KamuiWorld.Run(unit.Space)?.Has(26116)==true)
             {
                 sjb=new 世界类.伤害数据包{攻击者=sjb.攻击者,攻击目标=sjb.攻击目标,攻击坐标=sjb.攻击坐标,是否制导=sjb.是否制导,

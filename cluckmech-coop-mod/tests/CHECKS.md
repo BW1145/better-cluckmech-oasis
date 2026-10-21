@@ -1,6 +1,6 @@
 # 离线检查入口
 
-运行版本：0.6.15。入口为模组目录下的 `ValidateUpdate.ps1`。
+运行版本：0.6.16。入口为模组目录下的 `ValidateUpdate.ps1`。
 
 ```powershell
 ./ValidateUpdate.ps1 -List
@@ -13,6 +13,8 @@
 | 选择名称 | 检查范围 | 依赖 |
 |---|---|---|
 | Rules | 转交守恒、鸡械快照比较、远征波次和倍率 | .NET 8 |
+| CoopRepairs、CoopRepairNetwork、CoopRepairWiring | 原版周期生成、神威模板身份、客机反馈与真实程序集接线；排队模式单独选择 | GameDir；前两项另需NativeGameSource |
+| CoopRepairLimits、StratagemHitDisplay | 模板索引工作量、延迟显示队列边界、战备与状态显示分批，使用既有替身 | .NET 8、Newtonsoft.Json 13.0.3；后者另需Python |
 | TransferProtocol | 直接运行生产TransferService：双方prepare/state/commit、重复消息、金币与鸡械守恒、精确快照及断线清理；同步/排队传输替身，设置同步就绪作为输入 | GameDir |
 | Stratagems | 战备参数与强化池、费用和冷却、范围衰减、护盾几何、吞噬选择、护卫犬与光束 | .NET 8 |
 | Characters、RunSave、Music | 原版角色补丁、原版核心存档修复、音乐池与加载顺序 | Music另需GameDir |
@@ -37,7 +39,7 @@
 
 - `GameDir`：游戏安装目录，也可由 `CLUCKMECH_GAME_DIR` 提供。
 - `NativeStateSource`：同版本 `模块_状态属性.cs` 私有调查源码。
-- `NativeGameSource`：同版本原版源码目录；BossBar读取 `BossBloodstrip.cs`，EnemyMovement读取移动、仇恨、Boss与倒计时源码。
+- `NativeGameSource`（兼容别名 `NativeSource`）：同版本原版源码目录；BossBar读取 `BossBloodstrip.cs`，EnemyMovement读取移动、仇恨、Boss与倒计时源码；CoopRepairs还需世界类、原版周期词条和 `函数库/词条函数.cs`。
 - `NativeNavigationSource`：同版本PolyNavAgent源码文件。
 
 私有源码摘录仅生成到各测试的 `obj`，不进入仓库和安装包。测试读取生产源码或最终程序集；替身只负责提供原版/Unity依赖。这些检查验证各自列出的范围，不执行游戏、物理场景或真实双机传输。

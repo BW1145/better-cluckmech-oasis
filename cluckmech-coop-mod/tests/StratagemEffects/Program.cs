@@ -400,3 +400,5 @@ static class Program
 }
 
 namespace CluckmechCoop {internal static class OtherworldWorld {internal static int Space(GameObject obj)=>0;}}
+
+namespace CluckmechCoop {internal static class StratagemHitDisplay {internal static void TrackSource(GameObject source){} internal static IDisposable Capture()=>new Scope();private sealed class Scope:IDisposable {public void Dispose(){}}}}
