@@ -23,6 +23,11 @@ namespace CluckmechCoop
         {
             Region = null;
             if (!ModuleSettings.Extra.Growth || spawner.数据 == null || spawner.数据.是否最终关卡) return;
+            if (ThemeBranchRuntime.InBranch)
+            {
+                if (ThemeBranchRuntime.CurrentStep == 5) Region = ThemeBranchRuntime.State.Token + ":boss";
+                return;
+            }
             if (spawner.数据.波次数据.SelectMany(x => x.组次数据).SelectMany(x => x.单位).Any(x => x != null && regionBosses.Contains(x.name)))
                 Region = Plugin.Summary.地图存档.当前地图页位置 + ":" + Plugin.Summary.地图存档.当前地图页;
         }

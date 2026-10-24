@@ -90,10 +90,11 @@ namespace CluckmechCoop
         {
             EnterRun();
             run.ApplyHostSettings(expedition, transfer, choice, modules, progress);
+            ThemeBranchRuntime.SettingsReceived();
         }
         internal static void SetPlayerProgress(int role, PlayerProgress progress) => run.SetPlayerProgress(role, progress);
-        internal static bool Active => InRun && Expedition && !FinalLevel && Choice != null && Choice.Enabled;
-        internal static bool FinalLevel => Plugin.Spawner?.数据?.是否最终关卡 == true || Plugin.Summary?.地图存档?.当前场景名 == "绿洲";
+        internal static bool Active => InRun && Expedition && !ThemeBranchRuntime.InBranch && !FinalLevel && Choice != null && Choice.Enabled;
+        internal static bool FinalLevel => !ThemeBranchRuntime.InBranch && (Plugin.Spawner?.数据?.是否最终关卡 == true || Plugin.Summary?.地图存档?.当前场景名 == "绿洲");
         internal static string NodeKey
         {
             get
@@ -105,7 +106,7 @@ namespace CluckmechCoop
         internal static void Prepare()
         {
             EnterRun();
-            if (!Expedition || Plugin.Role == 2 || NodeKey == null) return;
+            if (!Expedition || ThemeBranchRuntime.InBranch || Plugin.Role == 2 || NodeKey == null) return;
             string node = NodeKey;
             if (Choice != null && (Choice.Node == node || Choice.Node?.StartsWith(node + ":", StringComparison.Ordinal) == true))
             {
@@ -125,6 +126,7 @@ namespace CluckmechCoop
         }
         internal static void Freeze()
         {
+            if (ThemeBranchRuntime.InBranch) return;
             Prepare();
             if (Choice != null) Choice.Locked = true;
         }
@@ -147,11 +149,16 @@ namespace CluckmechCoop
             if (Plugin.Role == 2) Plugin.Network.SendProgress(LocalProgress);
             else Plugin.Summary?.保存单局存档();
         }
-        internal static void Save(存档脚本 save) => saves.Save(save, run, Plugin.Role);
+        internal static void Save(存档脚本 save)
+        {
+            if (RunSaveRepair.IsRunSlot(save)) ThemeBranchRuntime.Capture();
+            saves.Save(save, run, Plugin.Role);
+        }
         internal static void Load(存档脚本 save)
         {
             if (!saves.TryLoad(save, Plugin.Role, out var snapshot)) return;
             run.Restore(snapshot.Progress, snapshot.Choice);
+            ThemeBranchRuntime.Restore();
             KamuiWorld.Load(snapshot.Characters);
             EnterRun();
         }

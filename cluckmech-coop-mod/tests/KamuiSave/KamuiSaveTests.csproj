@@ -6,10 +6,11 @@
   <ItemGroup>
     <Compile Include="../../src/KamuiSaveValidation.cs"/><Compile Include="../../src/OtherworldDataValidation.cs"/><Compile Include="../../src/NetworkValues.cs"/><Compile Include="../../src/OtherworldCatalog.cs"/><Compile Include="../../src/OtherworldTalentIds.cs"/><Compile Include="../../src/OtherworldRun.cs"/><Compile Include="../../src/Rules.cs"/><Compile Include="../../src/ExpansionRules.cs"/><Compile Include="../../src/StratagemRules.cs"/><Compile Include="../../src/ModuleSettings.cs"/>
     <Compile Include="../../src/ModulePreferences.cs"/><Compile Include="../../src/ModuleRunState.cs"/><Compile Include="../../src/ModuleSaveStore.cs"/>
+    <Compile Include="../../src/ThemeBranchState.cs"/>
     <Compile Include="../../src/OtherworldTalentState.cs"/>
     <Compile Include="../../src/OtherworldBurnSettlement.cs"/>
     <Compile Include="../../src/BronzeDragonRules.cs"/>
-    <Compile Include="Program.cs"/><Compile Include="StorageHarness.cs"/><Compile Include="ModuleStateHarness.cs"/><Compile Include="LifecycleHarness.cs"/>
+    <Compile Include="Program.cs"/><Compile Include="StorageHarness.cs"/><Compile Include="ModuleStateHarness.cs"/><Compile Include="LifecycleHarness.cs"/><Compile Include="ThemeBranchHarness.cs"/>
     <Reference Include="Game"><HintPath>$(Managed)/Assembly-CSharp.dll</HintPath></Reference>
     <Reference Include="UnityEngine"><HintPath>$(Managed)/UnityEngine.dll</HintPath></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)/UnityEngine.CoreModule.dll</HintPath></Reference>

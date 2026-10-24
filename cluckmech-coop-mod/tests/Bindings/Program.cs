@@ -20,6 +20,16 @@ var original=Assembly.LoadFrom(Path.Combine(managed,"Assembly-CSharp.dll"));
 var mod=Assembly.LoadFrom(Path.Combine(root,"src/bin/Release/net472/CluckmechCoop.dll"));
 int checks=0;
 try{
+if(args.Length>2 && args[2]=="--theme-message-size")
+{
+    ThemeBranchBindings.MessageSize(original,mod);
+    return;
+}
+if(args.Length>2 && args[2]=="--theme-branch-wiring")
+{
+    ThemeBranchBindings.Run(original,mod);
+    return;
+}
 if(args.Length>2 && args[2]=="--coop-repairs")
 {
     CoopRepairChecks.Run(original,mod);

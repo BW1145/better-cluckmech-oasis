@@ -66,7 +66,7 @@ namespace CluckmechCoop
         {
             if(WealthEncounter.Spawning)return;
             var spawner = Spawning != null ? Spawning : Plugin.Spawner;
-            if (Plugin.Role == 2 || spawner == null || !ModuleSettings.Expedition || unit == null) return;
+            if (Plugin.Role == 2 || spawner == null || !ModuleSettings.Expedition || ThemeBranchRuntime.InBranch || unit == null) return;
             if (!CountsForEncounter(unit)) return;
             if (IsFinalBoss(unit)) { Mark(unit,true,false); return; }
             if (!ModuleSettings.Active) return;

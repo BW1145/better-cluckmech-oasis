@@ -50,6 +50,14 @@ namespace CluckmechCoop
         internal static bool IsRunSlot(存档脚本 save)=>save.文件名=="danju"||save.文件名=="lianji";
         internal static bool CanSave(存档脚本 save)=>true;
     }
+    internal static class ThemeBranchRuntime
+    {
+        internal static int Captures, Restores, Settings;
+        internal static bool InBranch=>ModuleSettings.Progress.Branch.Active;
+        internal static void Capture()=>Captures++;
+        internal static void Restore()=>Restores++;
+        internal static void SettingsReceived()=>Settings++;
+    }
     internal static class StratagemDeployment { internal static void Capture(){} }
     internal static class NativeRepairs { internal static bool Enabled; }
     internal static class ArtisanEconomy { internal static int Refund(int paid,int tier)=>0; }
@@ -113,6 +121,28 @@ static class StorageHarness
             }
             ES3.Data[path+Characters]="{\"Players\":{},\"Rooms\":[]}";ModuleSettings.Load(save);ModuleSettings.Save(save);
             Check(ES3.Writes==3,"successful repaired reread re-enables all three addon writes");
+            const string progressKey="CluckmechCoop.Progress.v4";
+            foreach(var broken in new Action<RunProgress>[] {
+                p=>p.Branch=null,
+                p=>p.Branch.Eldritch=new bool[2],
+                p=>{p.Branch=ThemeBranchHarness.Entered();p.Branch.MainMap="{}";}
+            })
+            {
+                var progress=new RunProgress();broken(progress);
+                string original=JsonConvert.SerializeObject(progress);
+                ES3.Data.Clear();ES3.Writes=0;Plugin.Warnings.Clear();ModuleSettings.InRun=false;
+                ES3.Data[path+"native"]="native route snapshot";ES3.Data[path+progressKey]=original;
+                ModuleSettings.Load(save);
+                Check(ModuleSettings.Progress.Branch.Valid&&!ModuleSettings.Progress.Branch.Used,"invalid branch restores an unused fallback");
+                Check(Plugin.Warnings.Count==1&&Plugin.Warnings[0].Contains(progressKey),"invalid branch identifies its progress addon");
+                ModuleSettings.Save(save);
+                Check(ES3.Writes==0&&Equals(ES3.Data[path+progressKey],original)&&Equals(ES3.Data[path+"native"],"native route snapshot"),"invalid branch bytes and native return data are protected from autosave");
+            }
+            var legacy=JObject.FromObject(new RunProgress());legacy.Remove("Branch");
+            ES3.Data[path+progressKey]=legacy.ToString(Formatting.None);ModuleSettings.Load(save);
+            Check(ModuleSettings.Progress.Branch.Valid&&!ModuleSettings.Progress.Branch.Used,"legacy progress restores the default branch through production storage");
+            ES3.Writes=0;ModuleSettings.Save(save);
+            Check(ES3.Writes==3,"valid legacy load restores normal addon saving");
         }
         Console.WriteLine($"PASS: {checks} addon fallback/storage checks using complete production module persistence and real character validation");
     }

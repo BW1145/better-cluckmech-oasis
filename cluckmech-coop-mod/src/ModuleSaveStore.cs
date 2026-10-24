@@ -90,12 +90,13 @@ namespace CluckmechCoop
         private static bool ValidProgress(JObject data, RunProgress progress)
         {
             if (!HasFields(data, JTokenType.Boolean, "EnergyUsed") ||
-                !progress.ValidEnergy || !progress.ValidBoons ||
+                !progress.ValidEnergy || !progress.ValidBoons || progress.Branch == null || !progress.Branch.Valid ||
                 !(data["Players"] is JObject players) || progress.Players == null) return false;
             foreach (var entry in progress.Players)
             {
                 var player = entry.Value;
                 if (entry.Key < 0 || entry.Key > 2 || player == null || player.Coupons < 0 ||
+                    player.ThemeRewardToken != null && !Guid.TryParseExact(player.ThemeRewardToken, "N", out _) ||
                     !player.ValidGrowthRewards() || !player.ValidArtisan || !player.ValidShop ||
                     player.Regions == null || player.RepairNodes == null ||
                     player.Shops == null || player.StratagemCooldowns == null) return false;

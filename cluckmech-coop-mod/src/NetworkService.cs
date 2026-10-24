@@ -100,6 +100,7 @@ namespace CluckmechCoop
         private static bool ValidProgress(PlayerProgress progress)
         {
             if (progress == null || progress.Coupons < 0 || !progress.ValidGrowthRewards() || !progress.ValidArtisan || !progress.ValidShop || progress.Regions == null || progress.RepairNodes == null || progress.Shops == null || progress.StratagemCooldowns == null) return false;
+            if (progress.ThemeRewardToken != null && !Guid.TryParseExact(progress.ThemeRewardToken, "N", out _)) return false;
             foreach (string node in progress.RepairNodes) if (string.IsNullOrWhiteSpace(node)) return false;
             foreach (var cooldown in progress.StratagemCooldowns)
                 if (cooldown == null || string.IsNullOrWhiteSpace(cooldown.Node) || cooldown.Slot < 0 || cooldown.Slot >= 5+progress.ExtraCarrySlots ||
@@ -120,7 +121,8 @@ namespace CluckmechCoop
                 case "settings":
                     if (message.Revision < 0 || message.Delay > 10 || (message.Choice != null && (string.IsNullOrWhiteSpace(message.Choice.Token) || message.Choice.RewardId < -1 || message.Choice.RewardId > 2))) return false;
                     if (message.Progress == null) return true;
-                    if (message.Progress.Players == null || !message.Progress.ValidEnergy || !message.Progress.ValidBoons) return false;
+                    if (message.Progress.Players == null || !message.Progress.ValidEnergy || !message.Progress.ValidBoons ||
+                        message.Progress.Branch == null || !message.Progress.Branch.Valid) return false;
                     foreach (var player in message.Progress.Players)
                         if (player.Key < 0 || player.Key > 2 || !ValidProgress(player.Value)) return false;
                     return true;

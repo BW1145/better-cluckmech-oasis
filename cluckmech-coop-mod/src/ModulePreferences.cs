@@ -14,7 +14,7 @@ namespace CluckmechCoop
             {
                 string description = info.Id == ModuleId.Expedition ? "强化远征" :
                     info.Id == ModuleId.Transfer ? "队友转交" : info.Description;
-                entries[info.Id] = config.Bind("Modules", info.Id.ToString(), true, description);
+                entries[info.Id] = config.Bind("Modules", info.Id.ToString(), info.Id != ModuleId.ThemeBranches, description);
             }
         }
 

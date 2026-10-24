@@ -33,7 +33,7 @@ foreach ($name in @('kamui','kamui-in','kamui-out','perlica-shot','perlica-thund
 New-Item -ItemType Directory -Path $configDir -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $modRoot 'dependencies\Defaults\BepInEx.cfg') -Destination (Join-Path $configDir 'BepInEx.cfg') -Force
 [System.IO.File]::WriteAllText((Join-Path $configDir 'billy.cluckmech.coop.diagnostics.cfg'), "[Diagnostics]`r`nDetailedScan = false`r`n", [System.Text.UTF8Encoding]::new($false))
-[System.IO.File]::WriteAllText((Join-Path $configDir 'billy.cluckmech.coop.cfg'), "[Modules]`r`nSpeed = true`r`nCharacters = true`r`nEnergy = true`r`nMusic = true`r`nGrowth = true`r`nShop = true`r`nExpedition = true`r`nTransfer = true`r`nSkipSplash = true`r`nStratagems = true`r`nNativeRepairs = true`r`nBoons = true`r`nWealth = true`r`nOtherworld = true`r`nBronze = true`r`n", [System.Text.UTF8Encoding]::new($false))
+[System.IO.File]::WriteAllText((Join-Path $configDir 'billy.cluckmech.coop.cfg'), "[Modules]`r`nSpeed = true`r`nCharacters = true`r`nEnergy = true`r`nMusic = true`r`nGrowth = true`r`nShop = true`r`nExpedition = true`r`nTransfer = true`r`nSkipSplash = true`r`nStratagems = true`r`nNativeRepairs = true`r`nBoons = true`r`nWealth = true`r`nOtherworld = true`r`nBronze = true`r`nThemeBranches = false`r`n", [System.Text.UTF8Encoding]::new($false))
 Copy-Item -LiteralPath (Join-Path $modRoot '使用说明.md') -Destination $packageDir -Force
 $designDir = Join-Path $packageDir 'design'
 New-Item -ItemType Directory -Path $designDir -Force | Out-Null

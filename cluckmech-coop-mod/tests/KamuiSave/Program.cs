@@ -41,6 +41,7 @@ static class Program
     private static void BadRuntime(string name,Action<StratagemSaved> mutate)=>BadUnit(name,u=>mutate(u.Stratagem));
     static void Main(string[] args)
     {
+        if(args.Length>0&&args[0]=="theme-branches"){ThemeBranchHarness.Run();return;}
         if(args.Length>0&&args[0]=="bronze")
         {
             Check(BronzeDragonRules.Power==3&&BronzeDragonRules.Cap==4&&BronzeDragonRules.Health==350&&BronzeDragonRules.Cooldown==35,"confirmed B-tier parameters");

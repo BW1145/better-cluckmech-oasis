@@ -46,11 +46,13 @@ namespace CluckmechCoop
         {
             var summary=GameObject.Find("总结").GetComponent<总结脚本>();
             Plugin.BindSummary(summary);ModuleSettings.EnterRun();
-            if(controller.全事件.Length>=93)return;
             var originals=controller.全事件;
-            Array.Resize(ref controller.全事件,93);Array.Resize(ref controller.全事件布局,93);
+            if(controller.全事件.Length<93)Array.Resize(ref controller.全事件,93);
+            if(controller.全事件布局.Length<93)Array.Resize(ref controller.全事件布局,93);
             foreach(var item in All)
             {
+                var registered=controller.全事件[item.Id]?.GetComponent<GrowthEventPanel>();
+                if(registered!=null && registered.EventId==item.Id)continue;
                 var root=UnityEngine.Object.Instantiate(originals[0],originals[0].transform.parent);
                 root.SetActive(false);root.name=item.Name;
                 foreach(var script in root.GetComponentsInChildren<MonoBehaviour>(true))
@@ -83,6 +85,7 @@ namespace CluckmechCoop
         private GameObject upper,lower,result;
         private Text resultText;
         private bool resolved;
+        internal int EventId=>entry==null?-1:entry.Id;
         internal void Build(GrowthEvent value,模块_事件场景控制 owner)
         {
             entry=value;controller=owner;

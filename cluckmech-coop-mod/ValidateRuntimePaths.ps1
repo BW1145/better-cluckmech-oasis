@@ -37,8 +37,13 @@ try {
     }
     if ($mark | Where-Object { $_.Operand -and $_.Operand.Name -eq 'Generated' }) { throw 'Generic hostile Awake still enrolls encounter units' }
     if (-not ((Get-Method 'Difficulty' 'Generated').Body.Instructions | Where-Object { $_.Operand -and $_.Operand.Name -eq 'CountsForEncounter' })) { throw 'Native wave registration lacks scene-object filtering' }
-    foreach ($entry in @(@('ModuleSettings', 'Save'), @('ModuleSettings', 'Load'), @('RestoreRunSlot', 'Prefix'))) {
+    foreach ($entry in @(@('ModuleSaveStore', 'Save'), @('ModuleSaveStore', 'TryLoad'), @('RestoreRunSlot', 'Prefix'))) {
         if (-not ((Get-Method $entry[0] $entry[1]).Body.Instructions | Where-Object { $_.Operand -and $_.Operand.Name -eq 'IsRunSlot' })) { throw "Save scope missing: $($entry[0]).$($entry[1])" }
+    }
+    foreach ($entry in @(@('Save', 'Save'), @('Load', 'TryLoad'))) {
+        if (-not ((Get-Method 'ModuleSettings' $entry[0]).Body.Instructions | Where-Object {
+            $_.Operand -and $_.Operand.DeclaringType.FullName -eq 'CluckmechCoop.ModuleSaveStore' -and $_.Operand.Name -eq $entry[1]
+        })) { throw "Save facade delegation missing: ModuleSettings.$($entry[0])" }
     }
     if (-not ((Get-Method 'Plugin' 'Loaded').Body.Instructions | Where-Object { $_.OpCode.Name -eq 'stsfld' -and $_.Operand.Name -eq 'Blocked' })) { throw 'New run does not clear failed continuation gate' }
     foreach ($name in @('FinalAdvance', 'FinalJump', 'VictoryGate', 'DelayGate', 'SettlementGate')) {

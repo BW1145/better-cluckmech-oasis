@@ -30,7 +30,8 @@ namespace CluckmechCoop
                 Boons = preferences.Get(ModuleId.Boons),
                 Wealth = preferences.Get(ModuleId.Wealth),
                 Otherworld = preferences.Get(ModuleId.Otherworld),
-                Bronze = preferences.Get(ModuleId.Bronze)
+                Bronze = preferences.Get(ModuleId.Bronze),
+                ThemeBranches = preferences.Get(ModuleId.ThemeBranches)
             };
             return true;
         }
@@ -55,6 +56,7 @@ namespace CluckmechCoop
         internal void ApplyHostSettings(bool expedition, bool transfer, ExpeditionChoice choice,
             GameplayModules modules, RunProgress progress)
         {
+            string themeReceipt = Progress.Players.TryGetValue(2, out var local) ? local.ThemeRewardToken : null;
             if (choice != null)
             {
                 bool same = Choice != null && Choice.Token == choice.Token;
@@ -66,6 +68,8 @@ namespace CluckmechCoop
             Choice = choice;
             Extra = modules ?? new GameplayModules();
             Progress = progress ?? new RunProgress();
+            if (themeReceipt != null && themeReceipt == Progress.Branch.Token)
+                Progress.Player(2).ThemeRewardToken = themeReceipt;
         }
 
         internal void SetPlayerProgress(int role, PlayerProgress progress) => Progress.Players[role] = progress;

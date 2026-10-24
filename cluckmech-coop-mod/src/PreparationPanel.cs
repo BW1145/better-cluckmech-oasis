@@ -31,7 +31,7 @@ namespace CluckmechCoop
         private void OnDestroy() => panels.Remove(this);
         private void Refresh()
         {
-            bool show=ModuleSettings.Expedition && !ModuleSettings.FinalLevel;
+            bool show=ModuleSettings.Expedition && !ThemeBranchRuntime.InBranch && !ModuleSettings.FinalLevel;
             if(show && row==null)Build();
             if(row!=null)row.SetActive(show);
             if(challenge!=null && shifted!=show)
