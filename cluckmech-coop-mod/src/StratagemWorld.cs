@@ -181,6 +181,7 @@ namespace CluckmechCoop
         }
         internal void Area(Vector2 point, float radius, float damage, bool critical, Func<模块_基本属性,float> multiplier = null)
         {
+            using var shared = ThemeSharedDamageScope.Begin();
             var enemies=StratagemWorld.EnemiesFor(point);
             for (int i = enemies.Count-1; i >= 0; i--)
             {
@@ -200,6 +201,7 @@ namespace CluckmechCoop
         internal void StandardBurn(模块_基本属性 target) => Burn(target,10,2,new Vector3(.2f,.2f,.2f));
         internal void Burn(模块_基本属性 target, float damage, float seconds,Vector3 penalties=default)
         {
+            target = ThemeSharedDamageScope.CanonicalStateTarget(target);
             if (!StratagemWorld.Living(target)) return;
             if (burns.TryGetValue(target,out var current) && current != null && current.Valid) return;
             var values = new Vector4(damage,penalties.x,penalties.y,penalties.z);

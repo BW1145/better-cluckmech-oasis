@@ -1,6 +1,6 @@
 # 离线检查入口
 
-运行版本：0.6.18。入口为模组目录下的 `ValidateUpdate.ps1`。
+运行版本：0.6.19。入口为模组目录下的 `ValidateUpdate.ps1`。
 
 ```powershell
 ./ValidateUpdate.ps1 -List
@@ -25,6 +25,7 @@
 | SaveValidation、Storage、Modules、ModuleLifecycle | 附加数据验证、存储保护、模块组合与换关/重开 | GameDir |
 | ThemeBranches | 生产支线状态的两主题进入、事件选择、五节点推进、返回、第四层抽选和JSON继续 | GameDir |
 | ThemeBranchWiring | 最终DLL主题入口、原版地图同步与结算接线、真实地图JSON克隆和设置消息长度 | GameDir、最终主插件DLL |
+| ThemeBattles | 十二场主题战斗的生产波次、批次与替换数守恒，原版4×3基地占地、导航并集、机关位置与Boss数值关系 | GameDir |
 | Protocol | 实际Mirror消息序列化和固定字节样本 | GameDir |
 | Effects、EffectProtocol、SensorPrune、Invulnerability | 战备状态、协议、传感器与无敌处理 | NativeStateSource |
 | Encounter、BossBar、EnemyMovement | 遭遇计数、Boss血条、原版移动及结算协调 | 后两项需NativeGameSource；EnemyMovement另需NativeNavigationSource |

@@ -361,6 +361,7 @@ namespace CluckmechCoop
                 int ticks=clock.Advance(delta,rate);
                 while(ticks-->0 && Alive)
                 {
+                    using var shared = ThemeSharedDamageScope.Begin();
                     bool critical=Damage.Critical();
                     var enemies=StratagemWorld.EnemiesFor(beamPosition);
                     for(int i=enemies.Count-1;i>=0;i--)
@@ -390,6 +391,7 @@ namespace CluckmechCoop
             if (!Alive) yield break;
             var p = Parameters;
             bool critical=Damage.Critical();
+            using var shared = ThemeSharedDamageScope.Begin();
             var enemies=StratagemWorld.EnemiesFor(point);
             for(int i=enemies.Count-1;i>=0;i--)
             {

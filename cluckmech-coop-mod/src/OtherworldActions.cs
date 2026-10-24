@@ -77,6 +77,7 @@ namespace CluckmechCoop
         }
         private static void ApplyBombard(OtherworldActor actor,Vector2 point,float radius,float damage,bool rewards,bool delayed)
         {
+            using var shared = ThemeSharedDamageScope.Begin();
             var targets = new List<OtherworldUnit>();
             OtherworldWorld.CollectNearby(actor.gameObject, point, radius, targets);
             var detailed = actor.GetComponent<模块_攻击详细属性>();
@@ -134,6 +135,7 @@ namespace CluckmechCoop
             OtherworldWorld.SortNearest(targets, actor.Aim);
             int count = Mathf.Min(actor.Run.Has(OtherworldTalentIds.InstantCircuit) ? 8 : 6, targets.Count);
             Vector2 previous = actor.Muzzle;
+            using var shared = ThemeSharedDamageScope.Begin();
             for (int i = 0; i < count; i++)
             {
                 var target = targets[i];
@@ -157,6 +159,7 @@ namespace CluckmechCoop
         }
         internal static void Counter(OtherworldActor actor, float stored)
         {
+            using var shared = ThemeSharedDamageScope.Begin();
             Vector2 direction = (actor.Aim-(Vector2)actor.transform.position).normalized;
             var targets = new List<OtherworldUnit>();
             OtherworldWorld.CollectNearby(actor.gameObject, actor.transform.position, 6, targets);
@@ -194,6 +197,7 @@ namespace CluckmechCoop
                 Visual(actor, 4, actor.transform.position, .24f, 1);
                 using(var display=Plugin.Role==1?new OtherworldHitDisplay.Batch():null)
                 {
+                    using var shared = ThemeSharedDamageScope.Begin();
                     OtherworldWorld.CollectNearby(actor.gameObject, actor.transform.position, 5, targets);
                     foreach (var target in targets)
                     {

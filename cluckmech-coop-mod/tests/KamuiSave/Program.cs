@@ -42,6 +42,7 @@ static class Program
     static void Main(string[] args)
     {
         if(args.Length>0&&args[0]=="theme-branches"){ThemeBranchHarness.Run();return;}
+        if(args.Length>0&&args[0]=="theme-battles"){ThemeBattleHarness.Run(args.Length>1?args[1]:null);return;}
         if(args.Length>0&&args[0]=="bronze")
         {
             Check(BronzeDragonRules.Power==3&&BronzeDragonRules.Cap==4&&BronzeDragonRules.Health==350&&BronzeDragonRules.Cooldown==35,"confirmed B-tier parameters");

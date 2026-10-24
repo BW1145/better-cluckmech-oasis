@@ -47,7 +47,7 @@ $projects=[ordered]@{
     RunSave=@('RunSave','RunSaveTests.csproj');TransferUi=@('TransferUi','TransferUiTests.csproj')
     CoopRepairLimits=@('CoopRepairLimits','CoopRepairLimitsTests.csproj');Rig=@('Rig','RigTests.csproj');TransferProtocol=@('TransferProtocol','TransferProtocolTests.csproj')
 }
-$known=@('RefactorParity','CoopRepairs','CoopRepairNetwork','StratagemHitDisplay','ActionLifetime','Actor','Targets','RuntimeScopes','Visibility','CanvasOwnership','NestedHierarchy','SessionNotifications','Effects','EffectProtocol','SensorPrune','Invulnerability','SaveValidation','Storage','Modules','ModuleLifecycle','ThemeBranches','Protocol','ActionWiring','RuntimeWiring','NotificationWiring','Music','Encounter','BossBar','EnemyMovement','NativeBindings','RuntimePaths','UiLayout','StratagemAssets','ProductionAtlas','AssetSelection')+@($projects.Keys)+@($bindingModes.Keys)
+$known=@('RefactorParity','CoopRepairs','CoopRepairNetwork','StratagemHitDisplay','ActionLifetime','Actor','Targets','RuntimeScopes','Visibility','CanvasOwnership','NestedHierarchy','SessionNotifications','Effects','EffectProtocol','SensorPrune','Invulnerability','SaveValidation','Storage','Modules','ModuleLifecycle','ThemeBranches','ThemeBattles','Protocol','ActionWiring','RuntimeWiring','NotificationWiring','Music','Encounter','BossBar','EnemyMovement','NativeBindings','RuntimePaths','UiLayout','StratagemAssets','ProductionAtlas','AssetSelection')+@($projects.Keys)+@($bindingModes.Keys)
 if($List){$known;return}
 foreach($name in $Select){if($name -ne 'All' -and $name -notin $known){throw "Unknown suite: $name"}}
 $suites=@(if('All' -in $Select){$known}else{$Select}) | Select-Object -Unique
@@ -109,8 +109,8 @@ try {
                 $extra=if($suite -eq 'EffectProtocol'){@('--effect-protocol')}elseif($suite -eq 'SensorPrune'){@('--sensor-prune')}elseif($suite -eq 'Invulnerability'){@('--invulnerability')}else{@()}
                 Invoke-Test $suite 'StratagemEffects' 'StratagemEffectsTests.csproj' $extra
             }
-            {$_ -in @('SaveValidation','Storage','Modules','ModuleLifecycle','ThemeBranches')} {
-                $extra=if($suite -eq 'Storage'){@('storage')}elseif($suite -eq 'Modules'){@('modules')}elseif($suite -eq 'ModuleLifecycle'){@('--lifecycle')}elseif($suite -eq 'ThemeBranches'){@('theme-branches')}else{@()}
+            {$_ -in @('SaveValidation','Storage','Modules','ModuleLifecycle','ThemeBranches','ThemeBattles')} {
+                $extra=if($suite -eq 'Storage'){@('storage')}elseif($suite -eq 'Modules'){@('modules')}elseif($suite -eq 'ModuleLifecycle'){@('--lifecycle')}elseif($suite -eq 'ThemeBranches'){@('theme-branches')}elseif($suite -eq 'ThemeBattles'){@('theme-battles')}else{@()}
                 Invoke-Test $suite 'KamuiSave' 'KamuiSaveTests.csproj' $extra -Native
             }
             'Protocol' {Invoke-Test $suite 'OtherworldProtocol' 'OtherworldProtocolTests.csproj' @() -Native}

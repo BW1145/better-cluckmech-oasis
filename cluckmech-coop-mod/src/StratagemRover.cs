@@ -115,6 +115,7 @@ namespace CluckmechCoop
         {heat=Mathf.Max(0,heat-root.Parameters.HeatRecovery);}
         private void Fire()
         {
+            using var shared = ThemeSharedDamageScope.Begin();
             Vector2 aim=target.transform.position,start=drone.Muzzle;
             uint targetId=NetworkObjects.Id(target.gameObject);
             Vector2 direction=(aim-start).normalized;

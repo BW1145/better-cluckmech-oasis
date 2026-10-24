@@ -25,6 +25,8 @@ namespace CluckmechCoop
         public uint[] Targets;
         public float X, Y;
         public StratagemEffectMessage Effect;
+        public ThemeActorMessage Theme;
+        public ThemeMechanismMessage Mechanism;
     }
     internal sealed class NetworkService
     {
@@ -118,6 +120,9 @@ namespace CluckmechCoop
                 case "swallow": case "swallow-request":
                     return !string.IsNullOrWhiteSpace(message.Token) && message.Unit != 0 && message.Revision > 0 && message.Targets != null && message.Targets.Length <= 32;
                 case "stratagem-effect": return !string.IsNullOrWhiteSpace(message.Token) && message.Effect != null && message.Effect.Valid;
+                case "theme-actor": return !string.IsNullOrWhiteSpace(message.Token) && message.Theme != null && message.Theme.Valid;
+                case "theme-intro": return !string.IsNullOrWhiteSpace(message.Token) && message.Delay <= 4;
+                case "theme-interact": case "theme-mechanism": return message.Mechanism != null && message.Mechanism.Valid;
                 case "settings":
                     if (message.Revision < 0 || message.Delay > 10 || (message.Choice != null && (string.IsNullOrWhiteSpace(message.Choice.Token) || message.Choice.RewardId < -1 || message.Choice.RewardId > 2))) return false;
                     if (message.Progress == null) return true;
@@ -149,11 +154,13 @@ namespace CluckmechCoop
                 ModuleSettings.SetPlayerProgress(guest ? 2 : 1,message.PlayerProgress);
                 Plugin.Summary?.保存单局存档();
             }
+            else if (ThemeMechanisms.ServerReceive(message, guest ? 2 : 1)) return;
             else if (FeatureNetwork.ServerReceive(message, guest ? 2 : 1)) return;
             else if (message.Type == "hello")
             {
                 if (guest) session.PeerSeen();
                 BroadcastSettings();
+                ThemeBossPresentation.SyncPreparation();
             }
             else if (message.Type == "ack" && guest && message.Revision == session.Revision)
             {
@@ -181,6 +188,11 @@ namespace CluckmechCoop
             }
             else if (message.Token == Plugin.Combat?.Token && ModuleSettings.Extra.Stratagems && message.Type == "stratagem-effect")
                 StratagemEffects.Play(message.Effect);
+            else if (message.Token == Plugin.Combat?.Token && ThemeBranchRuntime.InBranch && message.Type == "theme-actor")
+                ThemeEnemyActor.Receive(message.Theme);
+            else if (message.Type == "theme-mechanism") ThemeMechanisms.Receive(message);
+            else if (message.Type == "theme-intro" && message.Token == ModuleSettings.NodeKey && ThemeBranchRuntime.InBranch)
+                ThemeBossPresentation.ReceivePreparation(message.Delay, message.Unit);
             else if (message.Type=="bronze-coins") BronzeDragon.Receive(message);
             else if (message.Type=="growth-event") GrowthEventPanel.Receive(message);
             else if (FeatureNetwork.Receive(message)) return;

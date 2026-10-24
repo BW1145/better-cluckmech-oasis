@@ -29,6 +29,7 @@ namespace CluckmechCoop
             => Create(source,target,type,seconds,new Vector4(value,0,0,0));
         internal static StratagemStateHandle Create(StratagemUnit source,模块_基本属性 target,攻击类型与状态数据库.状态枚举 type,float seconds,Vector4 values)
         {
+            target = ThemeSharedDamageScope.CanonicalStateTarget(target);
             var owner = target.GetComponent<模块_状态属性>();
             if (owner == null) return null;
             var effects = target.GetComponent<模块_状态持续效果>();
@@ -151,13 +152,14 @@ namespace CluckmechCoop
                 members.Clear();
                 members.AddRange(zone.Entered);
                 var source = zone.Source;
-                foreach (var target in members)
+                foreach (var member in members)
                 {
-                    if (!StratagemWorld.Present(target))
+                    if (!StratagemWorld.Present(member))
                     {
-                        Remove(target);
+                        Remove(member);
                         continue;
                     }
+                    var target = ThemeSharedDamageScope.CanonicalStateTarget(member);
                     if (!StratagemWorld.Living(target)) continue;
                     if (zone.Scorch)
                     {
@@ -222,6 +224,7 @@ namespace CluckmechCoop
         internal static void Enter(StratagemZone zone,模块_基本属性 target)
         {
             if (!StratagemWorld.Present(target) || !zone.Entered.Add(target)) return;
+            target = ThemeSharedDamageScope.CanonicalStateTarget(target);
             if (!StratagemWorld.Living(target) || zone.Source == null || zone.Scorch || zone.Source.Parameters.Gas) return;
             if (stunUntil.TryGetValue(target,out var next) && next > Time.time) return;
             zone.Source.Damage.Status(target,攻击类型与状态数据库.状态枚举.眩晕,zone.Source.Parameters.Stun,Vector4.zero);
@@ -230,8 +233,11 @@ namespace CluckmechCoop
         internal static void Exit(StratagemZone zone,模块_基本属性 target)
         {
             if (ReferenceEquals(target,null) || !zone.Entered.Remove(target)) return;
+            target = ThemeSharedDamageScope.CanonicalStateTarget(target);
             foreach (var other in zones)
-                if (!other.Scorch && other.Entered.Contains(target) && other.Source != null && other.Source.Parameters.Slow > 0) return;
+                if (!other.Scorch && other.Source != null && other.Source.Parameters.Slow > 0)
+                    foreach (var member in other.Entered)
+                        if (ThemeSharedDamageScope.CanonicalStateTarget(member) == target) return;
             if (slows.TryGetValue(target,out var slow) && slow != null && slow.Valid) slow.Maintain(.5f,slow.State.加成属性.当前属性效果.x);
         }
     }
