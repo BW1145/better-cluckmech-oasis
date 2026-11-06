@@ -51,7 +51,7 @@ namespace CluckmechCoop
     {
         internal static readonly List<string> Events=new List<string>();
         internal static bool ClosedBeforeCleanup=true;
-        internal static readonly string[] Order={"network","actions","combat","growth","boon-ui","modal","difficulty","module-scene","stratagem","kamui","units","damage-statistics","deployment","swallow"};
+        internal static readonly string[] Order={"visual-cache","visual-numbers","visual-particles","network","actions","combat","growth","boon-ui","modal","difficulty","module-scene","stratagem","kamui","units","damage-statistics","deployment","swallow"};
         internal static void Record(string item){ClosedBeforeCleanup&= !SceneLifecycle.IsCurrent(SceneLifecycle.Current);Events.Add(item);}
     }
     static class Plugin {internal static bool InCombat;internal static readonly NetworkStub Network=new NetworkStub();internal static readonly CombatStub Combat=new CombatStub();}
@@ -71,3 +71,5 @@ namespace CluckmechCoop
     static class OtherworldDeployment {internal static void ClearScene()=>Trace.Record("deployment");}
     static class SwallowTargets {internal static void Clear()=>Trace.Record("swallow");}
 }
+
+namespace CluckmechCoop { static class VisualSceneCache { internal static void Clear()=>Trace.Record("visual-cache"); } static class VisualDamageNumbers { internal static void Clear()=>Trace.Record("visual-numbers"); } static class VisualParticlePool { internal static void Clear()=>Trace.Record("visual-particles"); } }

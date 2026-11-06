@@ -24,14 +24,18 @@ namespace CluckmechCoop
         internal static bool Begin(模块_事件场景控制 controller)
         {
             if (Plugin.Role == 2 || !ModuleSettings.Extra.ThemeBranches || State.Used || Map == null) return false;
-            string entrance = ModuleSettings.NodeKey;
             controller.信息保存?.退出节点场景();
+            return BeginSelected(UnityEngine.Random.Range(1,3),new[]{UnityEngine.Random.value<.3f,UnityEngine.Random.value<.3f,UnityEngine.Random.value<.3f});
+        }
+        internal static bool BeginSelected(int theme,bool[] variants)
+        {
+            if(Plugin.Role==2||!ModuleSettings.Extra.ThemeBranches||State.Used||Map==null)return false;
+            string entrance=ModuleSettings.NodeKey;
             var main = ThemeMapCodec.Clone(Map);
             main.待跳转场景id = 常数类.场景id_选择地图;
             main.是否位于事件 = false;
-            bool[] variants = { UnityEngine.Random.value < .3f, UnityEngine.Random.value < .3f, UnityEngine.Random.value < .3f };
             if (!State.Begin(ThemeMapCodec.Encode(main), Guid.NewGuid().ToString("N"),
-                UnityEngine.Random.Range(1, 3), UnityEngine.Random.Range(0, 2), variants)) return false;
+                theme, UnityEngine.Random.Range(0, 2), variants)) return false;
             State.EntranceNode = entrance; State.EntranceChoice = 0;
             var branch = ThemeMapCodec.Clone(main);
             branch.当前地图页 = ThemeBranchCatalog.Page(State.Theme);
@@ -151,6 +155,7 @@ namespace CluckmechCoop
         private static void Return(bool changeScene)
         {
             if (!State.Active) return;
+            if(ThemeTest.Active){ThemeTest.Finish();return;}
             var main = ThemeMapCodec.Decode(State.MainMap);
             State.Return();
             main.是否初始化地图 = false;

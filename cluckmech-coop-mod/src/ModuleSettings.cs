@@ -71,6 +71,7 @@ namespace CluckmechCoop
         {
             if (run.Enter(preferences, Plugin.Role) && Plugin.Role != 2)
                 Plugin.Network.PublishSettings();
+            if(ThemeTest.Active)Extra.ThemeBranches=true;
         }
         internal static void MainMenu()
         {

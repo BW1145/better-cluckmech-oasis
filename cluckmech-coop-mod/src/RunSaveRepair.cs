@@ -30,6 +30,7 @@ namespace CluckmechCoop
         internal static bool CanSave(存档脚本 save)
         {
             if (!IsRunSlot(save)) return true;
+            if(ThemeTest.Active)return false;
             var summary = GameObject.Find(常数类.命名_总结)?.GetComponent<总结脚本>();
             if (AtMainMenu || Blocked || IsTemplate(summary))
             {

@@ -10,6 +10,7 @@ namespace CluckmechCoop
         internal static void Begin()
         {
             var effects=GameObject.Find(函数库.常数类.命名_世界).GetComponent<效果物体引用器>().特效;
+            VisualParticlePool.Register(GameObject.Find(函数库.常数类.命名_世界).GetComponent<效果物体引用器>());
             sparks=effects.普通攻击效果;smoke=effects.烟雾效果;electric=effects.感电效果;fire=effects.灼烧效果;
             var model=StratagemRegistry.Prefab(20001).GetComponentInChildren<SpriteRenderer>(true);
             sortingLayer=model.sortingLayerID;sortingOrder=model.sortingOrder;
@@ -19,14 +20,14 @@ namespace CluckmechCoop
         internal static StratagemNativeParticle Play(StratagemParticleKind kind,Vector2 point,float scale,float seconds,bool loop=false,Transform parent=null)
         {
             var prefab=kind==StratagemParticleKind.Sparks?sparks:kind==StratagemParticleKind.Smoke?smoke:kind==StratagemParticleKind.Fire?fire:electric;
-            var obj=Object.Instantiate(prefab,new Vector3(point.x,point.y,StratagemAssets.Z(point.y)+(kind==StratagemParticleKind.Sparks?-.03f:.4f)),Quaternion.identity);
+            var obj=VisualParticlePool.Rent(prefab,new Vector3(point.x,point.y,StratagemAssets.Z(point.y)+(kind==StratagemParticleKind.Sparks?-.03f:.4f)),Quaternion.identity,parent,true);
             if(parent!=null)obj.transform.SetParent(parent,true);
             obj.transform.localScale=Vector3.one*scale;
             // These native effect prefabs contain particles and an optional impact sprite.
             foreach(var renderer in obj.GetComponentsInChildren<SpriteRenderer>(true))renderer.enabled=false;
             foreach(var renderer in obj.GetComponentsInChildren<ParticleSystemRenderer>(true))
             {renderer.sortingLayerID=sortingLayer;renderer.sortingOrder=sortingOrder;}
-            var effect=obj.AddComponent<StratagemNativeParticle>();effect.Initialize(kind,seconds,loop);
+            var effect=(obj.GetComponent<StratagemNativeParticle>()??obj.AddComponent<StratagemNativeParticle>());effect.Initialize(kind,seconds,loop);
             return effect;
         }
     }
@@ -39,7 +40,7 @@ namespace CluckmechCoop
         private StratagemParticleKind kind;
         internal void Initialize(StratagemParticleKind type,float seconds,bool loop)
         {
-            kind=type;token=Plugin.Combat.Token;until=Time.time+seconds;
+            stopping=false;tail=0;kind=type;token=Plugin.Combat.Token;until=Time.time+seconds;
             systems=GetComponentsInChildren<ParticleSystem>(true);
             foreach(var particles in systems)
             {
@@ -56,6 +57,7 @@ namespace CluckmechCoop
                 }
                 particles.Play(false);
             }
+            if(type==StratagemParticleKind.Smoke)VisualPreferences.ThinSmoke(gameObject);
         }
         internal void Move(Vector2 point)
         {transform.position=new Vector3(point.x,point.y,StratagemAssets.Z(point.y)+(kind==StratagemParticleKind.Sparks?-.03f:.4f));}
@@ -67,9 +69,9 @@ namespace CluckmechCoop
         }
         private void Update()
         {
-            if(!Plugin.InCombat||token!=Plugin.Combat?.Token){Destroy(gameObject);return;}
+            if(!Plugin.InCombat||token!=Plugin.Combat?.Token){VisualParticlePool.Return(gameObject);return;}
             if(Time.time<until)return;
-            if(stopping)Destroy(gameObject);else Stop();
+            if(stopping)VisualParticlePool.Return(gameObject);else Stop();
         }
     }
 }

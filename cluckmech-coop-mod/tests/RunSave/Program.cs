@@ -126,6 +126,11 @@ static class Program
         current=GameObject.Find("总结").GetComponent<总结脚本>();Template(current);
         Check(RunSaveRepair.IsTemplate(current),"exact menu template identified");
         current.当前拥有炮台[0].强化上限=4;Check(!RunSaveRepair.IsTemplate(current),"real zero-gold chicken inventory accepted");
+        RunSaveRepair.Blocked=false;SceneManager.Index=4;
+        Check(RunSaveRepair.CanSave(save),"normal run retains native save eligibility");
+        ThemeTest.Active=true;Check(!RunSaveRepair.CanSave(save),"temporary test session bypasses formal run saving");ThemeTest.Active=false;
         Console.WriteLine($"PASS: {checks} production run-save checks using Unity and ES3 storage doubles");
     }
 }
+
+namespace CluckmechCoop { internal static class ThemeTest { internal static bool Active; } }

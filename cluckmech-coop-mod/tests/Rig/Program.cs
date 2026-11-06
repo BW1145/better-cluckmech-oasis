@@ -115,6 +115,7 @@ namespace CluckmechCoop
         {var obj=new GameObject();obj.transform.parent=parent;obj.transform.localScale=Vector3.one*(width/sprite.bounds.size.x);var image=new SpriteRenderer{sprite=sprite,transform=obj.transform};obj.Renderers.Add(image);obj.Components[typeof(SpriteRenderer)]=image;LaserParts.Add(image);return image;}
         internal static Dictionary<string,Dictionary<string,float>> Boxes;
         internal static Sprite Named(string name){var b=Boxes[name];return new Sprite{Name=name,bounds=new Bounds{size=new Vector3(b["W"]/32,b["H"]/32,0)}};}
+        internal static Sprite[] Sequence(string prefix,int count)=>Enumerable.Range(0,count).Select(i=>Named(prefix+i)).ToArray();
         internal static Vector3 Muzzle(string name){var b=Boxes[name];return new Vector3(b["MX"],b["MY"],0);}
         internal static SpriteRenderer Part(Transform parent,string name,float width,Vector3 position)
         {

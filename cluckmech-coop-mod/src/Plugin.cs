@@ -14,7 +14,7 @@ namespace CluckmechCoop
     [BepInPlugin("billy.cluckmech.coop", "更好的鸡械绿洲", Version)]
     public sealed class Plugin : BaseUnityPlugin
     {
-        internal const string Version = "0.6.20";
+        internal const string Version = "0.6.21";
         internal static Plugin Instance;
         internal static TransferService Transfers;
         internal static NetworkService Network;
@@ -30,6 +30,7 @@ namespace CluckmechCoop
         {
             Instance = this;
             ModuleSettings.Initialize(Config);
+            VisualPreferences.Bind(Config);
             Transfers = new TransferService(); Network = new NetworkService();
             Panel = gameObject.AddComponent<CoopPanel>();
             Combat = gameObject.AddComponent<CombatFeatures>();
@@ -51,7 +52,7 @@ namespace CluckmechCoop
             if (!SceneLifecycle.Enter(scene.handle)) return;
             Spawner = null; units = null; InCombat = false;
             Panel.Rebuild();
-            if (scene.buildIndex == 常数类.场景id_开始菜单) { Network.Disconnect(); ModuleSettings.MainMenu(); }
+            if (scene.buildIndex == 常数类.场景id_开始菜单) { ThemeTest.Leave(); Network.Disconnect(); ModuleSettings.MainMenu(); }
             else ModuleSettings.EnterRun();
             ThemeBattleScene.Install(scene);
             ThemeBossPresentation.Install(ThemeBattleScene.Current);
@@ -88,6 +89,7 @@ namespace CluckmechCoop
             if (RunSaveRepair.AtMainMenu) return;
             if (SceneLifecycle.Current == null) SceneLifecycle.Enter(SceneManager.GetActiveScene().handle);
             if (!SceneLifecycle.Current.BeginCombat()) return;
+            VisualPreferences.Begin();
             Spawner = spawner; InCombat = true; Combat.Begin(spawner); CharacterBoons.Begin(); WealthEncounter.Begin(spawner);
             StratagemWorld.Begin();
             if (OtherworldRegistry.Enabled) { OtherworldWorld.Begin(); KamuiWorld.Restore(); }

@@ -39,7 +39,7 @@ $bindingModes=[ordered]@{
     SettlementRepairs='--settlement-repairs';EnergyAudio='--energy-audio';DashChain='--dash-chain'
     CoopRepairWiring='--coop-repairs';Shop='--shop';ShopStock='--shop-stock';ParticleInit='--particle-init';NativeRepairs='--native-repairs'
     ThemeBranchWiring='--theme-branch-wiring'
-    Update0620='--update-0620'
+    Update0620='--update-0620';Update0621='--update-0621'
 }
 $projects=[ordered]@{
     Rules=@('','RulesTests.csproj');Characters=@('Characters','CharacterTests.csproj')

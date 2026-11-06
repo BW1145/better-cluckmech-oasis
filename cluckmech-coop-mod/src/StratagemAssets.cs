@@ -18,6 +18,9 @@ namespace CluckmechCoop
         private static Dictionary<string,StratagemSpriteRect> rectangles;
         private static readonly Dictionary<string,Sprite> sprites = new Dictionary<string,Sprite>();
         private static int sortingLayer,sortingOrder;
+        private static readonly Dictionary<string,Sprite[]> sequences=new Dictionary<string,Sprite[]>();
+        internal static Sprite[] Sequence(string prefix,int count)
+        {if(!sequences.TryGetValue(prefix,out var frames)){frames=new Sprite[count];for(int i=0;i<count;i++)frames[i]=Named(prefix+i);sequences.Add(prefix,frames);}return frames;}
         internal static void SetSorting(SpriteRenderer sample)
         {sortingLayer=sample.sortingLayerID;sortingOrder=sample.sortingOrder;}
         internal static float Z(float y) => (y+10000)*.01f;

@@ -1,9 +1,11 @@
-param([Parameter(Mandatory=$true)][string]$GameDir)
+param([Parameter(Mandatory=$true)][string]$GameDir,[switch]$Features,[ValidateRange(0,3)][int]$ThemeCase=0)
 $ErrorActionPreference='Stop'
 [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
 $modRoot=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$output=Join-Path $modRoot 'artifacts/shop-preview-0.6.20'
-$player=Join-Path $output 'player'
+$output=Join-Path $modRoot $(if($Features){'artifacts/feature-preview-0.6.21'}else{'artifacts/shop-preview-0.6.20'})
+if($Features -and $ThemeCase -gt 0){$output=Join-Path $output ('case-'+$ThemeCase)}
+$player=Join-Path $modRoot 'artifacts/feature-preview-0.6.21/player'
+if(-not $Features){$player=Join-Path $output 'player'}
 $dataLink=Join-Path $player 'Cluckmech Oasis_Data'
 $monoLink=Join-Path $player 'MonoBleedingEdge'
 New-Item -ItemType Directory -Path $output -Force | Out-Null
@@ -75,11 +77,12 @@ $previewProcess=$null
 try {
     [ShopPreviewAudio]::Mute($true)
     if(-not [ShopPreviewAudio]::Muted()){throw 'Preview audio isolation failed.'}
-    $arguments=@('-screen-fullscreen','0','-screen-width','1600','-screen-height','1000','-logFile',('"'+(Join-Path $output 'player.log')+'"'),('"--bco-shop-preview='+$output+'"'))
+    $arguments=@('-screen-fullscreen','0','-screen-width','1600','-screen-height','1000','-logFile',('"'+(Join-Path $output 'player.log')+'"'),('"'+$(if($Features){'--bco-feature-preview='}else{'--bco-shop-preview='})+$output+'"'))
+    if($Features){$arguments+=('--bco-feature-case='+$ThemeCase)}
     $previewProcess=Start-Process -FilePath (Join-Path $player 'Cluckmech Oasis.exe') -WorkingDirectory $player -ArgumentList $arguments -WindowStyle Hidden -PassThru
     if(-not $previewProcess.WaitForExit(45000)){$previewProcess.Kill();throw 'Preview exceeded its bounded runtime.'}
     if($previewProcess.ExitCode -ne 0){throw "Preview exited with code $($previewProcess.ExitCode)."}
-    Get-Content -LiteralPath (Join-Path $output 'player.log') -Encoding UTF8 | Select-String '\[SHOP-PREVIEW\]'
+    Get-Content -LiteralPath (Join-Path $output 'player.log') -Encoding UTF8 | Select-String '\[(SHOP|FEATURE)-PREVIEW\]'
 } finally {
     if($previewProcess -ne $null -and -not $previewProcess.HasExited){$previewProcess.Kill();$previewProcess.WaitForExit()}
     [ShopPreviewAudio]::Mute($originalMute)

@@ -155,3 +155,5 @@ static class StorageHarness
         Console.WriteLine($"PASS: {checks} addon fallback/storage checks using complete production module persistence and real character validation");
     }
 }
+
+namespace CluckmechCoop { internal static class ThemeTest { internal static bool Active; } }

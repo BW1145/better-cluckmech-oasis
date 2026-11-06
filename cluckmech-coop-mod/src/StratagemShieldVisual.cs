@@ -9,11 +9,15 @@ namespace CluckmechCoop
         private string token;
         private bool open;
         private float changed,radius;
+        private Sprite[] opening,closing;
+        private Sprite steady;
+        private int previous=-1;
         internal static StratagemShieldVisual Create(StratagemUnit owner)
         {
             var obj=new GameObject("StratagemShieldVisual");
             var visual=obj.AddComponent<StratagemShieldVisual>();
             visual.owner=owner;visual.token=Plugin.Combat.Token;
+            visual.opening=StratagemAssets.Sequence("fx.shield.start.",8);visual.closing=StratagemAssets.Sequence("fx.shield.end.",8);visual.steady=StratagemAssets.Named("fx.shield.loop.3");
             visual.shell=StratagemAssets.Renderer(obj.transform,StratagemAssets.Named("fx.shield.start.0"),1);
             visual.shell.enabled=false;
             visual.transform.position=owner.transform.position;
@@ -37,9 +41,9 @@ namespace CluckmechCoop
             float age=Time.time-changed;
             shell.enabled=open||age<.64f;
             if(!shell.enabled){if(!alive)Destroy(gameObject);return;}
-            string phase=open?(age<.64f?"start":"loop"):"end";
-            int frame=phase=="loop"?3:Mathf.Min(7,Mathf.FloorToInt(age/.08f));
-            shell.sprite=StratagemAssets.Named("fx.shield."+phase+"."+frame);
+            int phase=open?(age<.64f?0:1):2;
+            int frame=phase==1?3:Mathf.Min(7,Mathf.FloorToInt(age/.08f));
+            if(previous!=phase*8+frame){previous=phase*8+frame;shell.sprite=phase==0?opening[frame]:phase==2?closing[frame]:steady;}
             // The stable contact rim spans 76% of the registered frame; all phases share this registered footprint.
             shell.transform.localScale=Vector3.one*(radius*2/.76f/shell.sprite.bounds.size.x);
             shell.color=Color.white;

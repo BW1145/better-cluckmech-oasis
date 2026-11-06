@@ -9,6 +9,8 @@
     <Loader>$(MSBuildThisFileDirectory)..\dependencies\BepInEx\BepInEx\core</Loader>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="UnityEngine.ParticleSystemModule"><HintPath>$(Managed)\UnityEngine.ParticleSystemModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.Physics2DModule"><HintPath>$(Managed)\UnityEngine.Physics2DModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="BepInEx"><HintPath>$(Loader)\BepInEx.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(Loader)\0Harmony.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Game"><HintPath>$(Managed)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>

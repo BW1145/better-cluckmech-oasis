@@ -20,6 +20,7 @@ namespace CluckmechCoop
         internal static void Removed(模块_基本属性 health)
         {
             if (ReferenceEquals(health,null)) return;
+            VisualSceneCache.Removed(health.gameObject);VisualDamageNumbers.Removed(health.gameObject);
             var unit=health.GetComponent<OtherworldUnit>();
             if (unit!=null)
             {

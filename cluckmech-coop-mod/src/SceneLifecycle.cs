@@ -20,6 +20,8 @@ namespace CluckmechCoop
             if (Current == null || !Current.Close()) return;
             // Invalidate delayed work before destroying the objects it references.
             Plugin.InCombat = false;
+            VisualSceneCache.Clear();VisualDamageNumbers.Clear();
+            VisualParticlePool.Clear();
             Plugin.Network?.ClearScene();
             UnitLifecycle.ClearScene();
             Plugin.Combat?.ClearScene();

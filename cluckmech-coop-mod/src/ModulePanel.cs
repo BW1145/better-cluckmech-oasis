@@ -20,6 +20,7 @@ namespace CluckmechCoop
         {
             board = NativeUi.Rect(transform, "Module settings", 0, 0, 1460, 900);
             board.anchorMin = board.anchorMax = board.pivot = new Vector2(.5f, .5f); board.anchoredPosition = Vector2.zero;
+            NativeUi.TransferAction(board,"特效显示",1160,20,260,58,VisualPreferences.Show);
             NativeUi.Label(board, "模组", 16, 8, 900, 56, 38).color = new Color(1, .72f, .16f);
             NativeUi.Label(board, "玩法设置在开始或继续游戏时应用；启动项下次启动生效", 16, 70, 1050, 40, 24);
             var left = NativeUi.Rect(board, "Modules", 8, 134, 780, 748);

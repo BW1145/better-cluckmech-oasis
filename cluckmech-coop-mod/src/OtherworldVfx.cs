@@ -88,6 +88,7 @@ namespace CluckmechCoop
                     var renderer=particles.GetComponent<ParticleSystemRenderer>();renderer.sortingLayerID=actor.Body.sortingLayerID;renderer.sortingOrder=actor.Body.sortingOrder;
                     particles.Play(false);
                 }
+                if(prefab==references.特效.烟雾效果)VisualPreferences.ThinSmoke(dust);
                 Destroy(dust,2);
             }
         }

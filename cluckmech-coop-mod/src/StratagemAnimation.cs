@@ -7,16 +7,16 @@ namespace CluckmechCoop
         private SpriteRenderer image;
         private Sprite[] frames;
         private float started,duration;
+        private int frame=-1;
         internal void Set(SpriteRenderer renderer,string prefix,int count,float seconds,float delay)
         {
-            image=renderer;frames=new Sprite[count];
-            for(int i=0;i<count;i++)frames[i]=StratagemAssets.Named(prefix+i);
+            image=renderer;frames=StratagemAssets.Sequence(prefix,count);frame=-1;
             started=Time.time+delay;duration=seconds;
         }
         private void Update()
         {
             float elapsed=Time.time-started;
-            if(elapsed>=0)image.sprite=frames[Mathf.Min(frames.Length-1,Mathf.FloorToInt(elapsed/duration*frames.Length))];
+            if(elapsed>=0){int next=Mathf.Min(frames.Length-1,Mathf.FloorToInt(elapsed/duration*frames.Length));if(next!=frame){frame=next;image.sprite=frames[frame];}}
         }
     }
     public sealed class StratagemAnimation : MonoBehaviour
