@@ -79,7 +79,7 @@ namespace CluckmechCoop
         {
             using var shared = ThemeSharedDamageScope.Begin();
             var targets = new List<OtherworldUnit>();
-            OtherworldWorld.CollectNearby(actor.gameObject, point, radius, targets);
+            OtherworldWorld.CollectNearby(actor.gameObject, point, radius, targets,scenery:true);
             var detailed = actor.GetComponent<模块_攻击详细属性>();
             Vector4 shock = detailed.状态加成列表[(int)攻击类型与状态数据库.状态枚举.感电].当前属性效果;
             using var display=Plugin.Role==1?new OtherworldHitDisplay.Batch():null;
@@ -87,7 +87,7 @@ namespace CluckmechCoop
             foreach (var target in targets)
             {
                 if (target == null || target.Space != actor.Space || target.Health.当前生命值 <= 0) continue;
-                hits++;
+                if(target.Health.当前阵营==阵营数据库.阵营.敌方)hits++;
                 Hit(actor, target, damage);
                 Status(target, actor.gameObject, 攻击类型与状态数据库.状态枚举.感电, 5, shock);
                 if (actor.Run.Has(OtherworldTalentIds.Convergence) && !target.Health.免疫击退)

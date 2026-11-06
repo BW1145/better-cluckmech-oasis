@@ -40,17 +40,34 @@ namespace CluckmechCoop
         internal static void Begin(刷怪器 spawner)
         {
             if(Plugin.Role==2 || !ModuleSettings.Extra.Wealth || current!=null || RichPlayers==0 || spawner.数据==null)return;
+            var regularIds=new HashSet<int>(Plugin.Units.单位列表.Where(x=>x.单位阵营==dw单位库.单位单元.阵营枚举.敌方&&Regular(x.单位预制体)).Select(x=>x.id));
             var pool=spawner.数据.波次数据.SelectMany(x=>x.组次数据).Where(x=>!x.是否为boss).SelectMany(x=>x.单位)
                 .Where(x=>x!=null && x.GetComponent<模块_基本属性>()?.初始阵营==阵营数据库.阵营.敌方 && x.GetComponent<模块_基本属性>().单位类型!=模块_基本属性.单位类型枚举.陷阱 && x.GetComponent<最终boss状态机>()==null && x.GetComponent<词条_100028_Boss胜利判断>()==null)
+                .Where(x=>regularIds.Contains(x.GetComponent<模块_基本属性>().ID))
                 .Distinct().OrderByDescending(Score).Take(3).ToList();
             if(pool.Count==0 || spawner.出怪口.Count==0){Plugin.Warn("[Wealth] This encounter has no native regular-enemy source or entrance");return;}
             current=spawner.gameObject.AddComponent<WealthEncounter>();current.spawner=spawner;
             current.events=(事件管理器_战斗)AccessTools.Field(typeof(刷怪器),"战斗事件").GetValue(spawner);
             current.events.事件_敌人生成.AddListener(current.Generated);
-            current.StartCoroutine(current.SpawnBatches(pool,RichPlayers));
+            int rich=RichPlayers;Announce(0,rich);
+            current.StartCoroutine(current.SpawnBatches(pool,rich));
         }
+        private static bool Regular(GameObject unit)=>unit!=null&&unit.GetComponent<最终boss状态机>()==null&&
+            unit.GetComponent<词条_100028_Boss胜利判断>()==null&&unit.GetComponent<模块_Boss多难度>()==null&&unit.GetComponent<模块_BOSS生命和狂暴>()==null;
         private static float Score(GameObject unit)
-        {var hp=unit.GetComponent<模块_基本属性>();var attack=unit.GetComponent<模块_攻击属性>();return hp.生命值*(1+(attack==null?0:attack.攻击力));}
+            =>unit.GetComponent<模块_基本属性>().生命值;
+        internal static void Notice(int stage,int rich)
+        {
+            var broadcast=GameObject.Find("UI")?.GetComponent<广播器>();
+            if(broadcast==null)return;
+            string text=stage==0?$"财富追兵：{12*rich}只强敌分三批来袭，攻击×3":$"财富追兵　第{stage}/3批：{4*rich}只强敌到场，攻击×3";
+            broadcast.SendMessage("获取广播时间",3f);broadcast.SendMessage("获取内容",text);
+        }
+        private static void Announce(int stage,int rich)
+        {
+            Notice(stage,rich);
+            Plugin.Network.Broadcast(new SessionMessage{Type="wealth-warning",Token=Plugin.Combat.Token,Stage=stage,Revision=rich});
+        }
         private void Generated(GameObject unit)
         {
             if(!Spawning)return;
@@ -65,6 +82,9 @@ namespace CluckmechCoop
                 Spawning=true;
                 try{spawn.Invoke(spawner,new object[]{new 攻击波次数据模板.出怪单元{单位=new List<GameObject>{pool[batch%pool.Count]},数量=4*rich,是否为boss=false,出现延迟=0}});}
                 finally{Spawning=false;}
+                Announce(batch+1,rich);
+                var stats=pool[batch%pool.Count].GetComponent<模块_基本属性>();
+                Plugin.Log($"[Wealth] Batch {batch+1}/3, rich players {rich}, unit {stats.ID}, count {4*rich}, HP x1, ATK x3");
             }
             spawned=true;Plugin.Log("[Wealth] Spawned "+(12*rich)+" pursuers in three batches");
         }
@@ -110,17 +130,11 @@ namespace CluckmechCoop
     }
     public sealed class WealthEnemy:MonoBehaviour
     {
-        private IEnumerator Start()
-        {
-            yield return null;
-            var hp=GetComponent<模块_基本属性>();float ratio=hp.当前生命值上限>0?hp.当前生命值/hp.当前生命值上限:1;
-            hp.生命值*=3;hp.变化生命值*=3;hp.运算生命值上限();hp.当前生命值=hp.当前生命值上限*ratio;
-            GetComponent<模块_攻击属性>()?.运算攻击力();
-        }
+        private void Start()=>GetComponent<模块_攻击属性>()?.运算攻击力();
     }
     [HarmonyPatch(typeof(模块_攻击属性),"运算攻击力")]
     internal static class WealthEnemyAttack
-    {private static void Postfix(模块_攻击属性 __instance){if(__instance.GetComponent<WealthEnemy>()!=null)__instance.当前攻击力*=1.5f;}}
+    {private static void Postfix(模块_攻击属性 __instance){if(__instance.GetComponent<WealthEnemy>()!=null)__instance.当前攻击力*=3;}}
     [HarmonyPatch(typeof(联机玩家控件),"更新_总结数据")]
     internal static class PeerWalletWarning
     {private static void Postfix()=>WealthEncounter.RefreshWarnings();}

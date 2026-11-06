@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CluckmechCoop;
 using Newtonsoft.Json;
 
@@ -41,6 +42,37 @@ static class Program
     private static void BadRuntime(string name,Action<StratagemSaved> mutate)=>BadUnit(name,u=>mutate(u.Stratagem));
     static void Main(string[] args)
     {
+        if(args.Length>0&&args[0]=="shop-rewards")
+        {
+            Check(ShopRewardRules.Prizes.Length==13&&ShopRewardRules.Total(true,true)==100,"thirteen prizes share exactly one hundred tickets");
+            var counts=new int[13];for(int i=0;i<100;i++)counts[ShopRewardRules.Roll(i,true,true)]++;
+            Check(counts.SequenceEqual(new[]{25,14,5,1,15,12,3,8,2,8,5,1,1}),"every ticket interval matches the confirmed reward table");
+            var angles=new[]{126f,72f,108f,46.8f,7.2f};
+            for(int i=0;i<angles.Length;i++)Check(Math.Abs(ShopRewardRules.SectorEnd(i,true,true)-ShopRewardRules.SectorStart(i,true,true)-angles[i])<.001f,"visible sector area follows its combined prize probability");
+            Check(ShopRewardRules.Sector(ShopPrizeKind.Capacity)==4&&ShopRewardRules.Sector(ShopPrizeKind.Pick)==4&&ShopRewardRules.SectorEnd(4,true,true)==360,"rare prizes share one two-percent sector and the wheel covers a full circle");
+            foreach(bool growth in new[]{false,true})foreach(bool energy in new[]{false,true})
+            {
+                int total=ShopRewardRules.Total(growth,energy);
+                Check(total>0,"every active configuration has a reward source");
+                for(int i=0;i<total;i++)Check(ShopRewardRules.Available(ShopRewardRules.Prizes[ShopRewardRules.Roll(i,growth,energy)],growth,energy),"filtered draws use an enabled reward");
+            }
+            var p=new PlayerProgress();p.ShopSpent(800,false);Check(p.ShopSpins==0&&p.ShopRefreshCount==0,"purchases retain refresh-based progress");
+            for(int i=0;i<4;i++)p.ShopSpent(5,true);
+            Check(p.ShopSpins==0&&p.ShopRefreshCount==4,"four successful refreshes remain below the wheel threshold");
+            p.ShopSpent(5,true);Check(p.ShopSpins==1&&p.ShopRefreshCount==5,"fifth refresh grants one spin");
+            for(int i=5;i<15;i++)p.ShopSpent(5,true);
+            Check(p.ShopSpins==3&&p.ShopPicks==1&&p.ShopNormalPickEarned,"fifteen refreshes grant three spins and the normal pick");
+            p.ShopPicks--;for(int i=15;i<45;i++)p.ShopSpent(5,true);
+            Check(p.ShopSpins==9&&p.ShopPicks==0,"normal self-pick is earned once even after being consumed");
+            p.MachineUpgradeCredits=3;p.ShopDrawSequence=1;
+            p.ShopDraw=new ShopDrawResult{Token=Guid.NewGuid().ToString("N"),Sequence=1,Prize=3,Machines=new[]{1,2,3,4}};
+            var saved=JsonConvert.DeserializeObject<PlayerProgress>(JsonConvert.SerializeObject(p));
+            Check(saved.ValidShop&&saved.ShopRefreshCount==45&&saved.MachineUpgradeCredits==3&&saved.ShopDraw.Machines.Length==4,"reward progress, capacity credits and an unsettled draw survive saving");
+            var run=new RunProgress{EnergyBonus=8,EnergyBonusUsed=4};
+            Check(run.ValidEnergy&&run.UseEnergy()&&run.EnergyRemaining==4,"repeated energy prizes retain shared usable charges");
+            ShopRewardsHarness.Run(Check);
+            Console.WriteLine($"PASS: {checks} reward weights, refresh thresholds and save checks");return;
+        }
         if(args.Length>0&&args[0]=="theme-branches"){ThemeBranchHarness.Run();return;}
         if(args.Length>0&&args[0]=="theme-battles"){ThemeBattleHarness.Run(args.Length>1?args[1]:null);return;}
         if(args.Length>0&&args[0]=="bronze")
@@ -49,7 +81,7 @@ static class Program
             var pool=BronzeDragonRules.Pool();Check(pool.Count==14&&new HashSet<int>(pool).Count==14,"four exclusive and ten native candidates have no duplicate weighting");
             var normal=new BronzeDragonState();Check(normal.Advance(9,false,false,false)==0&&normal.Advance(1,false,false,false)==1,"first coin occurs after ten game seconds");
             Check(normal.Advance(50,false,false,false)==5,"base production gives six coins per minute");
-            var full=new BronzeDragonState{Remaining=6,Started=true};Check(full.Advance(60,true,true,true)==24,"full production gives 24 coins per minute without counting bonus coins as cycles");
+            var full=new BronzeDragonState{Remaining=7.2f,Started=true};Check(full.Advance(360,true,true,true)==120,"full production gives 20 coins per minute over complete five-cycle bonuses");
             var partial=new BronzeDragonState{Remaining=1.5f,Cycles=4,Started=true};
             var saved=Healthy();saved.Rooms[0].Units[0].Id=BronzeDragonRules.Unit;saved.Rooms[0].Units[0].Bronze=partial;
             var resumed=JsonConvert.DeserializeObject<OtherworldSave>(JsonConvert.SerializeObject(saved));

@@ -10,7 +10,8 @@ namespace CluckmechCoop
 {
     internal static class GrowthFeatures
     {
-        internal static bool Pending => ModuleSettings.LocalProgress.PendingRegion!=null || ModuleSettings.LocalProgress.PendingMachineUpgrade;
+        internal static bool AnyMachinePending=>ModuleSettings.LocalProgress.PendingMachineUpgrade||ModuleSettings.LocalProgress.MachineUpgradeCredits>0;
+        internal static bool Pending => ModuleSettings.LocalProgress.PendingRegion!=null || AnyMachinePending;
         internal static int CapacityGain(int id,bool any=false)
         {
             if(any)return 1;
@@ -92,7 +93,7 @@ namespace CluckmechCoop
             panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(.5f, .5f); panel.anchoredPosition = Vector2.zero;
             NativeUi.Image(panel, NativeUi.TransferPanel, Color.white);
             NativeUi.Label(panel, "增加强化上限", 28, 22, 840, 48, 32);
-            NativeUi.Label(panel, ModuleSettings.LocalProgress.PendingMachineUpgrade?"选择任意一台鸡械，强化上限+1":"选择C级鸡械上限+3，或B级鸡械上限+1", 28, 78, 840, 40, 24);
+            NativeUi.Label(panel, GrowthFeatures.AnyMachinePending?"选择任意一台鸡械，强化上限+1":"选择C级鸡械上限+3，或B级鸡械上限+1", 28, 78, 840, 40, 24);
             NativeUi.ScrollArea(panel, "Machines", 28, 142, 836, 418, out content);
             chosen = NativeUi.Label(panel, "", 28, 586, 420, 60, 25);
             NativeUi.TransferAction(panel,"跳过",452,588,180,54,Skip);
@@ -110,7 +111,7 @@ namespace CluckmechCoop
                 if (i == cards.Count) cards.Add(CreateCard(i));
                 var card = cards[i]; card.Button.gameObject.SetActive(true); card.Item = bag[i];
                 var item = card.Item;
-                int gain=GrowthFeatures.CapacityGain(item.炮台id,ModuleSettings.LocalProgress.PendingMachineUpgrade);
+                int gain=GrowthFeatures.CapacityGain(item.炮台id,GrowthFeatures.AnyMachinePending);
                 card.Button.interactable=gain>0;
                 card.Icon.color=gain>0?Color.white:new Color(.45f,.45f,.45f);
                 if (Rules.SameMachine(item.炮台id, item.强化上限, item.强化词条, card.Snapshot)) continue;
@@ -138,13 +139,13 @@ namespace CluckmechCoop
             if (item == null || !Plugin.Summary.当前拥有炮台.Contains(item) || !Rules.SameMachine(item.炮台id, item.强化上限, item.强化词条, card.Snapshot)) { Refresh(); return; }
             if (selectedCard != null) selectedCard.Marker.enabled = false;
             selectedCard = card; card.Marker.enabled = true; selected = item; snapshot = card.Snapshot;
-            int gain=GrowthFeatures.CapacityGain(item.炮台id,ModuleSettings.LocalProgress.PendingMachineUpgrade);
+            int gain=GrowthFeatures.CapacityGain(item.炮台id,GrowthFeatures.AnyMachinePending);
             chosen.text = attributes[item.炮台id].名称() + "  " + item.强化上限 + " → " + (item.强化上限 + gain); confirm.interactable = gain>0;
         }
         private void Confirm()
         {
             if (selected == null || !Plugin.Summary.当前拥有炮台.Contains(selected) || !Rules.SameMachine(selected.炮台id, selected.强化上限, selected.强化词条, snapshot)) { Refresh(); return; }
-            int gain=GrowthFeatures.CapacityGain(selected.炮台id,ModuleSettings.LocalProgress.PendingMachineUpgrade);
+            int gain=GrowthFeatures.CapacityGain(selected.炮台id,GrowthFeatures.AnyMachinePending);
             if(gain<=0 || !ConsumePending())return;
             selected.强化上限+=gain;
             Plugin.Log("[Growth] Upgrade limit +"+gain+": machine " + selected.炮台id + ", new limit " + selected.强化上限);
@@ -155,6 +156,7 @@ namespace CluckmechCoop
         }
         private static bool ConsumePending()
         {
+            if(ModuleSettings.LocalProgress.MachineUpgradeCredits>0){ModuleSettings.LocalProgress.MachineUpgradeCredits--;return true;}
             if(ModuleSettings.LocalProgress.PendingMachineUpgrade){ModuleSettings.LocalProgress.PendingMachineUpgrade=false;return true;}
             return ModuleSettings.LocalProgress.ClaimRegion();
         }

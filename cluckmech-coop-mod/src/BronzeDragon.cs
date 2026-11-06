@@ -19,7 +19,7 @@ namespace CluckmechCoop
             if(Plugin.Role==2||Plugin.Spawner==null)yield break;
             coin=Plugin.Spawner.GetComponent<效果物体引用器>().预制体.掉落_货币小;
             if(Resume!=null)State=Resume;
-            else State.Remaining=Has(25102)?6:10;
+            else State.Remaining=Has(25102)?7.2f:10;
             if(!State.Started)
             {
                 State.Started=true;

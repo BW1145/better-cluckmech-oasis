@@ -59,7 +59,7 @@ namespace CluckmechCoop
         }
         internal static string Overview(模块_基本属性 stats)
         {
-            var affixes=stats.强化词条列表;int count=affixes.Contains(25101)?2:1,seconds=affixes.Contains(25102)?6:10;
+            var affixes=stats.强化词条列表;int count=affixes.Contains(25101)?2:1;float seconds=affixes.Contains(25102)?7.2f:10;
             return "<color=orange>强化方向：金币经济、动力经济、生存</color>\n"+
                 $"·每{seconds}秒生产{count}金币\n·不攻击敌人"+
                 (affixes.Contains(25103)?"\n·每完成5次生产，额外生产2金币":"")+

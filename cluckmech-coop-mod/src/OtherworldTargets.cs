@@ -5,7 +5,7 @@ namespace CluckmechCoop
 {
     internal static partial class OtherworldWorld
     {
-        internal static void CollectNearby(GameObject source, Vector2 point, float radius, List<OtherworldUnit> result)
+        internal static void CollectNearby(GameObject source, Vector2 point, float radius, List<OtherworldUnit> result,bool scenery=false)
         {
             result.Clear();
             int space = Space(source);
@@ -13,7 +13,7 @@ namespace CluckmechCoop
             foreach (var health in KamuiWorld.CandidatesIn(space))
             {
                 if (health == null || !Units.TryGetValue(health.gameObject, out var unit)) continue;
-                if (unit == null || unit.Space != space || unit.Health.当前阵营 != 阵营数据库.阵营.敌方 ||
+                if (unit == null || unit.Space != space || (scenery?!NativeCombatTargets.CanDamage(source,unit.Health):unit.Health.当前阵营 != 阵营数据库.阵营.敌方) ||
                     unit.Health.当前生命值 <= 0 || unit.Health.当前是否无敌) continue;
 
                 bool hurt = false;

@@ -108,6 +108,7 @@ namespace CluckmechCoop
                 next=run.Initial==OtherworldTalentIds.FireStyle?run.BurnBonus:0;
                 Detailed.增加状态百分比效果加成(攻击类型与状态数据库.状态枚举.灼烧,new Vector4(next-burn,0,0,0));burn=next;
             }
+            if(CoopStatAuthority.Snapshot(Health)!=null)return;
             float ratio=Health.当前生命值上限>0?Health.当前生命值/Health.当前生命值上限:1;
             Health.运算生命值上限();Health.运算格挡值();
             Health.当前生命值=Health.当前生命值上限*ratio;

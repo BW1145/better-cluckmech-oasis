@@ -32,6 +32,9 @@ internal static class Program
 
         }
         var ids = new HashSet<int>();
+        Near(Params(20002).Definition.Damage,3000,"380 native attack base is 3000 per shell");
+        Near(Params(20002).BlastRadius,2.2f,"380 basic impact radius");
+        var dense=Params(20002,25023);Near(dense.BlastRadius,2.8f,"Dense charge impact radius");Near(dense.DamageMultiplier,.9f,"Dense charge retains damage tradeoff");
         var one = new Machine { Id = 20001, UpgradeLimit = 4, Upgrades = new List<int> {25011} };
         var two = new Machine { Id = 20001, UpgradeLimit = 5, Upgrades = new List<int> {25012} };
         Check(StratagemCatalog.OwnsDeck(new[] {two,one,null,null,null},new[] {one,two}), "Reordered same-name cards keep exact upgrades and cap");
@@ -97,6 +100,8 @@ internal static class Program
         eagle = Params(20004, 25041, 25043, 25044, 25045);
         Check(eagle.Power == 3, "Efficient Eagle payload costs three power");
         Near(eagle.EagleDamage(20), 1000, "Heavy expanded blast outer edge");
+        Near(eagle.EagleDamage(3),12500,"Heavy expanded blast inner edge");
+        Near(eagle.EagleDamage(11.5f),6750,"Heavy expanded blast midpoint follows falloff");
         Near(eagle.Cooldown, 31.68f, "Heavy payload and fast return cooldown");
         var mortar = Params(20005, 25051, 25052, 25053, 25055);
         Check(mortar.Gas && mortar.Stun == 0 && mortar.Slow == .5f, "Gas replaces stun while retaining slow");

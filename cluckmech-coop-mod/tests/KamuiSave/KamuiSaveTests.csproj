@@ -13,6 +13,8 @@
     <Compile Include="../../src/OtherworldTalentState.cs"/>
     <Compile Include="../../src/OtherworldBurnSettlement.cs"/>
     <Compile Include="../../src/BronzeDragonRules.cs"/>
+    <Compile Include="../../src/ShopRewardRules.cs"/>
+    <Compile Include="../../src/ShopRewardNetwork.cs"/><Compile Include="ShopRewardsHarness.cs"/>
     <Compile Include="Program.cs"/><Compile Include="StorageHarness.cs"/><Compile Include="ModuleStateHarness.cs"/><Compile Include="LifecycleHarness.cs"/><Compile Include="ThemeBranchHarness.cs"/><Compile Include="ThemeBattleHarness.cs"/>
     <Reference Include="Game"><HintPath>$(Managed)/Assembly-CSharp.dll</HintPath></Reference>
     <Reference Include="UnityEngine"><HintPath>$(Managed)/UnityEngine.dll</HintPath></Reference>

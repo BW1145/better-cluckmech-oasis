@@ -14,7 +14,7 @@ namespace CluckmechCoop
     [BepInPlugin("billy.cluckmech.coop", "更好的鸡械绿洲", Version)]
     public sealed class Plugin : BaseUnityPlugin
     {
-        internal const string Version = "0.6.19";
+        internal const string Version = "0.6.20";
         internal static Plugin Instance;
         internal static TransferService Transfers;
         internal static NetworkService Network;
@@ -59,6 +59,7 @@ namespace CluckmechCoop
         }
         private IEnumerator CaptureScene(SceneLifetime scene)
         {
+            NativeCombatLifecycle.PrepareParticles();
             yield return null;
             if (!SceneLifecycle.IsCurrent(scene)) yield break;
             summary = UnityEngine.Object.FindObjectOfType<总结脚本>();

@@ -23,6 +23,8 @@ namespace CluckmechCoop
     internal static class Plugin
     {
         internal static int Role;
+        internal static bool InCombat;
+        internal static readonly ShopTestUnits Units=new();
         internal static readonly List<string> Warnings=new();
         internal static readonly FakeNetwork Network=new();
         internal static readonly FakeSummary Summary=new();
@@ -35,9 +37,15 @@ namespace CluckmechCoop
         internal int Published,Sent;
         internal void PublishSettings()=>Published++;
         internal void SendProgress(PlayerProgress progress)=>Sent++;
+        internal void Send(SessionMessage message)=>ShopRewardsHarness.Messages.Add(message);
+        internal void Broadcast(SessionMessage message)=>ShopRewardsHarness.Messages.Add(message);
     }
     internal sealed class FakeSummary
     {
+        internal int 当前金钱数;
+        internal readonly List<int> Granted=new();
+        internal void 获得金钱(int amount)=>当前金钱数+=amount;
+        internal void 获得炮台(int id)=>Granted.Add(id);
         internal readonly FakeMap 地图存档=new();
         internal void 保存单局存档(){}
     }

@@ -55,6 +55,8 @@ static class Program {
         var last = Harness.Guest.Summary.当前拥有炮台[1];
         Check(last.炮台id == 20 && last.强化词条.Count == 2 && last.强化词条[0] == 3 && last.强化词条[1] == 3, "same-name machines remain distinguished by full affix data");
         Check(visible.Upgrades[0] == 3, "request preserves displayed snapshot");
+        Check(ReferenceEquals(Harness.Host.Summary.当前拥有炮台[0],first),"sending another machine retains the original upgrade target object");
+        Check(ReferenceEquals(Harness.Guest.Summary.当前拥有炮台[0],transferred),"receiving a machine retains existing inventory object identities");
 
         Harness.DeliverTransfers=false;
         Plugin.Transfers.Request("gold",10,-1);
@@ -67,6 +69,13 @@ static class Program {
         Plugin.Transfers.Request("gold",10,-1);
         Check(Plugin.Summary.当前金钱数==before-10,"new transfer succeeds after disconnect cleanup");
         ProtocolHarness.Run(Check);
+        var target=new 总结脚本.背包单元{炮台id=20,强化上限=5};
+        Plugin.Summary.当前拥有炮台=new(){new 总结脚本.背包单元{炮台id=20},target};
+        var identity=new UpgradeSelectionIdentity{Target=target};var reward=new 奖励结算脚本{当前选择的词缀=new UnityEngine.Vector2Int(1,42)};
+        Plugin.Summary.当前拥有炮台.Insert(0,new 总结脚本.背包单元{炮台id=20});
+        Check(identity.Resolve(reward)&&reward.当前选择的词缀.x==2&&reward.当前选择的词缀.y==42,"upgrade confirmation resolves the selected same-name machine after an inventory insertion");
+        Plugin.Summary.当前拥有炮台.Remove(target);Plugin.Summary.地图存档.是否选择单位强化=true;
+        Check(!identity.Resolve(reward)&&!Plugin.Summary.地图存档.是否选择单位强化,"a transferred upgrade target returns to machine selection before applying an affix");
         Console.WriteLine($"PASS: {checks} production transfer protocol checks using synchronous and queued two-peer transport doubles");
  }
 }

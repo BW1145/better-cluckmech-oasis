@@ -62,8 +62,8 @@ static class Program
         Check(oasisOnly.Stages.Count == 0 && !oasisOnly.TryStart(false), "oasis-only encounter never duplicates its boss");
         Check(Rules.HealthMultiplier(false, false) == 1 && Rules.AttackMultiplier(false, false) == 1, "original enemies and ordinary bosses retain native stats");
         Check(Rules.HealthMultiplier(false, true) == 2f && Rules.AttackMultiplier(false, true) == 2, "repeated enemies and ordinary bosses HP x2 ATK x2");
-        Check(Rules.HealthMultiplier(true, false) == 10 && Rules.AttackMultiplier(true, false) == 2, "oasis boss HP x10 ATK x2");
-        Check(Rules.HealthMultiplier(true, true) == 10 && Rules.AttackMultiplier(true, true) == 2, "oasis multiplier cannot stack");
+        Check(Rules.HealthMultiplier(true, false) == 3 && Rules.AttackMultiplier(true, false) == 2, "oasis boss HP x3 ATK x2");
+        Check(Rules.HealthMultiplier(true, true) == 3 && Rules.AttackMultiplier(true, true) == 2, "oasis multiplier cannot stack");
         var timedStage = new EncounterStage<string> { Limit = 20 };
         Check(!EncounterPlan<string>.StageFinished(timedStage, true, false, 19), "living native stage stays active before timeout");
         Check(EncounterPlan<string>.StageFinished(timedStage, true, false, 20), "native stage timeout still permits next scheduled enemies");

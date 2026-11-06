@@ -133,7 +133,7 @@ namespace CluckmechCoop
                 if(entry.Id==91 && choice==0)
                     foreach(var machine in Plugin.Summary.当前拥有炮台)
                         if(Plugin.Units.获取单位单元(machine.炮台id).单位等级==1)machine.强化上限+=3;
-                if(entry.Id==92 && choice==0)ModuleSettings.Progress.EnergyBonus=2;
+                if(entry.Id==92 && choice==0)ModuleSettings.Progress.EnergyBonus+=2;
                 CarryCapacity.Apply();
                 if(Plugin.Role!=0)Plugin.LocalPlayer?.上传玩家总结数据();
                 ModuleSettings.SaveProgress();

@@ -72,6 +72,7 @@ namespace CluckmechCoop
         internal bool Protecting=>ProtectedUntil>Time.time;
         internal bool SaveFromFatal()
         {
+            if(Plugin.Role==2)return false;
             if(Tier<3 || health==null || health.当前生命值>0)return false;
             if(!Protecting)
             {

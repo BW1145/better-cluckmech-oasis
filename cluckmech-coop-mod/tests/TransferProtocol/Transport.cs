@@ -8,12 +8,23 @@ using Newtonsoft.Json;
 namespace UnityEngine {
  public sealed class Coroutine {public IEnumerator Body;}
  public sealed class WaitForSecondsRealtime {public WaitForSecondsRealtime(float seconds){}}
- public static class Object {public static T FindObjectOfType<T>()=>default;public static T[] FindObjectsOfType<T>()=>Array.Empty<T>();}
- public sealed class GameObject {public T GetComponent<T>()=>default;}
+ public static class Object {public static T FindObjectOfType<T>()=>default;public static T[] FindObjectsOfType<T>(bool inactive=false)=>Array.Empty<T>();}
+ public class Component {public GameObject gameObject=new();public T GetComponent<T>()=>gameObject.GetComponent<T>();}
+ public class MonoBehaviour:Component {}
+ public sealed class GameObject {
+  private readonly Dictionary<Type,object> components=new();
+  public T GetComponent<T>()=>components.TryGetValue(typeof(T),out var value)?(T)value:default;
+  public T AddComponent<T>() where T:new(){var value=new T();components[typeof(T)]=value;if(value is Component c)c.gameObject=this;return value;}
+  public void SetActive(bool active){}
+ }
+ public static class Mathf {public static int Max(int a,int b)=>Math.Max(a,b);}
+ public readonly struct Vector2Int {public readonly int x,y;public Vector2Int(int x,int y){this.x=x;this.y=y;}}
 }
 namespace UnityEngine.UI {public sealed class Toggle {public void SetIsOnWithoutNotify(bool value){}}}
 namespace HarmonyLib {
  [AttributeUsage(AttributeTargets.Class)] public sealed class HarmonyPatch:Attribute {public HarmonyPatch(){} public HarmonyPatch(Type type,string name){}}
+ [AttributeUsage(AttributeTargets.Method)] public sealed class HarmonyPriority:Attribute {public HarmonyPriority(int value){}}
+ public static class Priority {public const int First=800;}
  public static class AccessTools {
   public static MethodInfo Method(Type type,string name,Type[] parameters)=>type.GetMethod(name,parameters);
   public static IEnumerable<MethodInfo> GetDeclaredMethods(Type type)=>type.GetMethods();
@@ -22,6 +33,9 @@ namespace HarmonyLib {
 public sealed class 总结脚本 {
  public sealed class 背包单元 {public int 炮台id,强化上限;public List<int> 强化词条=new();}
  public int 当前金钱数;
+ public int 当前选中的背包id;
+ public sealed class MapState {public bool 是否选择单位强化;public int 选择的背包位置;}
+ public MapState 地图存档=new();
  public List<背包单元> 当前拥有炮台=new(),当前携带炮台=new();
  public void 保存单局存档(){Harness.Current.Saves++;}
 }
@@ -31,6 +45,9 @@ public sealed class 背包类 {
  public void 更新背包(int count){}
 }
 public sealed class 玩家背包脚本 {public void 更新背包(){}}
+public sealed class 奖励结算脚本:UnityEngine.MonoBehaviour {public UnityEngine.Vector2Int 当前选择的词缀;}
+public sealed class 流程单元:UnityEngine.Component {public void 关闭子单元(){}}
+public sealed class 选择词条流程脚本 {public 流程单元 流程_选择要强化鸡械;public 玩家背包脚本 玩家背包脚本;}
 public sealed class 场景切换按钮 {public void 切换场景(int value){}}
 public sealed class 联机_2P存档 {public 联机玩家控件.联机总结数据包 联机存档_2P;}
 public sealed class 联机玩家控件 {

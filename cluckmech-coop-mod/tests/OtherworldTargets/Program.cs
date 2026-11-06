@@ -37,6 +37,8 @@ public sealed class 模块_基本属性
 }
 namespace CluckmechCoop
 {
+    internal static class NativeCombatTargets
+    {internal static bool CanDamage(GameObject source,模块_基本属性 target)=>target!=null&&target.当前阵营!=阵营数据库.阵营.友方&&OtherworldWorld.Space(source)==OtherworldWorld.Space(target.gameObject);}
     internal sealed class OtherworldUnit
     {
         internal 模块_基本属性 Health = new 模块_基本属性();

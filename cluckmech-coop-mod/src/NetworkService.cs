@@ -27,6 +27,8 @@ namespace CluckmechCoop
         public StratagemEffectMessage Effect;
         public ThemeActorMessage Theme;
         public ThemeMechanismMessage Mechanism;
+        public int[] ShopPool;
+        public ShopDrawResult ShopDraw;
     }
     internal sealed class NetworkService
     {
@@ -116,6 +118,10 @@ namespace CluckmechCoop
             if (!Finite(message.Delay) || message.Delay < 0 || !Finite(message.X) || !Finite(message.Y)) return false;
             switch (message.Type)
             {
+                case "shop-spin": return Guid.TryParseExact(message.Token,"N",out _)&&message.Stage>=1&&message.Stage<=3&&message.ShopPool!=null&&message.ShopPool.Length>0&&message.ShopPool.Length<=1024;
+                case "shop-spin-result": return message.ShopDraw!=null&&message.ShopDraw.Valid&&message.Token==message.ShopDraw.Token&&
+                    message.Role>=0&&message.Role<=2&&message.Revision>=0&&message.PlayerProgress!=null&&ValidProgress(message.PlayerProgress);
+                case "wealth-warning": return !string.IsNullOrWhiteSpace(message.Token)&&message.Stage>=0&&message.Stage<=3&&message.Revision>=1&&message.Revision<=2;
                 case "bronze-coins": return !string.IsNullOrWhiteSpace(message.Token) && message.Stage>0 && message.Stage<=128;
                 case "swallow": case "swallow-request":
                     return !string.IsNullOrWhiteSpace(message.Token) && message.Unit != 0 && message.Revision > 0 && message.Targets != null && message.Targets.Length <= 32;
@@ -134,7 +140,7 @@ namespace CluckmechCoop
                 case "progress": return ValidProgress(message.PlayerProgress);
                 case "hello": case "ack": return message.Revision >= 0;
                 case "playback": return !string.IsNullOrWhiteSpace(message.Token) && message.Stage >= 0;
-                case "energy": return !string.IsNullOrWhiteSpace(message.Token) && message.Delay <= 10 && message.EnergyBonusUsed >= 0 && message.EnergyBonusUsed <= 2;
+                case "energy": return !string.IsNullOrWhiteSpace(message.Token) && message.Delay <= 10 && message.EnergyBonusUsed >= 0;
                 case "growth-event": return !string.IsNullOrWhiteSpace(message.Token) && message.Stage>=88 && message.Stage<=92 && message.Revision>=0 && message.Revision<=1 && (message.Role==0 || message.Role==20);
                 case "complete": case "speed": case "growth": case "speed-request": case "triple-request": case "energy-request": case "rabbit-aim":
                     return !string.IsNullOrWhiteSpace(message.Token);
@@ -148,6 +154,7 @@ namespace CluckmechCoop
             if (!guest && sender != Steam联机管理器.玩家_主机) return;
             if (!NetworkJson.TryRead<SessionMessage>(json, out var message) || !ValidMessage(message)) return;
             if (message.Version != Plugin.Version) { session.Mismatch(); Status = "双方模组版本不一致"; PreparationPanel.ShowStatus(Status); return; }
+            if(ShopRewardNetwork.ServerReceive(message,guest?2:1))return;
             if (message.Type == "swallow-request") { SwallowTargets.Handle(message,guest ? 2 : 1,true); return; }
             if (message.Type == "progress" && message.PlayerProgress != null)
             {
@@ -173,8 +180,11 @@ namespace CluckmechCoop
             if (key != ReplyKey || Plugin.Role != 2) return;
             if (!NetworkJson.TryRead<SessionMessage>(json, out var message) || !ValidMessage(message)) return;
             if (message.Version != Plugin.Version) { session.Mismatch(); Status = "双方模组版本不一致"; PreparationPanel.ShowStatus(Status); return; }
+            if(ShopRewardNetwork.Receive(message))return;
             if (message.Type == "swallow") { SwallowTargets.Handle(message,2,false); return; }
-            if (message.Type == "settings")
+            if(message.Type=="wealth-warning"&&message.Token==Plugin.Combat?.Token&&ModuleSettings.Extra.Wealth)
+                WealthEncounter.Notice(message.Stage,message.Revision);
+            else if (message.Type == "settings")
             {
                 if (message.Revision < session.Revision) return;
                 ModuleSettings.ApplyHostSettings(message.Expedition,message.Transfer,message.Choice,message.Modules,message.Progress);

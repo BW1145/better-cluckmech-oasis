@@ -59,6 +59,9 @@ public partial class 模块_受伤
 public class 模块_死亡:Component { }
 namespace CluckmechCoop
 {
+    // Native faction/space eligibility is covered by the targeting bindings.
+    internal static class NativeCombatTargets
+    {internal static bool CanDamage(GameObject source,模块_基本属性 target)=>target!=null&&target.当前生命值>0&&!target.当前是否无敌&&target.当前阵营!=阵营数据库.阵营.友方&&OtherworldWorld.Space(source)==OtherworldWorld.Space(target.gameObject);}
     internal static class OtherworldFlatDamage { }
     internal static class OtherworldRegistry {internal static bool Enabled=true;}
     internal enum StratagemKind {Mines,Barrage,Laser,Eagle,Mortar,Shield,Rover}

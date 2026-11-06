@@ -50,8 +50,9 @@ internal static class TranspilerChecks
         Require(produce.Count(c=>c.operand is MethodInfo m&&m.Name=="Broadcast")==1&&produce.Any(c=>c.operand is MethodInfo m&&m.Name=="Space"),"main-field coin batch uses one broadcast while private space retains its drop channel");
         var damage=mod.GetType("CluckmechCoop.StratagemDamage",true);
         var minerals=Body(damage,"EagleMinerals");
-        Require(minerals.Count(c=>c.operand is MethodInfo m&&m.Name=="OverlapCircleAll")==1&&minerals.Any(c=>c.operand is MethodInfo m&&m.Name=="TryGetValue"),"mineral blast uses one overlap and deduplicates native roots");
-        Require(minerals.Any(c=>c.operand is MethodInfo m&&m.Name=="EagleDamage")&&minerals.Count(c=>c.operand is MethodInfo m&&m.Name=="Space")==2,"mineral damage retains Eagle falloff and space separation");
+        var targets=mod.GetType("CluckmechCoop.NativeCombatTargets",true);var scenery=Body(targets,"Scenery");
+        Require(minerals.Any(c=>c.operand is MethodInfo m&&m.Name=="Scenery")&&scenery.Count(c=>c.operand is MethodInfo m&&m.Name=="OverlapCircleAll")==1&&scenery.Any(c=>c.operand is MethodInfo m&&m.Name=="TryGetValue"),"mineral blast uses the shared overlap and native-root deduplication");
+        Require(minerals.Any(c=>c.operand is MethodInfo m&&m.Name=="EagleDamage")&&Body(targets,"CanDamage").Count(c=>c.operand is MethodInfo m&&m.Name=="Space")==2,"mineral damage retains Eagle falloff and space separation");
         var unit=mod.GetType("CluckmechCoop.StratagemUnit",true);
         foreach(var iterator in unit.GetNestedTypes(BindingFlags.NonPublic).Where(t=>t.Name.StartsWith("<")&&AccessTools.DeclaredMethod(t,"MoveNext")!=null))
         {

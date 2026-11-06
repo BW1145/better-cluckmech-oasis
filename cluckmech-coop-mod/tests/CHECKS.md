@@ -1,6 +1,6 @@
 # 离线检查入口
 
-运行版本：0.6.19。入口为模组目录下的 `ValidateUpdate.ps1`。
+运行版本：0.6.20。入口为模组目录下的 `ValidateUpdate.ps1`。
 
 ```powershell
 ./ValidateUpdate.ps1 -List
@@ -13,6 +13,8 @@
 | 选择名称 | 检查范围 | 依赖 |
 |---|---|---|
 | RefactorParity | 对照同一编译器生成的整理前后主插件，比较执行指令、字段顺序、补丁/JSON声明、天赋ID及内嵌资源；仅归一化版本字符串和有单独等价检查的公共查询调用 | BaselineAssembly |
+| Update0620 | 最终属性重算入口、原版初始化字段、弹丸生命周期、场景物目标、费用及概率轮盘接线 | GameDir、最终主插件DLL |
+| ShopRewards | 13档权重、概率面积、5/15刷新边界、共享能源、保存和抽奖重复消息 | GameDir |
 | Rules | 转交守恒、鸡械快照比较、远征波次和倍率 | .NET 8 |
 | CoopRepairs、CoopRepairNetwork、CoopRepairWiring | 原版周期生成、神威模板身份、客机反馈与真实程序集接线；排队模式单独选择 | GameDir；前两项另需NativeGameSource |
 | CoopRepairLimits、StratagemHitDisplay | 模板索引工作量、延迟显示队列边界、战备与状态显示分批，使用既有替身 | .NET 8、Newtonsoft.Json 13.0.3；后者另需Python |

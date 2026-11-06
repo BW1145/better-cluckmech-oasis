@@ -20,6 +20,10 @@ var original=Assembly.LoadFrom(Path.Combine(managed,"Assembly-CSharp.dll"));
 var mod=Assembly.LoadFrom(Path.Combine(root,"src/bin/Release/net472/CluckmechCoop.dll"));
 int checks=0;
 try{
+if(args.Length>2 && args[2]=="--update-0620")
+{
+    Update0620Checks.Run(original,mod,ValidateStack);return;
+}
 if(args.Length>2 && args[2]=="--theme-message-size")
 {
     ThemeBranchBindings.MessageSize(original,mod);

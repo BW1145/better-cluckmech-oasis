@@ -47,6 +47,14 @@ static class Program
     }
     static void Direct()
     {
+        Reset();Plugin.Role=2;var nativeTarget=Target();
+        var localStates=nativeTarget.gameObject.Add(new 模块_状态属性());
+        var nativePacket=new 世界类.伤害数据包{攻击伤害=25};nativePacket.造成状态.Add(new 模块_状态属性.状态类());
+        OtherworldHitDisplay.NativeLocal(nativeTarget,nativePacket);
+        Check(localStates.Count==1&&nativeTarget.Visuals==1&&nativeTarget.基本属性.当前生命值==1000,"guest native hit registers local status presentation and displays damage while preserving authoritative health");
+        var reflectedTarget=Target(2);nativeTarget.基本属性.当前反伤值=1;nativePacket.攻击者=reflectedTarget.gameObject;
+        OtherworldHitDisplay.NativeLocal(nativeTarget,nativePacket);
+        Check(reflectedTarget.Visuals==1&&reflectedTarget.LastVisual==25&&reflectedTarget.基本属性.当前生命值==1000,"guest reflection preserves native damage presentation without applying reflected health changes");
         foreach(bool otherworld in new[]{false,true})
         foreach(var kind in new[]{StratagemKind.Mines,StratagemKind.Barrage,StratagemKind.Laser,StratagemKind.Eagle,StratagemKind.Rover})
         foreach(bool critical in new[]{false,true})

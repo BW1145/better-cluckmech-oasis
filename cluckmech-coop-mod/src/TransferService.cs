@@ -304,7 +304,17 @@ namespace CluckmechCoop
             var carried = summary.当前携带炮台.Select(x => remap(oldInventory.IndexOf(x))).ToArray();
             var selection = UnityEngine.Object.FindObjectsOfType<战斗背包>().Select(x => new { Bag = x, Indices = x.背包类.当前已选单元.Select(remap).Where(i => i >= 0).ToArray() }).ToArray();
             summary.当前金钱数 = wallet.Gold;
-            summary.当前拥有炮台 = NativeMachines(wallet);
+            var inventory = new List<总结脚本.背包单元>(oldInventory);
+            if (removing) inventory.RemoveAt(transfer.Index);
+            else
+            {
+                var incoming = wallet.Machines[wallet.Machines.Count - 1];
+                inventory.Add(new 总结脚本.背包单元 { 炮台id=incoming.Id, 强化上限=incoming.UpgradeLimit, 强化词条=new List<int>(incoming.Upgrades) });
+            }
+            summary.当前拥有炮台 = inventory;
+            summary.当前选中的背包id = Mathf.Max(0,remap(summary.当前选中的背包id));
+            if(summary.地图存档.是否选择单位强化)summary.地图存档.选择的背包位置=remap(summary.地图存档.选择的背包位置);
+            UpgradeSelectionIdentity.InventoryChanged();
             for (int i = 0; i < carried.Length; i++)
                 summary.当前携带炮台[i] = carried[i] >= 0 && carried[i] < wallet.Machines.Count ? summary.当前拥有炮台[carried[i]] : new 总结脚本.背包单元();
             foreach (var bag in UnityEngine.Object.FindObjectsOfType<玩家背包脚本>()) bag.更新背包();

@@ -57,6 +57,8 @@ namespace CluckmechCoop
             }
         }
         internal static GameObject SelectedPrefab(dw单位库 units,int id) => Preview(建造系统.当前选中背包id,units.获取单位(id));
+        internal static int SlotPower(int slot,int fallback)=>build!=null&&slot>=0&&slot<build.建造单位信息列表.Count?
+            (int)build.建造单位信息列表[slot].当前花费动力:fallback;
         internal static GameObject Preview(int slot,GameObject original)
         {
             if (!ModuleSettings.Extra.Stratagems || Plugin.Summary == null || slot < 0 || slot >= Plugin.Summary.当前携带炮台.Count) return original;
@@ -101,6 +103,28 @@ namespace CluckmechCoop
                 }
                 yield return instruction;
             }
+        }
+    }
+    [HarmonyPatch(typeof(栏位单元),"Update")]
+    internal static class StratagemSlotCost
+    {
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var cost=AccessTools.Field(typeof(模块_基本属性),"花费");
+            foreach(var instruction in TranspilerContract.Exact(instructions,nameof(StratagemSlotCost),1,c=>c.opcode==OpCodes.Ldfld&&Equals(c.operand,cost)))
+            {
+                if(instruction.opcode==OpCodes.Ldfld&&Equals(instruction.operand,cost))
+                {
+                    yield return new CodeInstruction(OpCodes.Ldarg_0).MoveLabelsFrom(instruction);
+                    yield return new CodeInstruction(OpCodes.Call,AccessTools.Method(typeof(StratagemSlotCost),nameof(Cost)));
+                }
+                else yield return instruction;
+            }
+        }
+        private static int Cost(模块_基本属性 original,栏位单元 slot)
+        {
+            if(!ModuleSettings.Extra.Stratagems||!StratagemCatalog.IsUnit(original.ID))return original.花费;
+            return StratagemDeployment.SlotPower(slot.当前背包位置,original.花费);
         }
     }
 }

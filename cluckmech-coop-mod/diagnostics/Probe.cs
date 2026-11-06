@@ -43,6 +43,7 @@ namespace CluckmechCoopDiagnostics
             probe.Original = info.Instance;
             probe.Log = Logger;
             probe.DetailedScan = detailedScan;
+            ShopRuntimePreview.TryStart(this, info.Instance.GetType().Assembly);
         }
         private void OnDestroy()
         {

@@ -20,6 +20,7 @@ namespace CluckmechCoop
     {
         private static readonly Action<模块_受伤,float> normal=AccessTools.MethodDelegate<Action<模块_受伤,float>>(AccessTools.Method(typeof(模块_受伤),"伤害出现",new[]{typeof(float)}));
         private static readonly Action<模块_受伤,float> critical=AccessTools.MethodDelegate<Action<模块_受伤,float>>(AccessTools.Method(typeof(模块_受伤),"暴击出现",new[]{typeof(float)}));
+        private static readonly Action<模块_受伤,float> pushed=AccessTools.MethodDelegate<Action<模块_受伤,float>>(AccessTools.Method(typeof(模块_受伤),"击退效果出现",new[]{typeof(float)}));
         private static readonly Action<模块_受伤,float,Vector4> colored=AccessTools.MethodDelegate<Action<模块_受伤,float,Vector4>>(AccessTools.Method(typeof(模块_受伤),"伤害出现",new[]{typeof(float),typeof(Vector4)}));
         private static readonly AccessTools.FieldRef<模块_受伤,效果物体引用器> references=AccessTools.FieldRefAccess<模块_受伤,效果物体引用器>("引用器");
         [ThreadStatic] private static Batch current;
@@ -71,6 +72,33 @@ namespace CluckmechCoop
             if(unit.Space!=0&&unit.Health.当前阵营==阵营数据库.阵营.敌方&&KamuiWorld.Run(unit.Space)?.Has(OtherworldTalentIds.SpacePressure)==true)damage*=1.25f;
             float value=Value(damage,unit.Health.当前抗性,unit.Health.当前格挡值,unit.Health.当前是否保护,packet.是否暴击,packet.暴击倍率);
             Show(target,value,packet.是否暴击,false);
+        }
+        internal static void NativeLocal(模块_受伤 target,世界类.伤害数据包 packet)
+        {
+            var health=target.GetComponent<模块_基本属性>();
+            if(health==null||!(packet.攻击伤害>=0)||OtherworldWorld.Space(target.gameObject)!=ViewerSpace)return;
+            float reflected=health.当前反伤值*packet.攻击伤害;
+            if(packet.攻击者!=null&&(int)reflected>0)
+            {
+                var attacker=packet.攻击者.GetComponent<模块_受伤>();
+                if(attacker!=null)NativeScalar(attacker,reflected);
+            }
+            if(health.当前是否无敌)return;
+            // Native periodic state visuals still run locally; their damage entry
+            // only displays a value while the host supplies the health snapshot.
+            var states=target.GetComponent<模块_状态属性>();
+            if(states!=null)foreach(var state in packet.造成状态)states.增加状态(state);
+            if(packet.是否击退&&target.GetComponent<模块_移动>()!=null)pushed(target,packet.击退参数.w);
+            var unit=OtherworldWorld.Unit(target.gameObject);
+            if(unit!=null){Local(target,unit,packet);return;}
+            Show(target,Value(packet.攻击伤害,health.当前抗性,health.当前格挡值,health.当前是否保护,packet.是否暴击,packet.暴击倍率),packet.是否暴击,false);
+        }
+        internal static void NativeScalar(模块_受伤 target,float damage,int color=0)
+        {
+            var health=target.GetComponent<模块_基本属性>();
+            if(health==null||health.当前是否无敌||OtherworldWorld.Space(target.gameObject)!=ViewerSpace)return;
+            float amount=color==0?Math.Max(1,damage*(1-health.当前抗性)-health.当前格挡值):damage*(1-health.当前抗性);
+            if(amount>=0)Show(target,amount,false,color==1,color);
         }
         internal static void Record(模块_受伤 target,float amount,bool crit,bool burn,int color=0)
         {

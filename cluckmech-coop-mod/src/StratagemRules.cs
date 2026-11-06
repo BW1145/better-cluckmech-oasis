@@ -94,7 +94,7 @@ namespace CluckmechCoop
     {
         internal static readonly StratagemDefinition[] Units = {
             new StratagemDefinition(20001, "MD-6地雷播撒器", 4, 2, 4, 3, 650, 0, 100, .1f, 3.2f, 20, 2, new[] {42,109,157,23,25,66,82,72}),
-            new StratagemDefinition(20002, "380mm轨道火力网", 5, 3, 5, 6, 1, 0, 1200, 1, 4.5f, 60, 12, new[] {42,109,157,23,25,66,82,72}),
+            new StratagemDefinition(20002, "380mm轨道火力网", 5, 3, 5, 6, 1, 0, 3000, 1, 4.5f, 60, 12, new[] {42,109,157,23,25,66,82,72}),
             new StratagemDefinition(20003, "轨道激光", 5, 4, 6, 8, 1, 0, 300, 1f/.15f, 6, 60, 12, new[] {109,157,23,66,82,181,182,183,72}),
             new StratagemDefinition(20004, "飞鹰500kg", 5, 3, 5, 4, 1, 0, 10000, 1, 4, 40, 8, new[] {109,157,23,72}),
             new StratagemDefinition(20005, "EMS迫击炮", 0, 2, 4, 3, 450, 0, 0, .25f, 9, 25, 2, new[] {82,81,167,28,71,72}),
@@ -212,7 +212,7 @@ namespace CluckmechCoop
             switch (Definition.Kind)
             {
                 case StratagemKind.Mines: BlastRadius = 1.1f; break;
-                case StratagemKind.Barrage: BlastRadius = 1.6f; CallDelay = 2; break;
+                case StratagemKind.Barrage: BlastRadius = 2.2f; CallDelay = 2; break;
                 case StratagemKind.Laser: BlastRadius = .85f; CallDelay = 1.5f; break;
                 case StratagemKind.Eagle: InnerRadius = 2.5f; BlastRadius = 4; CallDelay = 1; break;
                 case StratagemKind.Mortar: BlastRadius = 1.8f; break;
@@ -236,7 +236,7 @@ namespace CluckmechCoop
                 case 25016: MineRefill = 4; break;
                 case 25021: ScatterRadius = 3.8f; break;
                 case 25022: Salvos = 6; break;
-                case 25023: BlastRadius = 2; DamageMultiplier *= .9f; break;
+                case 25023: BlastRadius = 2.8f; DamageMultiplier *= .9f; break;
                 case 25024: Cooldown *= .8f; break;
                 case 25025: CallDelay = 1.2f; ShellInterval = .5f; SalvoInterval = 2.5f; break;
                 case 25026: Scorch = true; break;
